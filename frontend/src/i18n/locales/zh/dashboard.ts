@@ -171,8 +171,8 @@ export default {
       openai: {
         description: '将以下配置保存为 Codex CLI 配置目录中的 config.toml。',
         authModeTitle: 'Codex 认证模式',
-        authModeDescription: '推荐 API Key 单文件模式；仅旧版客户端需要兼容模式和额外的 auth.json。',
-        authModeLegacy: '兼容模式',
+        authModeDescription: '默认使用兼容模式，API Key 直接写入 config.toml；也可切换为 API Key 模式。',
+        authModeLegacy: '兼容模式（推荐）',
         authModeApiKey: 'API Key（单文件）',
         authModeApiKeyRestartNotice: '保存此配置后，必须完全退出并重启 Codex Desktop 或 CLI，然后新建 task，让客户端重新构建工具注册表。',
         configTomlHint: '这是可直接导入的完整配置，内含 API Key；请勿提交到代码仓库。',
@@ -226,34 +226,25 @@ export default {
       deepseek: {
         description: '通过当前 DeepSeek 分组配置 Claude Code、Codex 或 OpenCode。',
         codexDescription: '使用 API Key 配置 Codex，并通过当前 DeepSeek 分组发送请求。',
-        codexConfigTomlHint: '配置内已包含 API Key；如下载模型目录，请将两个文件保存到 Codex 配置目录后重启。',
-        codexNote: 'config.toml 含明文 API Key，请勿提交；下载的目录只包含模型元数据。'
+        codexConfigTomlHint: '配置内已包含 API Key；保存为 config.toml 后重启 Codex，model 可改为当前分组支持的模型。',
+        codexNote: 'config.toml 含明文 API Key，请勿提交到代码仓库。'
       },
       minimax: {
         description: '通过当前 MiniMax 分组配置 Claude Code、Codex 或 OpenCode。',
         codexDescription: '使用 API Key 配置 Codex，并通过当前 MiniMax 分组发送请求。',
-        codexConfigTomlHint: '配置内已包含 API Key；如下载模型目录，请将两个文件保存到 Codex 配置目录后重启。',
-        codexNote: 'config.toml 含明文 API Key，请勿提交；下载的目录只包含模型元数据。'
+        codexConfigTomlHint: '配置内已包含 API Key；保存为 config.toml 后重启 Codex，model 可改为当前分组支持的模型。',
+        codexNote: 'config.toml 含明文 API Key，请勿提交到代码仓库。'
       },
       composite: {
         description: '通过当前 Composite 路由分组配置受支持的客户端。',
-        codexDescription: '使用 API Key 和当前 Composite 分组的完整模型目录配置 Codex。',
-        codexConfigTomlHint: '配置内已包含 API Key；如下载模型目录，请将两个文件保存到 Codex 配置目录后重启。',
-        codexNote: 'config.toml 含明文 API Key，请勿提交；分组会根据目录中选中的模型路由请求。'
+        codexDescription: '使用当前 API Key 配置 Codex，并选择 Composite 分组支持的模型。',
+        codexConfigTomlHint: '配置内已包含 API Key；保存为 config.toml 后重启 Codex，model 可改为当前分组支持的模型。',
+        codexNote: 'config.toml 含明文 API Key，请勿提交；分组会根据 model 中填写的模型路由请求。'
       },
       routedCodex: {
-        description: '使用当前路由分组的完整模型目录配置 Codex。',
-        configTomlHint: '配置内已包含 API Key；如下载模型目录，请将两个文件保存到 Codex 配置目录后重启。',
-        note: 'config.toml 含明文 API Key，请勿提交；下载的目录只包含模型元数据。'
-      },
-      codexModelCatalog: {
-        title: 'Codex 模型目录',
-        description: '使用当前 API Key 获取目录，并保存到 config.toml 引用的路径。',
-        fetch: '获取目录',
-        retry: '重试',
-        download: '下载目录',
-        modelsCount: '已获取 {count} 个模型',
-        errorDescription: '无法使用当前 API Key 获取模型目录。'
+        description: '使用当前 API Key 和路由分组支持的模型配置 Codex。',
+        configTomlHint: '配置内已包含 API Key；保存为 config.toml 后重启 Codex，model 可改为当前分组支持的模型。',
+        note: 'config.toml 含明文 API Key，请勿提交到代码仓库。'
       },
       opencode: {
         title: 'OpenCode 配置示例',
