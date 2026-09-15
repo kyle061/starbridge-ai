@@ -5,7 +5,7 @@ export default {
         description: "选择服务商，自动填入接口地址和文本协议。API Key、模型白名单和分组由你配置。",
         customHint: "其他兼容 OpenAI 的服务：直接填写 Base URL，并在下方选择上游实际支持的文本协议。模型名称以服务商提供的模型 ID 为准。",
         localHint: "Ollama 需已启动并加载模型。Docker 中此地址指向宿主机；Linux 需配置 host-gateway，并按部署文档开放可信内网端点。无需真实密钥时可填写 ollama-local。",
-        openaiOAuthHint: "选择 OAuth 后，点击下一步并登录你的 OpenAI / ChatGPT 账号（包括 Pro 会员），授权完成后星桥会保存该账号的刷新凭据。之后在密钥管理中生成星桥 API Key，客户端请求会使用这个登录账号的订阅额度。"
+        openaiOAuthHint: "选择 OAuth 后，点击下一步并登录你的 OpenAI / ChatGPT 账号（包括 Pro 会员），授权完成后星桥会保存该账号的刷新凭据。之后在密钥管理中生成星桥 API Key，客户端请求会使用这个登录账号的 Codex 订阅用量；可用模型与限额以账号权限为准。"
       },
       title: '账号管理',
       description: '管理 AI 平台账号和 Cookie',

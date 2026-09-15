@@ -6,7 +6,7 @@ Starbridge AI（星桥 AI）是一个自托管的多模型 API 中转站，基�
 
 - 品牌默认名称改为 **Starbridge AI**，保留后台设置中的自定义站点名称和 Logo。
 - 添加 OpenAI 上游快捷配置：OpenAI、DeepSeek、SiliconFlow、OpenRouter、Ollama。
-- 支持 OpenAI OAuth：管理员可以登录 ChatGPT / OpenAI Pro 账号，把订阅账号加入账号池，再生成星桥 API Key 使用该账号额度。
+- 支持 OpenAI OAuth：管理员可以登录 ChatGPT / OpenAI Pro 账号，把订阅账号加入账号池，再生成星桥 API Key 使用该账号的 Codex 订阅用量（受账号权限和用量限制）。
 - 预设会同时填入 Base URL 和文本协议：OpenAI 使用 Responses；其他预设默认使用 Chat Completions。
 - 支持继续手动填写任何 OpenAI-compatible Base URL、API Key 和模型 ID。
 - 提供 PostgreSQL、Redis、可选 Caddy HTTPS 的 Docker Compose 部署模板。
@@ -47,7 +47,7 @@ docker compose --profile https up -d --build
 | Ollama | `http://host.docker.internal:11434/v1` | Chat Completions |
 | 其他兼容服务 | 由服务商提供 | 以服务商文档为准 |
 
-Ollama 的地址仅适用于 Docker Desktop；Linux 部署需要 `host-gateway` 和可信内网配置。不要把本地 Ollama 端点暴露到公网。
+Ollama 预设指向 Docker 宿主机；Compose 已加入 Linux 的 `host-gateway` 映射，仍需按指南配置可信内网和 HTTP 访问。不要把本地 Ollama 端点暴露到公网。
 
 ## API 兼容性
 

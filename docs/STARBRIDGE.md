@@ -28,10 +28,13 @@ docker compose logs -f gateway
 1. 登录后台，点击 **账号管理 → 添加账号**。
 2. 选择 **OpenAI → OAuth**，点击下一步。
 3. 点击生成授权链接，在打开的 OpenAI 页面登录你的 Pro 账号并授权；回到星桥后粘贴回调地址完成绑定。服务器无法直连 OpenAI 时，先给该账号选择可用代理。
-4. 保存账号，点击测试；成功后在 **分组管理** 中创建服务分组并绑定这个 OAuth 账号。
-5. 在 **密钥管理** 创建面向客户端的 Starbridge API Key。这个 Key 是给客户端调用的 Token，会由网关使用已登录的 OpenAI 账号转发请求，并消耗该账号的订阅额度。
+4. 保存账号，点击测试；成功后在 **分组管理** 中创建 OpenAI 分组，例如“我的 Pro”。需要固定使用这个账号时，分组只绑定这一个 OAuth 账号。
+5. 在 **API 密钥 → 创建密钥** 中选择“我的 Pro”分组，生成面向客户端的 Starbridge API Key。这个 Key 是给客户端调用的 Token，网关会使用已登录账号的 Codex 订阅用量。账号管理中可查看上游返回的用量窗口与重置时间。
+6. 标准模式下，星桥用户还需要有站内余额或分组订阅。管理员可以在用户管理中分配站内余额；这个余额是站内记账，与 OpenAI Pro 的上游额度分别管理。
 
-星桥只在服务端保存 OAuth 刷新凭据，不把 OpenAI 刷新 Token 返回给客户端。不要把客户端 API Key 发布到前端、日志、代码仓库或公共聊天中。OpenAI 账号订阅状态和可用模型仍由 OpenAI 账号本身决定。
+星桥保留上游的 OAuth 刷新能力，普通调用者只使用星桥 API Key。不要把客户端 API Key 发布到前端、日志、代码仓库或公共聊天中。可用模型及用量上限由 OpenAI 账号决定；Pro 不等于全部 API 模型都可用，也不会转换为 OpenAI Platform 的 API 余额。官方说明见 [Codex 身份验证](https://learn.chatgpt.com/docs/auth)。
+
+授权回调包含敏感的一次性授权码，只粘贴到自己部署的星桥后台。真实登录、额度读取与模型调用需要部署后使用你的账号验收，本仓库测试使用模拟上游。
 
 ### API Key 上游账号
 
@@ -43,6 +46,23 @@ docker compose logs -f gateway
 6. 在 **密钥管理** 创建面向客户端的 API Key，只把客户端 Key 发给使用者，不要暴露上游 Key。
 
 自定义兼容服务直接填服务商提供的 Base URL。若服务商只实现 `/v1/chat/completions`，选择 Chat Completions；只有确实支持 `/v1/responses` 的服务才选择 Responses。
+
+新上游域名还需加入 `.env` 的 `UPSTREAM_HOSTS`（逗号分隔），再执行 `docker compose up -d`。多个同平台上游应配置准确的模型白名单，避免请求被调度到不支持该模型的账号。
+
+### 本机 Ollama
+
+Compose 已配置 Linux 的 `host-gateway`。先启动 Ollama、加载模型，并确保容器能连接到宿主机 11434 端口。生产场景推荐把 Ollama 放到带 HTTPS 的可信端点，再把端点域名加入 `UPSTREAM_HOSTS`。
+
+只在你控制的本机测试环境中使用默认 HTTP 预设时，在 `.env` 设置下列选项并重建容器配置：
+
+```dotenv
+BIND_HOST=127.0.0.1
+SECURITY_URL_ALLOWLIST_ENABLED=false
+ALLOW_PRIVATE_UPSTREAMS=true
+ALLOW_HTTP_UPSTREAMS=true
+```
+
+这是上游原有 HTTP 接入方式，会跳过 URL 白名单；不要将该配置用于不可信账号或公共服务。只设置 `ALLOW_PRIVATE_UPSTREAMS=true` 不会使 HTTPS 白名单接受 HTTP 地址。
 
 ## 4. 常见客户端
 
@@ -70,5 +90,5 @@ print(response.choices[0].message.content)
 - 只在受信任的内网中启用私有上游；不要让用户可控的 URL 指向云元数据地址、数据库或宿主机管理端口。
 - 上游返回 401：检查账号 API Key、Base URL 是否重复 `/v1`、以及 Key 是否绑定到正确分组。
 - 上游返回 404：确认协议与路径；Chat-only 服务不要强制 Responses。
-- Ollama 连接失败：确认模型已加载、容器能访问宿主机端口，并仅在可信网络中使用 `ALLOW_PRIVATE_UPSTREAMS=true`。
-- 数据库或 Redis 反复重启：检查 `.env` 中密码是否为空、是否改过已创建数据卷的密码；首次安装建议删除测试卷后重新初始化。
+- Ollama 连接失败：按上面的“本机 Ollama”配置检查协议、模型和宿主机可达性。
+- 数据库或 Redis 反复重启：检查 `.env` 中密码是否为空、是否改过已创建数据卷的密码；先保留数据并检查服务日志。

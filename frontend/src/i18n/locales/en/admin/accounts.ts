@@ -5,7 +5,7 @@ export default {
         description: "Choose a provider to fill its base URL and text protocol. Configure your own API key, model allowlist and groups.",
         customHint: "For other OpenAI-compatible services, enter a base URL and select the text protocol supported upstream. Use model IDs supplied by that provider.",
         localHint: "Start Ollama and load a model first. This Docker URL points to the host; Linux requires host-gateway and explicit trusted-local endpoint configuration. Use ollama-local if the upstream requires no real key.",
-        openaiOAuthHint: "Choose OAuth, continue, and sign in to your OpenAI / ChatGPT account, including a Pro subscription. After authorization, Starbridge stores the refresh credential, and you can issue a Starbridge API key that uses this account's subscription quota."
+        openaiOAuthHint: "Choose OAuth, continue, and sign in to your OpenAI / ChatGPT account, including a Pro subscription. After authorization, Starbridge stores the refresh credential, and you can issue a Starbridge API key that uses this account's Codex subscription quota, subject to its model access and limits."
       },
       title: 'Account Management',
       description: 'Manage AI platform accounts and credentials',

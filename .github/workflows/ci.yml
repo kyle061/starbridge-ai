@@ -28,8 +28,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
-        with: { go-version-file: backend/go.mod, cache: true }
-      - run: go test ./internal/pkg/apicompat ./internal/service -run 'TestForwardResponses_ForceChatCompletions|TestResolveOpenAIForwardModel|TestChatCompletionsToResponses'
+        with: { go-version-file: backend/go.mod, cache: true, cache-dependency-path: backend/go.sum }
+      - run: go test ./internal/pkg/apicompat ./internal/service -run 'TestOpenAIOAuthService_|TestForwardResponses_ForceChatCompletions|TestResolveOpenAIForwardModel|TestChatCompletionsToResponses'
         working-directory: backend
 
   deployment:
@@ -37,13 +37,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: python3 deploy/starbridge/test_init_env.py
-      - run: python3 - <<'PY'
+      - run: |
+          python3 - <<'PY'
           import pathlib, subprocess, tempfile
           root = pathlib.Path('deploy/starbridge')
           with tempfile.TemporaryDirectory() as d:
               p = pathlib.Path(d)
-              for name in ('.env.example', 'compose.yaml', 'Caddyfile', 'init-env.py'):
+              for name in ('.env.example', 'init-env.py'):
                   (p/name).write_bytes((root/name).read_bytes())
               subprocess.run(['python3', str(p/'init-env.py'), '--admin-email', 'ci@example.com'], check=True)
-              subprocess.run(['docker', 'compose', '-f', str(p/'compose.yaml'), '--env-file', str(p/'.env'), 'config'], check=True, stdout=subprocess.DEVNULL)
-        PY
+              subprocess.run(['docker', 'compose', '-f', str(root/'compose.yaml'), '--env-file', str(p/'.env'), 'config', '--quiet'], check=True)
+          PY

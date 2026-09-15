@@ -34,7 +34,7 @@ services:
       TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:?Run init-env.py first}
       TZ: ${TZ:-Asia/Shanghai}
       SECURITY_URL_ALLOWLIST_ENABLED: ${SECURITY_URL_ALLOWLIST_ENABLED:-true}
-      SECURITY_URL_ALLOWLIST_UPSTREAM_HOSTS: ${UPSTREAM_HOSTS:-api.openai.com,api.anthropic.com,generativelanguage.googleapis.com,api.deepseek.com,api.siliconflow.cn,openrouter.ai}
+      SECURITY_URL_ALLOWLIST_UPSTREAM_HOSTS: ${UPSTREAM_HOSTS:-api.openai.com,auth.openai.com,chatgpt.com,api.anthropic.com,generativelanguage.googleapis.com,api.deepseek.com,api.siliconflow.cn,openrouter.ai}
       SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS: ${ALLOW_PRIVATE_UPSTREAMS:-false}
       SECURITY_URL_ALLOWLIST_ALLOW_INSECURE_HTTP: ${ALLOW_HTTP_UPSTREAMS:-false}
       BATCH_IMAGE_ENABLED: "false"
