@@ -305,7 +305,7 @@ const copiedIndex = ref<number | null>(null)
 const activeTab = ref<string>('unix')
 const activeClientTab = ref<string>('claude')
 type CodexAuthMode = 'legacy' | 'api-key'
-const codexAuthMode = ref<CodexAuthMode>('legacy')
+const codexAuthMode = ref<CodexAuthMode>('api-key')
 type CodexModelManifestState = 'idle' | 'loading' | 'ready' | 'error'
 const codexModelManifestState = ref<CodexModelManifestState>('idle')
 const codexModelManifestContent = ref('')
@@ -350,12 +350,12 @@ const defaultClientTab = computed(() => {
 watch(() => props.platform, () => {
   activeTab.value = 'unix'
   activeClientTab.value = defaultClientTab.value
-  codexAuthMode.value = 'legacy'
+  codexAuthMode.value = 'api-key'
 }, { immediate: true })
 
 watch(() => props.show, (show) => {
   if (show) {
-    codexAuthMode.value = 'legacy'
+    codexAuthMode.value = 'api-key'
   } else {
     resetCodexModelManifest()
   }
@@ -751,9 +751,9 @@ const currentFiles = computed((): FileConfig[] => {
         return generateAnthropicFiles(baseUrl, apiKey)
       }
       if (activeClientTab.value === 'codex-ws') {
-        return generateOpenAIWsFiles(baseUrl, apiKey)
+        return generateOpenAIWsFiles(apiBase, apiKey)
       }
-      return generateOpenAIFiles(baseUrl, apiKey)
+      return generateOpenAIFiles(apiBase, apiKey)
     case 'gemini':
       if (activeClientTab.value === 'codex') {
         return generateRoutedCodexFiles(apiBase, apiKey, 'gemini')
@@ -958,17 +958,14 @@ function generateOpenAIFiles(baseUrl: string, apiKey: string): FileConfig[] {
   const reasoningEffortLine = codexReasoningEffortTomlLine(model)
 
   // config.toml content
-  const configContent = `model_provider = "OpenAI"
+  const configContent = `model_provider = "sub2api"
 model = "${model}"
 review_model = "${model}"
-${reasoningEffortLine}disable_response_storage = true
+${reasoningEffortLine}
 ${codexModelCatalogTomlLine()}
-network_access = "enabled"
-windows_wsl_setup_acknowledged = true
-
-[model_providers.OpenAI]
-name = "OpenAI"
-base_url = "${baseUrl}"
+[model_providers.sub2api]
+name = "Sub2API OpenAI"
+base_url = "${escapeTomlBasicString(baseUrl)}"
 wire_api = "responses"
 ${generateCodexProviderAuthConfig(apiKey)}
 
@@ -1017,7 +1014,14 @@ function joinConfigPath(dir: string, file: string, windows: boolean): string {
 }
 
 function escapeTomlBasicString(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .split(String.fromCharCode(8)).join('\\b')
+    .replace(/\t/g, '\\t')
+    .replace(/\n/g, '\\n')
+    .replace(/\f/g, '\\f')
+    .replace(/\r/g, '\\r')
 }
 
 function generateGrokFiles(baseUrl: string, apiKey: string): FileConfig[] {
@@ -1163,29 +1167,13 @@ image_edit_model_override = "grok-imagine-edit"
 }
 
 function generateGrokCodexFiles(baseUrl: string, apiKey: string): FileConfig[] {
-  // Codex config reference: wire_api = "responses" only; prefer env_key over experimental_bearer_token.
+  // Codex config reference: wire_api = "responses" only. Keep the generated setup
+  // self-contained because users paste/import this block as a single config file.
   // Non-OpenAI gateways should set supports_websockets = false (HTTP/SSE).
   const shell = activeTab.value
   const isWindowsPath = shell === 'windows' || shell === 'cmd' || shell === 'powershell'
   const configDir = isWindowsPath ? '%userprofile%\\.codex' : '~/.codex'
   const model = selectCodexCatalogModel('grok-4.5')
-
-  let envPath: string
-  let envContent: string
-  switch (shell) {
-    case 'cmd':
-      envPath = 'Command Prompt'
-      envContent = `set SUB2API_API_KEY=${apiKey}`
-      break
-    case 'powershell':
-    case 'windows':
-      envPath = 'PowerShell'
-      envContent = `$env:SUB2API_API_KEY="${apiKey}"`
-      break
-    default:
-      envPath = 'Terminal'
-      envContent = `export SUB2API_API_KEY="${apiKey}"`
-  }
 
   const configContent = `# Codex CLI → Sub2API Grok group
 # Docs: Codex config reference (model_providers.*, wire_api = "responses")
@@ -1200,17 +1188,12 @@ ${codexModelCatalogTomlLine()}
 # review_model = "${model}"
 # model_reasoning_effort = "medium"
 # model_context_window = 500000
-# disable_response_storage = true
-# network_access = "enabled"
-# windows_wsl_setup_acknowledged = true
 
 [model_providers.sub2api]
 name = "Sub2API Grok"
-base_url = "${baseUrl}"
-# Prefer env_key (variable NAME). Do not combine with experimental_bearer_token.
-env_key = "SUB2API_API_KEY"
-# Fallback only if you cannot set env (discouraged — keeps secret on disk):
-# experimental_bearer_token = "${apiKey}"
+base_url = "${escapeTomlBasicString(baseUrl)}"
+# This file contains the API key. Keep it private and do not commit it.
+experimental_bearer_token = "${escapeTomlBasicString(apiKey)}"
 wire_api = "responses"
 # API-key providers: do not require ChatGPT OAuth login
 requires_openai_auth = false
@@ -1222,7 +1205,6 @@ supports_websockets = false
 # goals = true`
 
   return [
-    { path: envPath, content: envContent },
     {
       path: joinConfigPath(configDir, 'config.toml', isWindowsPath),
       content: configContent,
@@ -1267,27 +1249,22 @@ function generateRoutedCodexFiles(
     composite: 'Composite'
   }
   const label = labels[platform]
-  const envContent = isWindows
-    ? `$env:SUB2API_API_KEY="${apiKey}"`
-    : `export SUB2API_API_KEY="${apiKey}"`
-
   const configContent = `# Codex CLI -> Sub2API ${label} group
 model_provider = "sub2api"
 model = "${model}"
 review_model = "${model}"
-disable_response_storage = true
 ${codexModelCatalogTomlLine()}
 
 [model_providers.sub2api]
 name = "Sub2API ${label}"
-base_url = "${baseUrl}"
-env_key = "SUB2API_API_KEY"
+base_url = "${escapeTomlBasicString(baseUrl)}"
+# This file contains the API key. Keep it private and do not commit it.
+experimental_bearer_token = "${escapeTomlBasicString(apiKey)}"
 wire_api = "responses"
 requires_openai_auth = false
 supports_websockets = false`
 
   return [
-    { path: isWindows ? 'PowerShell' : 'Terminal', content: envContent },
     {
       path: joinConfigPath(configDir, 'config.toml', isWindows),
       content: configContent,
@@ -1307,17 +1284,14 @@ function generateOpenAIWsFiles(baseUrl: string, apiKey: string): FileConfig[] {
   const reasoningEffortLine = codexReasoningEffortTomlLine(model)
 
   // config.toml content with WebSocket v2
-  const configContent = `model_provider = "OpenAI"
+  const configContent = `model_provider = "sub2api"
 model = "${model}"
 review_model = "${model}"
-${reasoningEffortLine}disable_response_storage = true
+${reasoningEffortLine}
 ${codexModelCatalogTomlLine()}
-network_access = "enabled"
-windows_wsl_setup_acknowledged = true
-
-[model_providers.OpenAI]
-name = "OpenAI"
-base_url = "${baseUrl}"
+[model_providers.sub2api]
+name = "Sub2API OpenAI"
+base_url = "${escapeTomlBasicString(baseUrl)}"
 wire_api = "responses"
 supports_websockets = true
 ${generateCodexProviderAuthConfig(apiKey)}

@@ -169,16 +169,16 @@ export default {
       noGroupDescription:
         '此 API 密钥尚未分配分组，请先在密钥列表中点击分组列进行分配，然后才能查看使用配置。',
       openai: {
-        description: '将以下配置文件添加到 Codex CLI 配置目录中。',
+        description: '将以下配置保存为 Codex CLI 配置目录中的 config.toml。',
         authModeTitle: 'Codex 认证模式',
-        authModeDescription: '兼容模式保留旧版 Codex 配置；API Key Mode 用于授权客户端图片执行器。',
+        authModeDescription: '推荐 API Key 单文件模式；仅旧版客户端需要兼容模式和额外的 auth.json。',
         authModeLegacy: '兼容模式',
-        authModeApiKey: 'API Key Mode',
+        authModeApiKey: 'API Key（单文件）',
         authModeApiKeyRestartNotice: '保存此配置后，必须完全退出并重启 Codex Desktop 或 CLI，然后新建 task，让客户端重新构建工具注册表。',
-        configTomlHint: '请确保以下内容位于 config.toml 文件的开头部分',
-        note: '请确保配置目录存在。macOS/Linux 用户可运行 mkdir -p ~/.codex 创建目录。',
+        configTomlHint: '这是可直接导入的完整配置，内含 API Key；请勿提交到代码仓库。',
+        note: '请确保配置目录存在。macOS/Linux 用户可运行 mkdir -p ~/.codex 创建目录；config.toml 含明文 API Key，请妥善保管。',
         noteWindows:
-          '按 Win+R，输入 %userprofile%\\.codex 打开配置目录。如目录不存在，请先手动创建。'
+          '按 Win+R，输入 %userprofile%\\.codex 打开配置目录。如目录不存在，请先手动创建；config.toml 含明文 API Key，请妥善保管。'
       },
       cliTabs: {
         claudeCode: 'Claude Code',
@@ -211,7 +211,7 @@ export default {
         configTomlHint:
           '官方路径：~/.grok/config.toml（或 $GROK_HOME）。请填写 [endpoints]（models_base_url / models_list_url / xai_api_base_url / cli_chat_proxy_base_url）、[auth] preferred_method=api_key、[models]、[session]、[features] 图片/视频覆盖。优先 env_key，勿硬编码 api_key；文本模型必须 api_backend=responses。合并前备份，保存后运行 grok inspect。',
         codexConfigTomlHint:
-          'Codex 官方：wire_api 仅支持 "responses"；优先 env_key，勿与 experimental_bearer_token 混用；非 OpenAI 网关默认 supports_websockets = false（Sub2API 仍可接客户端 WS 并桥接到 HTTP/SSE）。合并前备份 ~/.codex/config.toml。',
+          '可直接导入的单文件 Codex 配置，内含 API Key。wire_api 使用 "responses"；非 OpenAI 网关设置 supports_websockets = false。合并前备份 ~/.codex/config.toml，勿提交密钥。',
         note:
           '导出 GROK_MODELS_BASE_URL 与 XAI_API_KEY，将完整 config.toml（endpoints/auth/models/session/features）保存为 ~/.grok/config.toml，运行 grok inspect，再用 /model 选择 grok-4.5（编程场景可用 grok-build-0.1）。',
         noteWindows:
@@ -219,32 +219,32 @@ export default {
         claudeNote:
           '二选一：终端环境变量仅当前会话；~/.claude/settings.json 可持久化。请勿把含 API Key 的文件提交到仓库。',
         codexNote:
-          '导出 SUB2API_API_KEY，将 config.toml 保存到 ~/.codex（可用 mkdir -p ~/.codex）。优先 env_key，勿提交密钥。',
+          '将 config.toml 保存到 ~/.codex（可用 mkdir -p ~/.codex）并重启 Codex。文件内含 API Key，请勿提交。',
         codexNoteWindows:
-          '设置 $env:SUB2API_API_KEY，将 config.toml 保存到 %USERPROFILE%\\.codex。优先 env_key，勿提交密钥。'
+          '将 config.toml 保存到 %USERPROFILE%\\.codex 并重启 Codex。文件内含 API Key，请勿提交。'
       },
       deepseek: {
         description: '通过当前 DeepSeek 分组配置 Claude Code、Codex 或 OpenCode。',
         codexDescription: '使用 API Key 配置 Codex，并通过当前 DeepSeek 分组发送请求。',
-        codexConfigTomlHint: '下载下方模型目录，将两个文件保存到 Codex 配置目录后重启 Codex。',
-        codexNote: '启动 Codex 前先导出 SUB2API_API_KEY。下载的目录只包含模型元数据，不包含 API Key。'
+        codexConfigTomlHint: '配置内已包含 API Key；如下载模型目录，请将两个文件保存到 Codex 配置目录后重启。',
+        codexNote: 'config.toml 含明文 API Key，请勿提交；下载的目录只包含模型元数据。'
       },
       minimax: {
         description: '通过当前 MiniMax 分组配置 Claude Code、Codex 或 OpenCode。',
         codexDescription: '使用 API Key 配置 Codex，并通过当前 MiniMax 分组发送请求。',
-        codexConfigTomlHint: '下载下方模型目录，将两个文件保存到 Codex 配置目录后重启 Codex。',
-        codexNote: '启动 Codex 前先导出 SUB2API_API_KEY。下载的目录只包含模型元数据，不包含 API Key。'
+        codexConfigTomlHint: '配置内已包含 API Key；如下载模型目录，请将两个文件保存到 Codex 配置目录后重启。',
+        codexNote: 'config.toml 含明文 API Key，请勿提交；下载的目录只包含模型元数据。'
       },
       composite: {
         description: '通过当前 Composite 路由分组配置受支持的客户端。',
         codexDescription: '使用 API Key 和当前 Composite 分组的完整模型目录配置 Codex。',
-        codexConfigTomlHint: '下载下方模型目录，将两个文件保存到 Codex 配置目录后重启 Codex。',
-        codexNote: '启动 Codex 前先导出 SUB2API_API_KEY；分组会根据目录中选中的模型路由请求。'
+        codexConfigTomlHint: '配置内已包含 API Key；如下载模型目录，请将两个文件保存到 Codex 配置目录后重启。',
+        codexNote: 'config.toml 含明文 API Key，请勿提交；分组会根据目录中选中的模型路由请求。'
       },
       routedCodex: {
         description: '使用当前路由分组的完整模型目录配置 Codex。',
-        configTomlHint: '下载下方模型目录，将两个文件保存到 Codex 配置目录后重启 Codex。',
-        note: '启动 Codex 前先导出 SUB2API_API_KEY。下载的目录只包含模型元数据，不包含 API Key。'
+        configTomlHint: '配置内已包含 API Key；如下载模型目录，请将两个文件保存到 Codex 配置目录后重启。',
+        note: 'config.toml 含明文 API Key，请勿提交；下载的目录只包含模型元数据。'
       },
       codexModelCatalog: {
         title: 'Codex 模型目录',

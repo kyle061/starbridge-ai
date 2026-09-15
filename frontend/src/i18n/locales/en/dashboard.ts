@@ -169,15 +169,15 @@ export default {
       noGroupTitle: 'Please assign a group first',
       noGroupDescription: 'This API key has not been assigned to a group. Please click the group column in the key list to assign one before viewing the configuration.',
       openai: {
-        description: 'Add the following configuration files to your Codex CLI config directory.',
+        description: 'Save the following configuration as config.toml in your Codex CLI config directory.',
         authModeTitle: 'Codex authentication mode',
-        authModeDescription: 'Compatibility mode keeps the existing setup for older Codex clients. API Key Mode authorizes the client-side image executor.',
+        authModeDescription: 'API Key single-file mode is recommended. Only older clients need compatibility mode and a separate auth.json.',
         authModeLegacy: 'Compatibility mode',
-        authModeApiKey: 'API Key Mode',
+        authModeApiKey: 'API Key (single file)',
         authModeApiKeyRestartNotice: 'After saving this configuration, completely quit and restart Codex Desktop or CLI, then create a new task so the client can rebuild its tool registry.',
-        configTomlHint: 'Make sure the following content is at the beginning of the config.toml file',
-        note: 'Make sure the config directory exists. macOS/Linux users can run mkdir -p ~/.codex to create it.',
-        noteWindows: 'Press Win+R and enter %userprofile%\\.codex to open the config directory. Create it manually if it does not exist.',
+        configTomlHint: 'This complete configuration can be imported directly and contains the API key. Do not commit it.',
+        note: 'Make sure the config directory exists. macOS/Linux users can run mkdir -p ~/.codex. config.toml contains the plaintext API key, so keep it private.',
+        noteWindows: 'Press Win+R and enter %userprofile%\\.codex to open the config directory. Create it if needed. config.toml contains the plaintext API key, so keep it private.',
       },
       cliTabs: {
         claudeCode: 'Claude Code',
@@ -207,7 +207,7 @@ export default {
         configTomlHint:
           'Official path: ~/.grok/config.toml (or $GROK_HOME). Fill [endpoints] (models_base_url / models_list_url / xai_api_base_url / cli_chat_proxy_base_url), [auth] preferred_method=api_key, [models], [session], and [features] image/video overrides. Prefer env_key over api_key; every text model needs api_backend=responses. Back up before merge, then run grok inspect.',
         codexConfigTomlHint:
-          'Official Codex: wire_api = "responses" only; prefer env_key over experimental_bearer_token; supports_websockets = false for non-OpenAI gateways (Sub2API can still accept client WS and bridge to HTTP/SSE). Back up ~/.codex/config.toml before merge.',
+          'A directly importable single-file Codex config containing the API key. It uses wire_api = "responses" and supports_websockets = false for this non-OpenAI gateway. Back up ~/.codex/config.toml and do not commit the key.',
         note:
           'Export GROK_MODELS_BASE_URL and XAI_API_KEY, save the full config.toml (endpoints/auth/models/session/features) as ~/.grok/config.toml, run grok inspect, then /model grok-4.5 (or grok-build-0.1 for coding).',
         noteWindows:
@@ -215,32 +215,32 @@ export default {
         claudeNote:
           'Choose one method: terminal env for this session, or ~/.claude/settings.json for persistence. Do not commit files that contain your API key.',
         codexNote:
-          'Export SUB2API_API_KEY, save config.toml under ~/.codex (mkdir -p ~/.codex). Prefer env_key auth; do not commit secrets.',
+          'Save config.toml under ~/.codex (mkdir -p ~/.codex) and restart Codex. The file contains the API key; do not commit it.',
         codexNoteWindows:
-          'Set $env:SUB2API_API_KEY, save config.toml under %USERPROFILE%\\.codex. Prefer env_key auth; do not commit secrets.',
+          'Save config.toml under %USERPROFILE%\\.codex and restart Codex. The file contains the API key; do not commit it.',
       },
       deepseek: {
         description: 'Configure Claude Code, Codex, or OpenCode through the current DeepSeek group.',
         codexDescription: 'Configure Codex with API key authentication through the current DeepSeek group.',
-        codexConfigTomlHint: 'Download the model catalog below, save both files under the Codex config directory, and restart Codex.',
-        codexNote: 'Export SUB2API_API_KEY before starting Codex. The downloaded catalog contains model metadata only, not your API key.',
+        codexConfigTomlHint: 'The API key is included in the config. If you download the catalog, save both files under the Codex config directory and restart.',
+        codexNote: 'config.toml contains the plaintext API key; do not commit it. The downloaded catalog contains model metadata only.',
       },
       minimax: {
         description: 'Configure Claude Code, Codex, or OpenCode through the current MiniMax group.',
         codexDescription: 'Configure Codex with API key authentication through the current MiniMax group.',
-        codexConfigTomlHint: 'Download the model catalog below, save both files under the Codex config directory, and restart Codex.',
-        codexNote: 'Export SUB2API_API_KEY before starting Codex. The downloaded catalog contains model metadata only, not your API key.',
+        codexConfigTomlHint: 'The API key is included in the config. If you download the catalog, save both files under the Codex config directory and restart.',
+        codexNote: 'config.toml contains the plaintext API key; do not commit it. The downloaded catalog contains model metadata only.',
       },
       composite: {
         description: 'Configure supported clients through the current Composite routing group.',
         codexDescription: 'Configure Codex with API key authentication and the complete model catalog for this Composite group.',
-        codexConfigTomlHint: 'Download the model catalog below, save both files under the Codex config directory, and restart Codex.',
-        codexNote: 'Export SUB2API_API_KEY before starting Codex. Model requests are routed by the selected catalog slug.',
+        codexConfigTomlHint: 'The API key is included in the config. If you download the catalog, save both files under the Codex config directory and restart.',
+        codexNote: 'config.toml contains the plaintext API key; do not commit it. Model requests are routed by the selected catalog slug.',
       },
       routedCodex: {
         description: 'Configure Codex with the complete model catalog for the current routed group.',
-        configTomlHint: 'Download the model catalog below, save both files under the Codex config directory, and restart Codex.',
-        note: 'Export SUB2API_API_KEY before starting Codex. The downloaded catalog contains model metadata only, not your API key.',
+        configTomlHint: 'The API key is included in the config. If you download the catalog, save both files under the Codex config directory and restart.',
+        note: 'config.toml contains the plaintext API key; do not commit it. The downloaded catalog contains model metadata only.',
       },
       codexModelCatalog: {
         title: 'Codex model catalog',
