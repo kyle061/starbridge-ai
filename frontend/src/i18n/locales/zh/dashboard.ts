@@ -66,6 +66,19 @@ export default {
 
   // API Keys
   keys: {
+    prepaidBalance: '可用 API 美元额度：${balance}',
+    prepaidPurchaseRequired: '完成首次付款后，系统会自动生成 Key。',
+    prepaidReady: '余额充足，可以使用 Key 发起请求。',
+    prepaidPaused: '余额已耗尽，所有 Key 的新请求已暂停。充值到账且余额恢复为正后自动恢复。',
+    prepaidLifetimeHint: 'Key 长期有效，所有 Key 共用账户美元额度，按实际 Token 用量计费。',
+    prepaidAccessUnavailable: '暂时无法查询充值状态，请刷新后重试。',
+    purchaseBalance: '购买美元额度',
+    renewBalance: '充值续用',
+    prepaidPaymentSuccess: '美元额度已到账。首次购买会生成长期有效 Key；续费后继续使用原 Key。',
+    viewMyKeys: '查看我的 Key',
+    prepaidPausedStatus: '余额不足，已暂停',
+    prepaidPurchaseStatus: '等待首次付款',
+
     title: 'API 密钥',
     description: '管理您的 API 密钥和访问令牌',
     searchPlaceholder: '搜索名称或Key...',

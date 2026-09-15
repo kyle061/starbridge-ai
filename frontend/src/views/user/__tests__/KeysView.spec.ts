@@ -6,6 +6,7 @@ import type { ApiKey } from '@/types'
 import KeysView from '../KeysView.vue'
 
 const {
+  getAccess,
   listKeys,
   updateKey,
   getPublicSettings,
@@ -18,6 +19,7 @@ const {
   isCurrentStep,
   nextStep,
 } = vi.hoisted(() => ({
+  getAccess: vi.fn(),
   listKeys: vi.fn(),
   updateKey: vi.fn(),
   getPublicSettings: vi.fn(),
@@ -59,6 +61,7 @@ const messages: Record<string, string> = {
 
 vi.mock('@/api', () => ({
   keysAPI: {
+    getAccess,
     list: listKeys,
     create: vi.fn(),
     update: updateKey,
@@ -267,6 +270,8 @@ describe('user KeysView column settings', () => {
   beforeEach(() => {
     localStorage.clear()
 
+    getAccess.mockReset()
+    getAccess.mockResolvedValue({ enabled: false, can_create_key: true, requests_allowed: true, has_purchased: false, balance: 10 })
     listKeys.mockReset()
     updateKey.mockReset()
     getPublicSettings.mockReset()
@@ -291,6 +296,37 @@ describe('user KeysView column settings', () => {
     getAvailableGroups.mockResolvedValue([])
     getUserGroupRates.mockResolvedValue({})
     isCurrentStep.mockReturnValue(false)
+  })
+
+  it('requires a completed purchase before creating keys, even with gifted balance', async () => {
+    getAccess.mockResolvedValue({ enabled: true, has_purchased: false, balance: 10, can_create_key: false, requests_allowed: false })
+    const wrapper = await mountView()
+    expect(wrapper.get('[data-tour="keys-create-btn"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-test="prepaid-access"]').text()).toContain('keys.prepaidPurchaseRequired')
+    expect(wrapper.get('[data-test="prepaid-access"] a').attributes('href')).toBe('/purchase')
+    wrapper.unmount()
+  })
+
+  it('keeps the same key and enables it after a renewal restores the balance', async () => {
+    getAccess.mockResolvedValue({ enabled: true, has_purchased: true, balance: 0, can_create_key: false, requests_allowed: false })
+    const wrapper = await mountView()
+    expect(wrapper.get('[data-tour="keys-create-btn"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-test="prepaid-access"]').text()).toContain('keys.prepaidPaused')
+    getAccess.mockResolvedValue({ enabled: true, has_purchased: true, balance: 20, can_create_key: true, requests_allowed: true })
+    window.dispatchEvent(new Event('focus'))
+    await flushPromises()
+    expect(wrapper.get('[data-tour="keys-create-btn"]').attributes('disabled')).toBeUndefined()
+    expect(wrapper.get('[data-test="prepaid-access"]').text()).toContain('keys.prepaidReady')
+    expect(listKeys).toHaveBeenCalledTimes(1)
+    wrapper.unmount()
+  })
+
+  it('disables key creation when purchase verification fails', async () => {
+    getAccess.mockRejectedValue(new Error('unavailable'))
+    const wrapper = await mountView()
+    expect(wrapper.get('[data-tour="keys-create-btn"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.text()).toContain('keys.prepaidAccessUnavailable')
+    wrapper.unmount()
   })
 
   it.each([

@@ -468,6 +468,14 @@ func (s *APIKeyService) Create(ctx context.Context, userID int64, req CreateAPIK
 		return nil, fmt.Errorf("get user: %w", err)
 	}
 
+	// 先确认支付到账与可用余额
+	if s.RequiresBalancePurchase(user) {
+		if err := checkPrepaidBalance(ctx, s.userRepo, user, nil); err != nil {
+			return nil, err
+		}
+		req.ExpiresInDays = nil
+	}
+
 	// 验证 IP 白名单格式
 	if len(req.IPWhitelist) > 0 {
 		if invalid := ip.ValidateIPPatterns(req.IPWhitelist); len(invalid) > 0 {
@@ -490,6 +498,9 @@ func (s *APIKeyService) Create(ctx context.Context, userID int64, req CreateAPIK
 		}
 
 		// 检查用户是否可以绑定该分组
+		if s.RequiresBalancePurchase(user) && group.IsSubscriptionType() {
+			return nil, ErrPrepaidGroupRequired
+		}
 		if !s.canUserBindGroup(ctx, user, group) {
 			return nil, ErrGroupNotAllowed
 		}
@@ -784,6 +795,17 @@ func (s *APIKeyService) Update(ctx context.Context, id int64, userID int64, req 
 		}
 	}
 
+	if s.cfg != nil && s.cfg.Billing.RequireBalancePurchase {
+		owner, err := s.userRepo.GetByID(ctx, userID)
+		if err != nil {
+			return nil, err
+		}
+		if s.RequiresBalancePurchase(owner) {
+			req.ExpiresAt = nil
+			req.ClearExpiration = true
+		}
+	}
+
 	// fields 只登记本次请求真正要改的列。quota_used 与 usage_5h/1d/7d 由计费热路径
 	// 原子递增，除非用户显式点了"重置"，否则这里不用快照把它们写回去。
 	var fields APIKeyUpdateFields
@@ -813,6 +835,9 @@ func (s *APIKeyService) Update(ctx context.Context, id int64, userID int64, req 
 			return nil, ErrGroupNotAllowed
 		}
 
+		if s.RequiresBalancePurchase(user) && group.IsSubscriptionType() {
+			return nil, ErrPrepaidGroupRequired
+		}
 		apiKey.GroupID = req.GroupID
 		fields.GroupID = true
 	}
@@ -1045,6 +1070,9 @@ func (s *APIKeyService) GetAvailableGroups(ctx context.Context, userID int64) ([
 	// 过滤出用户有权限的分组
 	availableGroups := make([]Group, 0)
 	for _, group := range allGroups {
+		if s.RequiresBalancePurchase(user) && group.IsSubscriptionType() {
+			continue
+		}
 		if s.canUserBindGroupInternal(user, &group, subscribedGroupIDs) {
 			availableGroups = append(availableGroups, group)
 		}

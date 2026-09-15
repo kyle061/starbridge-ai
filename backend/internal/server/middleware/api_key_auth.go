@@ -9,6 +9,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/ip"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
@@ -170,6 +171,12 @@ func apiKeyAuthWithSubscription(apiKeyService *service.APIKeyService, subscripti
 		// authenticated key and must remain available after the completed
 		// generation consumes the key's remaining balance.
 		skipBilling := c.Request.URL.Path == "/v1/usage" || billingInfoRequest || isAsyncImageTaskRead(c.Request.Method, c.Request.URL.Path)
+		if !skipBilling {
+			if err := apiKeyService.CheckPrepaidAccess(c.Request.Context(), apiKey.User, apiKey.Group); err != nil {
+				AbortWithError(c, infraerrors.Code(err), infraerrors.Reason(err), infraerrors.Message(err))
+				return
+			}
+		}
 
 		// ── 4. SimpleMode → early return ─────────────────────────────
 

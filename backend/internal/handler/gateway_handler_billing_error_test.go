@@ -55,6 +55,12 @@ func TestBillingErrorDetails_UnknownErrorFallsBackTo403(t *testing.T) {
 	require.NotEmpty(t, msg)
 }
 
+func TestPrepaidBillingLookupFailureMapsTo503(t *testing.T) {
+	status, _, message, _ := billingErrorDetails(service.ErrPrepaidAccessUnavailable)
+	require.Equal(t, http.StatusServiceUnavailable, status)
+	require.NotEmpty(t, message)
+}
+
 func TestExtractQuotaResetSeconds_T19_HappyPath(t *testing.T) {
 	err := service.ErrUserPlatformDailyQuotaExhausted.WithMetadata(map[string]string{
 		"window_resets_at": time.Now().Add(10 * time.Second).UTC().Format(time.RFC3339),

@@ -3,6 +3,15 @@
     <TablePageLayout>
       <template #filters>
         <div class="flex flex-col gap-3">
+          <div v-if="prepaidAccess?.enabled" class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary-200 bg-primary-50 p-4 dark:border-primary-900 dark:bg-primary-950/30" data-test="prepaid-access">
+            <div class="space-y-1 text-sm">
+              <p class="font-semibold text-gray-900 dark:text-white">{{ t('keys.prepaidBalance', { balance: prepaidAccess.balance.toFixed(8).replace(/0+$/, '').replace(/\.$/, '') }) }}</p>
+              <p class="text-gray-600 dark:text-gray-300">{{ t(prepaidStatusMessage) }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('keys.prepaidLifetimeHint') }}</p>
+            </div>
+            <a href="/purchase" class="btn btn-primary">{{ t(prepaidAccess.has_purchased ? 'keys.renewBalance' : 'keys.purchaseBalance') }}</a>
+          </div>
+          <p v-if="prepaidAccessError" class="text-sm text-amber-600" role="alert">{{ t('keys.prepaidAccessUnavailable') }}</p>
           <div class="grid grid-cols-2 items-center gap-3 sm:flex sm:flex-wrap">
             <SearchInput
               v-model="filterSearch"
@@ -89,7 +98,7 @@
               </button>
             </div>
           </div>
-          <button @click="showCreateModal = true" class="btn btn-primary" data-tour="keys-create-btn">
+          <button @click="showCreateModal = true" :disabled="!canCreateKey" class="btn btn-primary" data-tour="keys-create-btn">
             <Icon name="plus" size="md" class="mr-2" />
             {{ t('keys.createKey') }}
           </button>
@@ -361,7 +370,10 @@
           </template>
 
           <template #cell-status="{ value }">
-            <span :class="[
+            <span v-if="value === 'active' && prepaidAccess?.enabled && !prepaidAccess.requests_allowed" class="badge badge-warning">
+              {{ t(prepaidAccess.has_purchased ? 'keys.prepaidPausedStatus' : 'keys.prepaidPurchaseStatus') }}
+            </span>
+            <span v-else :class="[
               'badge',
               value === 'active' ? 'badge-success' :
               value === 'quota_exhausted' ? 'badge-warning' :
@@ -857,7 +869,8 @@
         </div>
 
         <!-- Expiration Section -->
-        <div class="space-y-3">
+        <p v-if="prepaidAccess?.enabled" class="input-hint">{{ t('keys.prepaidLifetimeHint') }}</p>
+        <div v-else class="space-y-3">
           <div class="flex items-center justify-between">
             <label class="input-label mb-0">{{ t('keys.expiration') }}</label>
             <button
@@ -1173,6 +1186,7 @@ import BulkEditKeysModal from '@/components/keys/BulkEditKeysModal.vue'
 	import type { ApiKey, Group, PublicSettings, SubscriptionType, GroupPlatform, UpdateApiKeyRequest } from '@/types'
 import type { Column } from '@/components/common/types'
 import type { BatchApiKeyUsageStats } from '@/api/usage'
+import type { PrepaidAccess } from '@/api/keys'
 import { formatDateTime } from '@/utils/format'
 import { maskApiKey } from '@/utils/maskApiKey'
 import {
@@ -1352,6 +1366,28 @@ const selectedKey = ref<ApiKey | null>(null)
 const copiedKeyId = ref<number | null>(null)
 const groupSelectorKeyId = ref<number | null>(null)
 const publicSettings = ref<PublicSettings | null>(null)
+const prepaidAccess = ref<PrepaidAccess | null>(null)
+const prepaidAccessError = ref(false)
+const canCreateKey = computed(() => !prepaidAccessError.value && !!prepaidAccess.value?.can_create_key)
+const prepaidStatusMessage = computed(() => !prepaidAccess.value?.has_purchased
+  ? 'keys.prepaidPurchaseRequired'
+  : prepaidAccess.value.requests_allowed ? 'keys.prepaidReady' : 'keys.prepaidPaused')
+let prepaidTimer: ReturnType<typeof setInterval> | null = null
+let prepaidController: AbortController | null = null
+
+const loadPrepaidAccess = async () => {
+  prepaidController?.abort()
+  const controller = new AbortController()
+  prepaidController = controller
+  try {
+    const access = await keysAPI.getAccess({ signal: controller.signal })
+    if (controller.signal.aborted) return
+    prepaidAccess.value = access
+    prepaidAccessError.value = false
+  } catch (error) {
+    if (!controller.signal.aborted && !isAbortError(error)) prepaidAccessError.value = true
+  }
+}
 const dropdownRef = ref<HTMLElement | null>(null)
 const columnDropdownRef = ref<HTMLElement | null>(null)
 const dropdownPosition = ref<{ top?: number; bottom?: number; left: number } | null>(null)
@@ -1498,6 +1534,7 @@ const isAbortError = (error: unknown) => {
 }
 
 const loadApiKeys = async () => {
+  void loadPrepaidAccess()
   abortController?.abort()
   const controller = new AbortController()
   abortController = controller
@@ -1712,6 +1749,7 @@ const confirmDelete = (key: ApiKey) => {
 }
 
 const handleSubmit = async () => {
+  if (!showEditModal.value && !canCreateKey.value) return
   // Validate group_id is required
   if (formData.value.group_id === null) {
     appStore.showError(t('keys.groupRequired'))
@@ -1742,7 +1780,7 @@ const handleSubmit = async () => {
   // Calculate expiration
   let expiresInDays: number | undefined
   let expiresAt: string | null | undefined
-  if (formData.value.enable_expiration && formData.value.expiration_date) {
+  if (!prepaidAccess.value?.enabled && formData.value.enable_expiration && formData.value.expiration_date) {
     if (!showEditModal.value) {
       // Create mode: calculate days from date
       const expDate = new Date(formData.value.expiration_date)
@@ -2014,10 +2052,15 @@ onMounted(() => {
   loadUserGroupRates()
   loadPublicSettings()
   document.addEventListener('click', closeGroupSelector)
+  window.addEventListener('focus', loadPrepaidAccess)
+  prepaidTimer = setInterval(() => { if (!document.hidden) void loadPrepaidAccess() }, 30000)
   resetTimer = setInterval(() => { now.value = new Date() }, 60000)
 })
 
 onUnmounted(() => {
+  window.removeEventListener('focus', loadPrepaidAccess)
+  prepaidController?.abort()
+  if (prepaidTimer) clearInterval(prepaidTimer)
   document.removeEventListener('click', closeGroupSelector)
   if (resetTimer) clearInterval(resetTimer)
 })

@@ -2428,7 +2428,7 @@ func extractQuotaResetSeconds(err error) int {
 }
 
 func billingErrorDetails(err error) (status int, code, message string, retryAfter int) {
-	if errors.Is(err, service.ErrBillingServiceUnavailable) {
+	if errors.Is(err, service.ErrBillingServiceUnavailable) || errors.Is(err, service.ErrPrepaidAccessUnavailable) {
 		msg := pkgerrors.Message(err)
 		if msg == "" {
 			msg = "Billing service temporarily unavailable. Please retry later."

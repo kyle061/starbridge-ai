@@ -376,6 +376,9 @@ func (s *PaymentService) doBalance(ctx context.Context, o *dbent.PaymentOrder, l
 
 	switch action {
 	case redeemActionSkipCompleted:
+		if err := s.ensurePrepaidKey(ctx, o); err != nil {
+			return err
+		}
 		if err := s.applyAffiliateRebateForOrder(ctx, o); err != nil {
 			return err
 		}
@@ -391,6 +394,9 @@ func (s *PaymentService) doBalance(ctx context.Context, o *dbent.PaymentOrder, l
 	}
 	if _, err := s.redeemService.redeemForPaymentFulfillment(ctx, o.UserID, o.RechargeCode); err != nil {
 		return fmt.Errorf("redeem balance: %w", err)
+	}
+	if err := s.ensurePrepaidKey(ctx, o); err != nil {
+		return err
 	}
 	if err := s.applyAffiliateRebateForOrder(ctx, o); err != nil {
 		return err

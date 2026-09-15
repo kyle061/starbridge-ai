@@ -101,6 +101,21 @@ func validateAPIKeyUpdateRequest(req UpdateAPIKeyRequest) error {
 	return nil
 }
 
+// PrepaidAccess reports the live purchase and balance gate for the user panel.
+func (h *APIKeyHandler) PrepaidAccess(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+	access, err := h.apiKeyService.GetPrepaidAccess(c.Request.Context(), subject.UserID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, access)
+}
+
 // List handles listing user's API keys with pagination
 // GET /api/v1/api-keys
 func (h *APIKeyHandler) List(c *gin.Context) {

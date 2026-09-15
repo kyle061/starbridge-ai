@@ -30,6 +30,18 @@ func TestLoadDefaultModelsListReadMaxBytes(t *testing.T) {
 	require.Equal(t, DefaultModelsListReadMaxBytes, cfg.Gateway.ModelsListReadMaxBytes)
 }
 
+func TestStarbridgePrepaidDefaultRequiresBilling(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	cfg, err := Load()
+	require.NoError(t, err)
+	require.True(t, cfg.Billing.RequireBalancePurchase)
+	cfg.RunMode = RunModeSimple
+	require.ErrorContains(t, cfg.Validate(), "requires standard run mode")
+	// Operators must explicitly opt out to run an unbilled private deployment.
+	cfg.Billing.RequireBalancePurchase = false
+	require.NoError(t, cfg.Validate())
+}
+
 func TestLoadTimezonePrecedence(t *testing.T) {
 	tests := []struct {
 		name         string

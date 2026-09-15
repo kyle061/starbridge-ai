@@ -202,8 +202,9 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		// Available channels feature (default disabled; opt-in)
 		SettingKeyAvailableChannelsEnabled: "false",
 
-		// Subscription feature (default enabled; opt-out)
-		SettingKeySubscriptionEnabled: "true",
+		// Starbridge users purchase balance credit through the payment flow.
+		SettingKeySubscriptionEnabled: "false",
+		SettingPaymentEnabled:         "true",
 
 		// Model plaza feature (default disabled; opt-in, public unless require_auth)
 		SettingKeyModelPlazaEnabled:       "false",

@@ -7,7 +7,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-const defaultBalanceRechargeMultiplier = 1.0
+// Starbridge: CNY 0.50 purchases USD 1.00 of API credit.
+const defaultBalanceRechargeMultiplier = 2.0
 
 func normalizeBalanceRechargeMultiplier(multiplier float64) float64 {
 	if math.IsNaN(multiplier) || math.IsInf(multiplier, 0) || multiplier <= 0 {

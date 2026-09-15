@@ -66,6 +66,19 @@ export default {
 
   // API Keys
   keys: {
+    prepaidBalance: 'Available API credit: ${balance} USD',
+    prepaidPurchaseRequired: 'Your first completed payment automatically creates an API key.',
+    prepaidReady: 'Your balance is available. You can send requests with your key.',
+    prepaidPaused: 'Your balance is exhausted. New requests for all keys are paused until a top-up restores a positive balance.',
+    prepaidLifetimeHint: 'Keys never expire. All keys share your USD balance and are billed for actual token usage.',
+    prepaidAccessUnavailable: 'Purchase status is unavailable. Refresh to retry.',
+    purchaseBalance: 'Buy API credit',
+    renewBalance: 'Top up balance',
+    prepaidPaymentSuccess: 'Your API credit has arrived. Your first purchase creates a permanent key; renewals keep your existing key.',
+    viewMyKeys: 'View my keys',
+    prepaidPausedStatus: 'Paused: balance exhausted',
+    prepaidPurchaseStatus: 'Awaiting first payment',
+
     title: 'API Keys',
     description: 'Manage your API keys and access tokens',
     searchPlaceholder: 'Search name or key...',

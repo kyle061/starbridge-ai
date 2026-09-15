@@ -6,6 +6,19 @@
 import { apiClient } from './client'
 import type { ApiKey, CreateApiKeyRequest, UpdateApiKeyRequest, PaginatedResponse } from '@/types'
 
+export interface PrepaidAccess {
+  enabled: boolean
+  has_purchased: boolean
+  balance: number
+  can_create_key: boolean
+  requests_allowed: boolean
+}
+
+export async function getAccess(options?: { signal?: AbortSignal }): Promise<PrepaidAccess> {
+  const { data } = await apiClient.get<PrepaidAccess>('/keys/access', options)
+  return data
+}
+
 /**
  * List all API keys for current user
  * @param page - Page number (default: 1)
@@ -158,6 +171,7 @@ export async function toggleStatus(id: number, status: 'active' | 'inactive'): P
 }
 
 export const keysAPI = {
+  getAccess,
   list,
   getById,
   create,
