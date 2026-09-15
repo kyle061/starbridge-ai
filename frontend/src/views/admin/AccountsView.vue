@@ -162,6 +162,26 @@
           </AccountTableActions>
         </div>
         <div
+          class="mt-3 flex flex-col gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-blue-900 dark:border-blue-800/60 dark:bg-blue-900/20 dark:text-blue-100 sm:flex-row sm:items-center sm:justify-between"
+          data-testid="account-pool-hint"
+        >
+          <div class="flex min-w-0 items-start gap-3">
+            <span class="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white">
+              <Icon name="sync" size="sm" />
+            </span>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold">{{ t('admin.accounts.accountPoolTitle') }}</p>
+              <p class="mt-1 text-xs leading-5 text-blue-700 dark:text-blue-200">
+                {{ t('admin.accounts.accountPoolDescription') }}
+              </p>
+            </div>
+          </div>
+          <button class="btn btn-primary w-full flex-shrink-0 sm:w-auto" @click="showCreate = true">
+            <Icon name="plus" size="sm" class="mr-1.5" />
+            {{ t('admin.accounts.accountPoolAddAnother') }}
+          </button>
+        </div>
+        <div
           v-if="hasPendingListSync"
           class="mt-2 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700/40 dark:bg-amber-900/20 dark:text-amber-200"
         >

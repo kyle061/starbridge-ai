@@ -22,6 +22,7 @@ jobs:
         working-directory: frontend
       - run: >-
           pnpm exec vitest run
+          src/components/account/__tests__/OAuthAuthorizationFlow.openai.spec.ts
           src/components/account/__tests__/OpenAIProviderPresets.spec.ts
           src/components/account/__tests__/CreateAccountModal.spec.ts
           src/components/common/__tests__/Pagination.spec.ts
@@ -30,6 +31,7 @@ jobs:
           src/components/layout/__tests__/TablePageLayout.spec.ts
           src/components/keys/__tests__/EndpointPopover.spec.ts
           src/views/user/__tests__/KeysView.spec.ts
+          src/utils/__tests__/oauthCallback.spec.ts
           src/i18n/__tests__/localeKeyCompleteness.spec.ts
         working-directory: frontend
 

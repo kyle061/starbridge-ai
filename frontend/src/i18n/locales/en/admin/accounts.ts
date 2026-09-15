@@ -5,10 +5,13 @@ export default {
         description: "Choose a provider to fill its base URL and text protocol. Configure your own API key, model allowlist and groups.",
         customHint: "For other OpenAI-compatible services, enter a base URL and select the text protocol supported upstream. Use model IDs supplied by that provider.",
         localHint: "Start Ollama and load a model first. This Docker URL points to the host; Linux requires host-gateway and explicit trusted-local endpoint configuration. Use ollama-local if the upstream requires no real key.",
-        openaiOAuthHint: "Choose OAuth, continue, and sign in to your OpenAI / ChatGPT account, including a Pro subscription. After authorization, Starbridge stores the refresh credential, and you can issue a Starbridge API key that uses this account's Codex subscription quota, subject to its model access and limits."
+        openaiOAuthHint: "ChatGPT Plus / Pro must use OAuth sign-in to use the account's Codex subscription quota. An OpenAI Platform API key is billed separately as API usage. You can add multiple Plus / Pro and API-key accounts to one group for automatic failover."
       },
       title: 'Account Management',
       description: 'Manage AI platform accounts and credentials',
+      accountPoolTitle: 'Multi-account failover is enabled',
+      accountPoolDescription: 'Add multiple OpenAI, Claude, Gemini, Grok, and compatible-provider accounts. A provider group can mix OAuth and API-key accounts. When an account exhausts quota, returns 429, loses authorization, or becomes temporarily unavailable, the gateway selects another healthy account in that group. Use a composite group with model routes when one relay key needs several providers.',
+      accountPoolAddAnother: 'Add another account',
       createAccount: 'Create Account',
       autoRefresh: 'Auto Refresh',
       enableAutoRefresh: 'Enable auto refresh',
@@ -183,8 +186,8 @@ export default {
       },
       types: {
         oauth: 'OAuth',
-        chatgptOauth: 'ChatGPT OAuth',
-        responsesApi: 'Responses API',
+        chatgptOauth: 'ChatGPT Plus / Pro OAuth',
+        responsesApi: 'OpenAI / Compatible API Key',
         googleOauth: 'Google OAuth',
         codeAssist: 'Code Assist',
         antigravityOauth: 'Antigravity OAuth',
@@ -1069,6 +1072,8 @@ export default {
         title: 'Claude Account Authorization',
         authMethod: 'Authorization Method',
         manualAuth: 'Manual Authorization',
+        openAuthorizationPage: 'Open authorization page',
+        callbackRecognized: 'Callback URL recognized. You can complete authorization.',
         cookieAutoAuth: 'Cookie Auto-Auth',
         cookieAutoAuthDesc:
           'Use claude.ai sessionKey to automatically complete OAuth authorization without manually opening browser.',
@@ -1116,23 +1121,24 @@ export default {
         batchFailed: 'Batch creation failed',
         // OpenAI specific
         openai: {
-          title: 'OpenAI Account Authorization',
-          followSteps: 'Follow these steps to complete OpenAI account authorization:',
+          title: 'ChatGPT Plus / Pro Account Authorization',
+          followSteps: "Sign in to ChatGPT to use this account's Codex subscription quota:",
+          chatgptLogin: 'ChatGPT sign-in (Plus / Pro)',
           step1GenerateUrl: 'Click the button below to generate the authorization URL',
           generateAuthUrl: 'Generate Auth URL',
+          openAuthorizationPage: 'Open ChatGPT sign-in page',
           step2OpenUrl: 'Open the URL in your browser and complete authorization',
-          openUrlDesc:
-            'Open the authorization URL in a new tab, log in to your OpenAI account and authorize.',
+          openUrlDesc: 'Click the button above, sign in to the ChatGPT Plus / Pro account you want to bind, and approve access. Bind one account at a time, then repeat to add more.',
           importantNotice:
-            'Important: The page may take a while to load after authorization. Please wait patiently. When the browser address bar changes to http://localhost..., the authorization is complete.',
-          step3EnterCode: 'Enter Authorization URL or Code',
+            'After approval, the browser redirects to http://localhost:1455. A “page cannot be reached” message is expected. Do not refresh. Copy the complete address-bar URL, return to Starbridge, and paste it into step 3. On mobile, press and hold the address bar to copy it.',
+          step3EnterCode: 'Paste the localhost callback URL',
           authCodeDesc:
-            'After authorization is complete, when the page URL becomes http://localhost:xxx/auth/callback?code=...:',
-          authCode: 'Authorization URL or Code',
+            'Copy and paste the complete address-bar URL beginning with http://localhost:1455/auth/callback?code=...:',
+          authCode: 'Complete callback URL or code',
           authCodePlaceholder:
-            'Option 1: Copy the complete URL\n(http://localhost:xxx/auth/callback?code=...)\nOption 2: Copy only the code parameter value',
-          authCodeHint:
-            'You can copy the entire URL or just the code parameter value, the system will auto-detect',
+            'Recommended: paste the complete URL\nhttp://localhost:1455/auth/callback?code=...&state=...\nA bare code value is also accepted',
+          authCodeHint: 'The complete URL is safest. Starbridge extracts code and state automatically.',
+          callbackRecognized: 'ChatGPT callback URL recognized. Click Complete Authorization.',
           failedToGenerateUrl: 'Failed to generate OpenAI auth URL',
           failedToExchangeCode: 'Failed to exchange OpenAI auth code',
           failedToValidateRT: 'Failed to validate refresh token',

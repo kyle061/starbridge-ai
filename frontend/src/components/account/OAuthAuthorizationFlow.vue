@@ -23,7 +23,7 @@
                 class="text-blue-600 focus:ring-blue-500"
               />
               <span class="text-sm text-blue-900 dark:text-blue-200">{{
-                t('admin.accounts.oauth.manualAuth')
+                manualAuthLabel
               }}</span>
             </label>
             <label v-if="showCookieOption" class="flex cursor-pointer items-center gap-2">
@@ -767,6 +767,16 @@
                       />
                     </button>
                   </div>
+                  <a
+                    :href="authUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="btn btn-primary w-full justify-center sm:w-auto"
+                    data-testid="oauth-open-authorization-page"
+                  >
+                    <Icon name="externalLink" size="sm" class="mr-2" />
+                    {{ openAuthorizationPageLabel }}
+                  </a>
                   <button
                     type="button"
                     class="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400"
@@ -854,6 +864,14 @@
                     <Icon name="infoCircle" size="xs" class="mr-1 inline" />
                     {{ oauthAuthCodeHint }}
                   </p>
+                  <div
+                    v-if="callbackInputRecognized"
+                    class="mt-2 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700 dark:border-green-800/50 dark:bg-green-900/20 dark:text-green-300"
+                    data-testid="oauth-callback-recognized"
+                  >
+                    <Icon name="check" size="xs" class="mt-0.5 flex-shrink-0" />
+                    <span>{{ callbackRecognizedLabel }}</span>
+                  </div>
 
                   <!-- Gemini-specific state parameter warning -->
                   <div
@@ -901,6 +919,7 @@ import Icon from '@/components/icons/Icon.vue'
 import type { AddMethod, AuthInputMethod } from '@/composables/useAccountOAuth'
 import type { AccountPlatform } from '@/types'
 import { adminAPI } from '@/api/admin'
+import { parseOAuthCallbackInput } from '@/utils/oauthCallback'
 
 interface Props {
   addMethod: AddMethod
@@ -1010,11 +1029,27 @@ const oauthImportantNotice = computed(() => {
   if (props.platform === 'grok') return t('admin.accounts.oauth.grok.importantNotice')
   return ''
 })
+const manualAuthLabel = computed(() =>
+  props.platform === 'openai'
+    ? t('admin.accounts.oauth.openai.chatgptLogin')
+    : t('admin.accounts.oauth.manualAuth')
+)
+const openAuthorizationPageLabel = computed(() =>
+  props.platform === 'openai'
+    ? t('admin.accounts.oauth.openai.openAuthorizationPage')
+    : t('admin.accounts.oauth.openAuthorizationPage')
+)
+const callbackRecognizedLabel = computed(() =>
+  props.platform === 'openai'
+    ? t('admin.accounts.oauth.openai.callbackRecognized')
+    : t('admin.accounts.oauth.callbackRecognized')
+)
 
 // Local state
 const inputMethod = ref<AuthInputMethod>(props.initialInputMethod)
 const isAgentIdentityInput = computed(() => inputMethod.value === 'agent_identity')
 const authCodeInput = ref('')
+const callbackInputRecognized = ref(false)
 const sessionKeyInput = ref('')
 const refreshTokenInput = ref('')
 const sessionTokenInput = ref('')
@@ -1134,32 +1169,17 @@ watch(inputMethod, (newVal) => {
 watch(authCodeInput, (newVal) => {
   if (props.platform !== 'openai' && props.platform !== 'gemini' && props.platform !== 'antigravity' && props.platform !== 'grok') return
 
-  const trimmed = newVal.trim()
-  // Check if it looks like a URL with code parameter
-  if (trimmed.includes('code=')) {
-    try {
-      // Try to parse as URL
-      const url = trimmed.includes('?') ? new URL(trimmed) : new URL(`http://localhost/callback?${trimmed.replace(/^\?/, '')}`)
-      const code = url.searchParams.get('code')
-      const stateParam = url.searchParams.get('state')
-      if ((props.platform === 'openai' || props.platform === 'gemini' || props.platform === 'antigravity' || props.platform === 'grok') && stateParam) {
-        oauthState.value = stateParam
-      }
-      if (code && code !== trimmed) {
-        // Replace the input with just the code
-        authCodeInput.value = code
-      }
-    } catch {
-      // If URL parsing fails, try regex extraction
-      const match = trimmed.match(/[?&]code=([^&]+)/)
-      const stateMatch = trimmed.match(/[?&]state=([^&]+)/)
-      if ((props.platform === 'openai' || props.platform === 'gemini' || props.platform === 'antigravity' || props.platform === 'grok') && stateMatch && stateMatch[1]) {
-        oauthState.value = stateMatch[1]
-      }
-      if (match && match[1] && match[1] !== trimmed) {
-        authCodeInput.value = match[1]
-      }
-    }
+  const parsed = parseOAuthCallbackInput(newVal)
+  if (!parsed.code) {
+    callbackInputRecognized.value = false
+    return
+  }
+  if (parsed.state) {
+    oauthState.value = parsed.state
+  }
+  if (parsed.isCallback) {
+    callbackInputRecognized.value = true
+    if (parsed.code !== newVal.trim()) authCodeInput.value = parsed.code
   }
 })
 
@@ -1228,6 +1248,7 @@ defineExpose({
   inputMethod,
   reset: () => {
     authCodeInput.value = ''
+    callbackInputRecognized.value = false
     oauthState.value = ''
     projectId.value = ''
     sessionKeyInput.value = ''
