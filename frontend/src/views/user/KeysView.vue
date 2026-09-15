@@ -33,10 +33,12 @@
             />
           </div>
           <EndpointPopover
-            v-if="publicSettings?.api_base_url || (publicSettings?.custom_endpoints?.length ?? 0) > 0"
-            :api-base-url="publicSettings?.api_base_url || ''"
+            :api-base-url="effectiveApiBaseUrl"
             :custom-endpoints="publicSettings?.custom_endpoints || []"
           />
+          <p class="text-xs leading-5 text-gray-500 dark:text-gray-400">
+            {{ t('keys.gatewayUsageHint') }}
+          </p>
           <div v-if="selectedIds.length" class="flex flex-wrap items-center gap-3 text-sm">
             <span class="text-gray-600 dark:text-gray-300">
               {{ t('keys.bulkEdit.selectedCount', { count: selectedIds.length }) }}
@@ -213,18 +215,30 @@
           </template>
 
           <template #cell-usage="{ row }">
-            <div class="text-sm">
+            <span v-if="usageLoading" class="text-xs text-gray-400" role="status">{{ t('common.loading') }}</span>
+            <span v-else-if="usageLoadFailed || !usageStats[row.id]" class="text-xs text-amber-600 dark:text-amber-400" role="status">
+              {{ t('keys.usageUnavailable') }}
+            </span>
+            <div v-else class="text-sm">
               <div class="flex items-center gap-1.5">
                 <span class="text-gray-500 dark:text-gray-400">{{ t('keys.today') }}:</span>
                 <span class="font-medium text-gray-900 dark:text-white">
-                  ${{ (usageStats[row.id]?.today_actual_cost ?? 0).toFixed(4) }}
+                  {{ formatUsageCost(usageStats[row.id]?.today_actual_cost ?? 0) }}
                 </span>
+              </div>
+              <div class="text-xs tabular-nums text-gray-500 dark:text-gray-400">
+                {{ t('keys.requestCount', { count: (usageStats[row.id]?.today_requests ?? 0).toLocaleString() }) }}
+                · {{ (usageStats[row.id]?.today_tokens ?? 0).toLocaleString() }} Tokens
               </div>
               <div class="mt-0.5 flex items-center gap-1.5">
                 <span class="text-gray-500 dark:text-gray-400">{{ t('keys.total') }}:</span>
                 <span class="font-medium text-gray-900 dark:text-white">
-                  ${{ (usageStats[row.id]?.total_actual_cost ?? 0).toFixed(4) }}
+                  {{ formatUsageCost(usageStats[row.id]?.total_actual_cost ?? 0) }}
                 </span>
+              </div>
+              <div class="text-xs tabular-nums text-gray-500 dark:text-gray-400">
+                {{ t('keys.requestCount', { count: (usageStats[row.id]?.total_requests ?? 0).toLocaleString() }) }}
+                · {{ (usageStats[row.id]?.total_tokens ?? 0).toLocaleString() }} Tokens
               </div>
               <!-- Quota progress (if quota is set) -->
               <div v-if="row.quota > 0" class="mt-1.5">
@@ -503,7 +517,7 @@
     <UseKeyModal
       :show="showUseKeyModal"
       :api-key="selectedKey?.key || ''"
-      :base-url="publicSettings?.api_base_url || ''"
+      :base-url="effectiveApiBaseUrl"
       :platform="selectedKey?.group?.platform || null"
       :allow-messages-dispatch="selectedKey?.group?.allow_messages_dispatch || false"
       @close="closeUseKeyModal"
@@ -782,6 +796,13 @@ const groups = ref<Group[]>([])
 const loading = ref(false)
 const submitting = ref(false)
 const usageStats = ref<Record<string, BatchApiKeyUsageStats>>({})
+const usageLoading = ref(false)
+const usageLoadFailed = ref(false)
+
+const formatUsageCost = (amount: number): string => {
+  if (amount > 0 && amount < 0.00000001) return '<$0.00000001'
+  return `$${amount.toFixed(amount > 0 && amount < 0.0001 ? 8 : 4)}`
+}
 
 const pagination = ref({
   page: 1,
@@ -832,6 +853,7 @@ const loadPrepaidAccess = async () => {
     if (!controller.signal.aborted && !isAbortError(error)) prepaidAccessError.value = true
   }
 }
+const effectiveApiBaseUrl = computed(() => publicSettings.value?.api_base_url?.trim() || window.location.origin)
 const dropdownRef = ref<HTMLElement | null>(null)
 const columnDropdownRef = ref<HTMLElement | null>(null)
 const dropdownPosition = ref<{ top?: number; bottom?: number; left: number } | null>(null)
@@ -946,6 +968,9 @@ const loadApiKeys = async () => {
   abortController = controller
   const { signal } = controller
   loading.value = true
+  usageLoading.value = true
+  usageLoadFailed.value = false
+  usageStats.value = {}
   try {
     // Build filters
     const filters: {
@@ -978,7 +1003,8 @@ const loadApiKeys = async () => {
         if (signal.aborted) return
         usageStats.value = usageResponse.stats
       } catch (e) {
-        if (!isAbortError(e)) {
+        if (!signal.aborted && !isAbortError(e)) {
+          usageLoadFailed.value = true
           console.error('Failed to load usage stats:', e)
         }
       }
@@ -991,6 +1017,7 @@ const loadApiKeys = async () => {
   } finally {
     if (abortController === controller) {
       loading.value = false
+      usageLoading.value = false
     }
   }
 }
@@ -1215,7 +1242,7 @@ const importToCcswitch = (row: ApiKey) => {
 }
 
 const executeCcsImport = (row: ApiKey, clientType: CcSwitchClientType) => {
-  const baseUrl = publicSettings.value?.api_base_url || window.location.origin
+  const baseUrl = effectiveApiBaseUrl.value
   const platform = row.group?.platform || 'anthropic'
 
   const usageScript = `({

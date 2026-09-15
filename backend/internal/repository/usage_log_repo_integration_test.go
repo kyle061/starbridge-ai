@@ -1147,6 +1147,48 @@ func (s *UsageLogRepoSuite) TestGetBatchApiKeyUsageStats_Empty() {
 	s.Require().Empty(stats)
 }
 
+func (s *UsageLogRepoSuite) TestGetBatchApiKeyUsageStats_ZeroCostTokensAndDateBoundaries() {
+	user := mustCreateUser(s.T(), s.client, &service.User{Email: "key-metrics@test.com"})
+	key := mustCreateApiKey(s.T(), s.client, &service.APIKey{UserID: user.ID, Key: "sk-key-metrics", Name: "metrics"})
+	other := mustCreateApiKey(s.T(), s.client, &service.APIKey{UserID: user.ID, Key: "sk-key-other", Name: "other"})
+	empty := mustCreateApiKey(s.T(), s.client, &service.APIKey{UserID: user.ID, Key: "sk-key-empty", Name: "empty"})
+	account := mustCreateAccount(s.T(), s.client, &service.Account{Name: "key-metrics"})
+	today := timezone.Today()
+	zeroCost := &service.UsageLog{
+		UserID: user.ID, APIKeyID: key.ID, AccountID: account.ID,
+		RequestID: uuid.NewString(), Model: "unpriced-model", CreatedAt: today,
+		InputTokens: 10, OutputTokens: 20, CacheCreationTokens: 5, CacheReadTokens: 7,
+	}
+	_, err := s.repo.Create(s.ctx, zeroCost)
+	s.Require().NoError(err)
+	s.createUsageLog(user, key, account, 4, 6, 0.00000001, today.AddDate(0, 0, -1))
+	s.createUsageLog(user, key, account, 500, 500, 1, today.AddDate(0, 0, -31))
+	s.createUsageLog(user, key, account, 500, 500, 100, today.AddDate(0, 0, 1))
+	s.createUsageLog(user, other, account, 1, 2, 0.3, today)
+
+	stats, err := s.repo.GetBatchAPIKeyUsageStats(s.ctx, []int64{key.ID, other.ID, empty.ID, key.ID, -1}, time.Time{}, time.Time{})
+	s.Require().NoError(err)
+	s.Require().Len(stats, 3)
+	s.Require().Equal(int64(2), stats[key.ID].TotalRequests)
+	s.Require().Equal(int64(1), stats[key.ID].TodayRequests)
+	s.Require().Equal(int64(52), stats[key.ID].TotalTokens)
+	s.Require().Equal(int64(42), stats[key.ID].TodayTokens)
+	s.Require().InDelta(0.00000001, stats[key.ID].TotalActualCost, 1e-12)
+	s.Require().Zero(stats[key.ID].TodayActualCost)
+	s.Require().Equal(int64(3), stats[other.ID].TotalTokens)
+	s.Require().Equal(int64(1), stats[other.ID].TotalRequests)
+	s.Require().Zero(stats[empty.ID].TotalTokens)
+	s.Require().Zero(stats[empty.ID].TotalRequests)
+
+	// Explicit historical ranges use an exclusive end; today's independent
+	// counters still report the current day's usage.
+	historical, err := s.repo.GetBatchAPIKeyUsageStats(s.ctx, []int64{key.ID}, today.AddDate(0, 0, -2), today)
+	s.Require().NoError(err)
+	s.Require().Equal(int64(1), historical[key.ID].TotalRequests)
+	s.Require().Equal(int64(10), historical[key.ID].TotalTokens)
+	s.Require().Equal(int64(42), historical[key.ID].TodayTokens)
+}
+
 // --- GetGlobalStats ---
 
 func (s *UsageLogRepoSuite) TestGetGlobalStats() {

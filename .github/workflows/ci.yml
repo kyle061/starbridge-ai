@@ -58,6 +58,10 @@ jobs:
           go test -tags unit ./internal/service
           -run 'TestAdminService_PreviewCompositeRoute|TestGatewayService_SelectAccountForModelWithExclusions_FallsBackAcrossCompositePlatforms'
         working-directory: backend
+      - run: go test ./internal/service -run '^TestOpenAIGatewayServiceRecordUsage_'
+        working-directory: backend
+      - run: go test -tags integration ./internal/repository -run '^TestUsageLogRepoSuite$/^TestGetBatchApiKeyUsageStats' -count=1
+        working-directory: backend
 
       - run: >-
           go test -tags unit ./internal/service ./internal/handler ./internal/handler/admin ./internal/server/middleware ./internal/repository

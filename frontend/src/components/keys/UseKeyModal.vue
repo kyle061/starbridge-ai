@@ -310,6 +310,7 @@ type CodexModelManifestState = 'idle' | 'loading' | 'ready' | 'error'
 const codexModelManifestState = ref<CodexModelManifestState>('idle')
 const codexModelManifestContent = ref('')
 const codexModelManifestModelCount = ref(0)
+const codexModelManifestDownloaded = ref(false)
 let codexModelManifestController: AbortController | null = null
 let codexModelManifestRequestID = 0
 
@@ -623,6 +624,7 @@ function resetCodexModelManifest() {
   codexModelManifestState.value = 'idle'
   codexModelManifestContent.value = ''
   codexModelManifestModelCount.value = 0
+  codexModelManifestDownloaded.value = false
 }
 
 async function loadCodexModelManifest() {
@@ -659,6 +661,7 @@ function downloadCodexModelManifest() {
     new Blob([codexModelManifestContent.value], { type: 'application/json;charset=utf-8' }),
     'codex-models.json'
   )
+  codexModelManifestDownloaded.value = true
 }
 
 const codexCatalogModelSlugs = computed(() =>
@@ -674,6 +677,15 @@ function codexReasoningEffortTomlLine(modelSlug: string): string {
   return formatCodexReasoningEffortTomlLine(
     selectCodexConfigReasoningEffort(findCodexCatalogModel(codexModelManifestContent.value, modelSlug))
   )
+}
+
+/**
+ * Only reference the catalog after it has been fetched and downloaded.
+ * A missing model_catalog_json file makes Codex reject the entire config.
+ */
+function codexModelCatalogTomlLine(): string {
+  if (codexModelManifestState.value !== 'ready' || !codexModelManifestDownloaded.value) return ''
+  return `model_catalog_json = "${escapeTomlBasicString(codexModelCatalogPath.value)}"\n`
 }
 
 const escapeHtml = (value: string) => value
@@ -950,7 +962,7 @@ function generateOpenAIFiles(baseUrl: string, apiKey: string): FileConfig[] {
 model = "${model}"
 review_model = "${model}"
 ${reasoningEffortLine}disable_response_storage = true
-model_catalog_json = "${escapeTomlBasicString(codexModelCatalogPath.value)}"
+${codexModelCatalogTomlLine()}
 network_access = "enabled"
 windows_wsl_setup_acknowledged = true
 
@@ -1183,7 +1195,7 @@ function generateGrokCodexFiles(baseUrl: string, apiKey: string): FileConfig[] {
 
 model_provider = "sub2api"
 model = "${model}"
-model_catalog_json = "${escapeTomlBasicString(codexModelCatalogPath.value)}"
+${codexModelCatalogTomlLine()}
 # Optional:
 # review_model = "${model}"
 # model_reasoning_effort = "medium"
@@ -1264,7 +1276,7 @@ model_provider = "sub2api"
 model = "${model}"
 review_model = "${model}"
 disable_response_storage = true
-model_catalog_json = "${escapeTomlBasicString(codexModelCatalogPath.value)}"
+${codexModelCatalogTomlLine()}
 
 [model_providers.sub2api]
 name = "Sub2API ${label}"
@@ -1299,7 +1311,7 @@ function generateOpenAIWsFiles(baseUrl: string, apiKey: string): FileConfig[] {
 model = "${model}"
 review_model = "${model}"
 ${reasoningEffortLine}disable_response_storage = true
-model_catalog_json = "${escapeTomlBasicString(codexModelCatalogPath.value)}"
+${codexModelCatalogTomlLine()}
 network_access = "enabled"
 windows_wsl_setup_acknowledged = true
 

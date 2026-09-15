@@ -59,6 +59,10 @@ const messages: Record<string, string> = {
   'keys.status.inactive': 'Inactive',
   'keys.status.quota_exhausted': 'Quota exhausted',
   'keys.usage': 'Usage',
+  'keys.today': 'Today',
+  'keys.total': 'Last 30d',
+  'keys.requestCount': '{count} requests',
+  'keys.usageUnavailable': 'Usage unavailable. Refresh to retry.',
 }
 
 vi.mock('@/api', () => ({
@@ -107,7 +111,8 @@ vi.mock('vue-i18n', async () => {
   return {
     ...actual,
     useI18n: () => ({
-      t: (key: string) => messages[key] ?? key,
+      t: (key: string, params: Record<string, string | number> = {}) =>
+        (messages[key] ?? key).replace(/\{(\w+)\}/g, (_, name) => String(params[name] ?? '')),
     }),
   }
 })
@@ -177,6 +182,7 @@ const DataTableStub = {
           <slot name="cell-id" :value="row.id" :row="row" />
         </div>
         <slot name="cell-name" :value="row.name" :row="row" />
+        <div data-test="key-usage"><slot name="cell-usage" :row="row" /></div>
         <slot name="cell-actions" :row="row" />
         <div data-test="current-concurrency">
           <slot name="cell-current_concurrency" :value="row.current_concurrency" :row="row" />
@@ -330,6 +336,57 @@ describe('user KeysView column settings', () => {
     expect(wrapper.get('[data-tour="keys-create-btn"]').attributes('disabled')).toBeDefined()
     expect(wrapper.text()).toContain('keys.prepaidAccessUnavailable')
     wrapper.unmount()
+  })
+
+  it('shows the current site endpoint when no custom API base URL is configured', async () => {
+    const wrapper = await mountView()
+    expect(wrapper.findComponent({ name: 'EndpointPopover' }).props('apiBaseUrl')).toBe(window.location.origin)
+    expect(wrapper.findComponent({ name: 'UseKeyModal' }).props('baseUrl')).toBe(window.location.origin)
+    wrapper.unmount()
+  })
+
+  it('uses the configured endpoint consistently', async () => {
+    getPublicSettings.mockResolvedValue({ api_base_url: ' https://gateway.example ' })
+    const wrapper = await mountView()
+    expect(wrapper.findComponent({ name: 'EndpointPopover' }).props('apiBaseUrl')).toBe('https://gateway.example')
+    expect(wrapper.findComponent({ name: 'UseKeyModal' }).props('baseUrl')).toBe('https://gateway.example')
+    wrapper.unmount()
+  })
+
+  it('shows measured tokens and requests even when dollar amounts are tiny', async () => {
+    getDashboardApiKeysUsage.mockResolvedValue({ stats: { 1: {
+      api_key_id: 1, today_actual_cost: 0.0000000001, total_actual_cost: 0.00001234,
+      today_requests: 1, total_requests: 3, today_tokens: 42, total_tokens: 123,
+    } } })
+    const wrapper = await mountView()
+    const usage = wrapper.get('[data-test="key-usage"]').text()
+    expect(usage).toContain('<$0.00000001')
+    expect(usage).toContain('$0.00001234')
+    expect(usage).toContain('1 requests')
+    expect(usage).toContain('3 requests')
+    expect(usage).toContain('42 Tokens')
+    expect(usage).toContain('123 Tokens')
+    wrapper.unmount()
+  })
+
+  it('distinguishes a statistics failure from zero usage and allows refreshing', async () => {
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {})
+    getDashboardApiKeysUsage.mockRejectedValueOnce(new Error('statistics unavailable'))
+    const wrapper = await mountView()
+    expect(wrapper.get('[data-test="key-usage"]').text()).toContain('Usage unavailable')
+    expect(wrapper.get('[data-test="key-usage"]').text()).not.toContain('$0.0000')
+
+    getDashboardApiKeysUsage.mockResolvedValue({ stats: { 1: {
+      api_key_id: 1, today_actual_cost: 0, total_actual_cost: 0,
+      today_requests: 1, total_requests: 1, today_tokens: 42, total_tokens: 42,
+    } } })
+    await wrapper.get('button[title="Refresh"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-test="key-usage"]').text()).not.toContain('Usage unavailable')
+    expect(wrapper.get('[data-test="key-usage"]').text()).toContain('42 Tokens')
+    expect(wrapper.get('[data-test="key-usage"]').text()).toContain('$0.0000')
+    wrapper.unmount()
+    errorLog.mockRestore()
   })
 
   it('creates a funded key using only its name and group', async () => {
