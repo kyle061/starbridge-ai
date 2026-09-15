@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Starbridge AI">
+  <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#4f46e5"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs>
+  <rect width="128" height="128" rx="30" fill="#0f172a"/>
+  <path d="M25 68 51 30l10 24 22-11-10 25 30 8-39 8-15 22-8-24z" fill="url(#g)"/>
+  <circle cx="92" cy="30" r="7" fill="#fbbf24"/><circle cx="103" cy="53" r="4" fill="#fbbf24"/>
+</svg>

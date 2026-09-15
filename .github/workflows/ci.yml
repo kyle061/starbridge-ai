@@ -1,0 +1,49 @@
+name: Starbridge CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm, cache-dependency-path: frontend/pnpm-lock.yaml }
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - run: pnpm run build
+        working-directory: frontend
+      - run: pnpm exec vitest run src/components/account/__tests__/OpenAIProviderPresets.spec.ts src/components/account/__tests__/CreateAccountModal.spec.ts src/i18n/__tests__/localeKeyCompleteness.spec.ts
+        working-directory: frontend
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version-file: backend/go.mod, cache: true }
+      - run: go test ./internal/pkg/apicompat ./internal/service -run 'TestForwardResponses_ForceChatCompletions|TestResolveOpenAIForwardModel|TestChatCompletionsToResponses'
+        working-directory: backend
+
+  deployment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 deploy/starbridge/test_init_env.py
+      - run: python3 - <<'PY'
+          import pathlib, subprocess, tempfile
+          root = pathlib.Path('deploy/starbridge')
+          with tempfile.TemporaryDirectory() as d:
+              p = pathlib.Path(d)
+              for name in ('.env.example', 'compose.yaml', 'Caddyfile', 'init-env.py'):
+                  (p/name).write_bytes((root/name).read_bytes())
+              subprocess.run(['python3', str(p/'init-env.py'), '--admin-email', 'ci@example.com'], check=True)
+              subprocess.run(['docker', 'compose', '-f', str(p/'compose.yaml'), '--env-file', str(p/'.env'), 'config'], check=True, stdout=subprocess.DEVNULL)
+        PY

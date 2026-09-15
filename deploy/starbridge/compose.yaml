@@ -1,0 +1,109 @@
+name: starbridge
+
+services:
+  gateway:
+    image: starbridge-ai:local
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        VERSION: starbridge-0.1.0
+    restart: unless-stopped
+    ports:
+      - "${BIND_HOST:-127.0.0.1}:${APP_PORT:-8080}:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      AUTO_SETUP: "true"
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: "8080"
+      SERVER_MODE: release
+      RUN_MODE: standard
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_USER: starbridge
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Run init-env.py first}
+      DATABASE_DBNAME: starbridge
+      DATABASE_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Run init-env.py first}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?Set your admin email}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Run init-env.py first}
+      JWT_SECRET: ${JWT_SECRET:?Run init-env.py first}
+      TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:?Run init-env.py first}
+      TZ: ${TZ:-Asia/Shanghai}
+      SECURITY_URL_ALLOWLIST_ENABLED: ${SECURITY_URL_ALLOWLIST_ENABLED:-true}
+      SECURITY_URL_ALLOWLIST_UPSTREAM_HOSTS: ${UPSTREAM_HOSTS:-api.openai.com,api.anthropic.com,generativelanguage.googleapis.com,api.deepseek.com,api.siliconflow.cn,openrouter.ai}
+      SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS: ${ALLOW_PRIVATE_UPSTREAMS:-false}
+      SECURITY_URL_ALLOWLIST_ALLOW_INSECURE_HTTP: ${ALLOW_HTTP_UPSTREAMS:-false}
+      BATCH_IMAGE_ENABLED: "false"
+      BATCH_IMAGE_QUEUE_ENABLED: "false"
+      BATCH_IMAGE_VERTEX_ENABLED: "false"
+    volumes:
+      - gateway_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, -T, "5", -O, /dev/null, "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: starbridge
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run init-env.py first}
+      POSTGRES_DB: starbridge
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U starbridge -d starbridge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Run init-env.py first}
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?Run init-env.py first}
+    command: [sh, -c, 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"']
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: [https]
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      gateway:
+        condition: service_healthy
+
+volumes:
+  gateway_data:
+  postgres_data:
+  redis_data:
+  caddy_data:
+  caddy_config:
