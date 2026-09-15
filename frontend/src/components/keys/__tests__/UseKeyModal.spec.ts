@@ -328,7 +328,7 @@ describe('UseKeyModal', () => {
     expect(codeBlocks.join('\n')).toContain('experimental_bearer_token = "sk-grok-codex-test"')
   })
 
-  it('generates a self-contained, reference-compatible OpenAI Codex config by default', () => {
+  it('generates a reference-compatible OpenAI Codex config with environment auth by default', () => {
     const wrapper = mount(UseKeyModal, {
       props: {
         show: true,
@@ -351,18 +351,20 @@ describe('UseKeyModal', () => {
 
     const codeBlocks = wrapper.findAll('pre code').map((code) => code.text())
     const configToml = codeBlocks.find((content) => content.includes('model_provider = "sub2api"'))
+    const environment = codeBlocks.find((content) => content.includes('export SUB2API_API_KEY='))
 
     expect(configToml).toBeDefined()
+    expect(environment).toBe("export SUB2API_API_KEY='sk-test'")
     expect(configToml).toContain('model = "gpt-6-astra"')
     expect(configToml).not.toContain('review_model')
     expect(configToml).not.toContain('model = "gpt-5.4"')
     expect(configToml).not.toContain('model_context_window')
     expect(configToml).not.toContain('model_auto_compact_token_limit')
     expect(configToml).toContain('base_url = "https://example.com/v1"')
-    expect(configToml).toContain('requires_openai_auth = true')
-    expect(configToml).toContain('experimental_bearer_token = "sk-test"')
+    expect(configToml).toContain('requires_openai_auth = false')
+    expect(configToml).not.toContain('experimental_bearer_token')
     expect(configToml).not.toContain('x-openai-actor-authorization')
-    expect(configToml).not.toContain('env_key')
+    expect(configToml).toContain('env_key = "SUB2API_API_KEY"')
     expect(configToml).not.toContain('disable_response_storage')
     expect(configToml).not.toContain('network_access = "enabled"')
     expect(configToml).not.toContain('windows_wsl_setup_acknowledged')
@@ -375,13 +377,13 @@ describe('UseKeyModal', () => {
     expect(configToml).toContain('personality = "pragmatic"')
     expect(configToml).toContain('service_tier = "default"')
     expect(configToml).not.toContain('notify')
-    expect(codeBlocks).toHaveLength(1)
+    expect(codeBlocks).toHaveLength(2)
     expect(wrapper.text()).not.toContain('auth.json')
-    expect(wrapper.get('[data-testid="codex-auth-mode-legacy"]').attributes('aria-checked')).toBe('true')
+    expect(wrapper.get('[data-testid="codex-auth-mode-env-key"]').attributes('aria-checked')).toBe('true')
     expect(wrapper.find('[data-testid="codex-api-key-restart-notice"]').exists()).toBe(false)
   })
 
-  it('switches between self-contained compatibility and API key modes', async () => {
+  it('switches between environment and inline API key modes', async () => {
     const wrapper = mount(UseKeyModal, {
       props: {
         show: true,
@@ -401,20 +403,20 @@ describe('UseKeyModal', () => {
       }
     })
 
-    const legacyMode = wrapper.get('[data-testid="codex-auth-mode-legacy"]')
+    const envKeyMode = wrapper.get('[data-testid="codex-auth-mode-env-key"]')
     await nextTick()
 
     const codeBlocks = wrapper.findAll('pre code').map((code) => code.text())
     const configToml = codeBlocks.find((content) => content.includes('model_provider = "sub2api"'))
 
-    expect(legacyMode.attributes('aria-checked')).toBe('true')
+    expect(envKeyMode.attributes('aria-checked')).toBe('true')
     expect(configToml).toBeDefined()
-    expect(configToml).toContain('requires_openai_auth = true')
-    expect(configToml).toContain('experimental_bearer_token = "sk-test"')
+    expect(configToml).toContain('requires_openai_auth = false')
+    expect(configToml).not.toContain('experimental_bearer_token')
     expect(configToml).not.toContain('x-openai-actor-authorization')
-    expect(configToml).not.toContain('env_key')
+    expect(configToml).toContain('env_key = "SUB2API_API_KEY"')
     expect(configToml).not.toContain('image_generation')
-    expect(codeBlocks).toHaveLength(1)
+    expect(codeBlocks).toHaveLength(2)
     expect(wrapper.text()).not.toContain('auth.json')
     expect(wrapper.find('[data-testid="codex-api-key-restart-notice"]').exists()).toBe(false)
 
@@ -429,11 +431,11 @@ describe('UseKeyModal', () => {
     expect(apiKeyConfig).toContain('experimental_bearer_token = "sk-test"')
     expect(apiKeyConfig).toContain('x-openai-actor-authorization')
 
-    await legacyMode.trigger('click')
-    expect(wrapper.get('pre code').text()).toBe(configToml)
+    await envKeyMode.trigger('click')
+    expect(wrapper.findAll('pre code').map((code) => code.text())).toContain(configToml)
   })
 
-  it('generates a self-contained OpenAI Codex WebSocket config by default', async () => {
+  it('generates an environment-authenticated OpenAI Codex WebSocket config by default', async () => {
     const wrapper = mount(UseKeyModal, {
       props: {
         show: true,
@@ -472,17 +474,17 @@ describe('UseKeyModal', () => {
     expect(configToml).not.toContain('model = "gpt-5.4"')
     expect(configToml).not.toContain('model_context_window')
     expect(configToml).not.toContain('model_auto_compact_token_limit')
-    expect(configToml).toContain('requires_openai_auth = true')
-    expect(configToml).toContain('experimental_bearer_token = "sk-test"')
+    expect(configToml).toContain('requires_openai_auth = false')
+    expect(configToml).not.toContain('experimental_bearer_token')
     expect(configToml).not.toContain('x-openai-actor-authorization')
-    expect(configToml).not.toContain('env_key')
+    expect(configToml).toContain('env_key = "SUB2API_API_KEY"')
     expect(configToml).not.toContain('disable_response_storage')
     expect(configToml).not.toContain('network_access = "enabled"')
     expect(configToml).not.toContain('image_generation')
     expect(configToml).toContain('supports_websockets = true')
     expect(configToml).not.toContain('model_catalog_json')
     expect(configToml).toContain('[features]\nresponses_websockets_v2 = true\ngoals = true')
-    expect(codeBlocks).toHaveLength(1)
+    expect(codeBlocks).toHaveLength(2)
     expect(wrapper.text()).not.toContain('auth.json')
   })
 
@@ -533,7 +535,7 @@ describe('UseKeyModal', () => {
     expect(wrapper.text()).not.toContain('auth.json')
   })
 
-  it('resets Codex authentication mode to the self-contained compatibility mode', async () => {
+  it('resets Codex authentication mode to the recommended environment mode', async () => {
     const wrapper = mount(UseKeyModal, {
       props: {
         show: true,
@@ -558,15 +560,15 @@ describe('UseKeyModal', () => {
     await wrapper.setProps({ show: true })
     await nextTick()
 
-    expect(wrapper.get('[data-testid="codex-auth-mode-legacy"]').attributes('aria-checked')).toBe('true')
-    expect(wrapper.findAll('pre code').map((code) => code.text()).join('\n')).toContain('requires_openai_auth = true')
+    expect(wrapper.get('[data-testid="codex-auth-mode-env-key"]').attributes('aria-checked')).toBe('true')
+    expect(wrapper.findAll('pre code').map((code) => code.text()).join('\n')).toContain('env_key = "SUB2API_API_KEY"')
 
     await wrapper.get('[data-testid="codex-auth-mode-api-key"]').trigger('click')
     await wrapper.setProps({ platform: 'gemini' })
     await wrapper.setProps({ platform: 'openai' })
     await nextTick()
 
-    expect(wrapper.get('[data-testid="codex-auth-mode-legacy"]').attributes('aria-checked')).toBe('true')
+    expect(wrapper.get('[data-testid="codex-auth-mode-env-key"]').attributes('aria-checked')).toBe('true')
     expect(wrapper.findAll('pre code').map((code) => code.text()).join('\n')).not.toContain('x-openai-actor-authorization')
   })
 
@@ -742,29 +744,41 @@ describe('UseKeyModal', () => {
     await codexTab!.trigger('click')
     await flushPromises()
 
-    const config = wrapper.get('pre code').text()
-    expect(wrapper.findAll('pre code')).toHaveLength(1)
+    const initialCodeBlocks = wrapper.findAll('pre code').map((code) => code.text())
+    const config = initialCodeBlocks.find((content) => content.includes('model_provider = "sub2api"'))!
+    expect(config).toBeDefined()
+    expect(initialCodeBlocks).toHaveLength(platform === 'openai' ? 2 : 1)
     expect(wrapper.find('[data-testid="codex-model-catalog"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="codex-model-catalog-fetch"]').exists()).toBe(false)
     expect(config).not.toContain('model_catalog_json')
     expect(config).not.toContain('codex-models.json')
     expect(config).toContain('model = "' + model + '"')
     expect(config).toContain('base_url = "https://example.com/v1"')
-    expect(config).toContain('experimental_bearer_token = "sk-config-test"')
+    if (platform === 'openai') {
+      expect(initialCodeBlocks).toContain("export SUB2API_API_KEY='sk-config-test'")
+      expect(config).toContain('env_key = "SUB2API_API_KEY"')
+      expect(config).not.toContain('experimental_bearer_token')
+    } else {
+      expect(config).toContain('experimental_bearer_token = "sk-config-test"')
+    }
     expect(config).toContain('wire_api = "responses"')
 
-    const copyButton = wrapper.findAll('button').find((button) =>
+    const copyButtons = wrapper.findAll('button').filter((button) =>
       button.text().trim() === 'keys.useKeyModal.copy'
     )
-    expect(copyButton).toBeDefined()
-    await copyButton!.trigger('click')
+    expect(copyButtons.length).toBe(platform === 'openai' ? 2 : 1)
+    await copyButtons[copyButtons.length - 1].trigger('click')
     expect(copyToClipboardMock).toHaveBeenCalledWith(config, 'keys.copied')
 
     const windowsTab = wrapper.findAll('button').find((button) => button.text().trim() === 'Windows')
     expect(windowsTab).toBeDefined()
     await windowsTab!.trigger('click')
     expect(wrapper.text()).toContain('%userprofile%\\.codex\\config.toml')
-    expect(wrapper.get('pre code').text()).toBe(config)
+    const windowsCodeBlocks = wrapper.findAll('pre code').map((code) => code.text())
+    expect(windowsCodeBlocks).toContain(config)
+    if (platform === 'openai') {
+      expect(windowsCodeBlocks).toContain("$env:SUB2API_API_KEY='sk-config-test'")
+    }
     expect(fetchMock).not.toHaveBeenCalled()
   })
 })

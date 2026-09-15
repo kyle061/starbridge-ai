@@ -72,17 +72,17 @@
             <button
               type="button"
               role="radio"
-              data-testid="codex-auth-mode-legacy"
-              :aria-checked="codexAuthMode === 'legacy'"
+              data-testid="codex-auth-mode-env-key"
+              :aria-checked="codexAuthMode === 'env-key'"
               :class="[
                 'rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                codexAuthMode === 'legacy'
+                codexAuthMode === 'env-key'
                   ? 'bg-white text-primary-700 shadow-sm dark:bg-dark-800 dark:text-primary-300'
                   : 'text-gray-600 hover:text-gray-900 dark:text-dark-300 dark:hover:text-white'
               ]"
-              @click="codexAuthMode = 'legacy'"
+              @click="codexAuthMode = 'env-key'"
             >
-              {{ t('keys.useKeyModal.openai.authModeLegacy') }}
+              {{ t('keys.useKeyModal.openai.authModeEnvKey') }}
             </button>
             <button
               type="button"
@@ -237,8 +237,8 @@ const { copyToClipboard: clipboardCopy } = useClipboard()
 const copiedIndex = ref<number | null>(null)
 const activeTab = ref<string>('unix')
 const activeClientTab = ref<string>('claude')
-type CodexAuthMode = 'legacy' | 'api-key'
-const codexAuthMode = ref<CodexAuthMode>('legacy')
+type CodexAuthMode = 'env-key' | 'api-key'
+const codexAuthMode = ref<CodexAuthMode>('env-key')
 
 // Reset tabs when platform changes
 const defaultClientTab = computed(() => {
@@ -259,12 +259,12 @@ const defaultClientTab = computed(() => {
 watch(() => props.platform, () => {
   activeTab.value = 'unix'
   activeClientTab.value = defaultClientTab.value
-  codexAuthMode.value = 'legacy'
+  codexAuthMode.value = 'env-key'
 }, { immediate: true })
 
 watch(() => props.show, (show) => {
   if (show) {
-    codexAuthMode.value = 'legacy'
+    codexAuthMode.value = 'env-key'
   }
 })
 
@@ -800,11 +800,20 @@ ${useWebSocket ? 'supports_websockets = true\n' : ''}${generateCodexProviderAuth
 [features]
 ${useWebSocket ? 'responses_websockets_v2 = true\n' : ''}goals = true`
 
-  return [{
+  const files: FileConfig[] = []
+  if (codexAuthMode.value === 'env-key') {
+    files.push(generateCodexApiKeyEnvironmentFile(apiKey, isWindows))
+  }
+  files.push({
     path: joinConfigPath(configDir, 'config.toml', isWindows),
     content: configContent,
-    hint: t('keys.useKeyModal.openai.configTomlHint')
-  }]
+    hint: t(
+      codexAuthMode.value === 'env-key'
+        ? 'keys.useKeyModal.openai.configTomlEnvKeyHint'
+        : 'keys.useKeyModal.openai.configTomlHint'
+    )
+  })
+  return files
 }
 
 function generateCodexProviderAuthConfig(apiKey: string): string {
@@ -814,8 +823,29 @@ experimental_bearer_token = "${escapeTomlBasicString(apiKey)}"
 http_headers = { "x-openai-actor-authorization" = "local-image-extension" }`
   }
 
-  return `requires_openai_auth = true
-experimental_bearer_token = "${escapeTomlBasicString(apiKey)}"`
+  return `requires_openai_auth = false
+env_key = "SUB2API_API_KEY"`
+}
+
+function generateCodexApiKeyEnvironmentFile(apiKey: string, windows: boolean): FileConfig {
+  if (windows) {
+    return {
+      path: 'PowerShell',
+      content: `$env:SUB2API_API_KEY=${quotePowerShell(apiKey)}`
+    }
+  }
+  return {
+    path: 'Terminal',
+    content: `export SUB2API_API_KEY=${quotePosixShell(apiKey)}`
+  }
+}
+
+function quotePosixShell(value: string): string {
+  return `'${value.replace(/'/g, `'"'"'`)}'`
+}
+
+function quotePowerShell(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`
 }
 
 function joinConfigPath(dir: string, file: string, windows: boolean): string {

@@ -171,14 +171,15 @@ export default {
       openai: {
         description: '将以下配置保存为 Codex CLI 配置目录中的 config.toml。',
         authModeTitle: 'Codex 认证模式',
-        authModeDescription: '默认使用兼容模式，API Key 直接写入 config.toml；也可切换为 API Key 模式。',
-        authModeLegacy: '兼容模式（推荐）',
-        authModeApiKey: 'API Key（单文件）',
+        authModeDescription: '推荐使用环境变量模式；客户端无法继承环境变量时，也可切换为密钥写入配置。',
+        authModeEnvKey: '环境变量（推荐）',
+        authModeApiKey: '密钥写入配置',
         authModeApiKeyRestartNotice: '保存此配置后，必须完全退出并重启 Codex Desktop 或 CLI，然后新建 task，让客户端重新构建工具注册表。',
-        configTomlHint: '这是可直接导入的完整配置，内含 API Key；请勿提交到代码仓库。',
-        note: '请确保配置目录存在。macOS/Linux 用户可运行 mkdir -p ~/.codex 创建目录；config.toml 含明文 API Key，请妥善保管。',
+        configTomlEnvKeyHint: '此配置从 SUB2API_API_KEY 读取密钥，配置文件本身不再包含明文密钥。',
+        configTomlHint: '此配置包含明文 API Key，请妥善保管且不要提交到代码仓库。',
+        note: '请先在启动 Codex CLI 的同一终端运行 Terminal 命令，再将 config.toml 保存到 ~/.codex。Codex Desktop 需让应用进程继承 SUB2API_API_KEY，或改用「密钥写入配置」模式。',
         noteWindows:
-          '按 Win+R，输入 %userprofile%\\.codex 打开配置目录。如目录不存在，请先手动创建；config.toml 含明文 API Key，请妥善保管。'
+          '请先在启动 Codex CLI 的同一 PowerShell 中运行命令，再将 config.toml 保存到 %userprofile%\\.codex。Codex Desktop 需让应用进程继承 SUB2API_API_KEY，或改用「密钥写入配置」模式。'
       },
       cliTabs: {
         claudeCode: 'Claude Code',

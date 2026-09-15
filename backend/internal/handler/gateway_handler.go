@@ -1160,6 +1160,17 @@ func (h *GatewayHandler) Models(c *gin.Context) {
 
 	// Get available models from account configurations for the selected group platform.
 	availableModels := h.gatewayService.GetAvailableModels(c.Request.Context(), groupID, platform)
+	// A nil model list is also how accounts without explicit mappings request the
+	// static default catalogue. Before falling back, distinguish that valid case
+	// from an empty OpenAI pool so /models does not advertise models that this key
+	// cannot route to any account.
+	if len(availableModels) == 0 && platform == service.PlatformOpenAI && groupID != nil {
+		schedulablePlatforms := h.gatewayService.GetSchedulablePlatforms(c.Request.Context(), groupID)
+		if _, ok := schedulablePlatforms[service.PlatformOpenAI]; !ok {
+			writeOpenAIModelsError(c, http.StatusServiceUnavailable, "upstream_error", "No available OpenAI accounts for this API key group")
+			return
+		}
+	}
 	if apiKey != nil && apiKey.Group != nil && apiKey.Group.ModelAllowlistEnabled() {
 		source := modelListingSource(platform, availableModels, defaultModelIDsForPlatform(platform))
 		writeAllowlistedModelsList(c, platform, apiKey.Group.ModelAllowlist.FilterForListing(source))

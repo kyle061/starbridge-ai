@@ -207,6 +207,7 @@ func TestClassifyNoAccountError_NoAccountsInPool_Stays503(t *testing.T) {
 	cls := classifyNoAccountErrorFromGin(c, fd, apiKey, "gpt-5", "gpt-5", service.PlatformOpenAI)
 
 	require.Equal(t, http.StatusServiceUnavailable, cls.Status, "empty pool is a service-availability issue, not a model issue")
+	require.Equal(t, "No available accounts are configured for this API key group and platform", cls.Message)
 	require.False(t, cls.ModelNotFound)
 }
 
