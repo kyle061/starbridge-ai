@@ -27,7 +27,6 @@ jobs:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
       DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/starbridge' }}
       DEPLOY_APP_PORT: ${{ secrets.DEPLOY_APP_PORT || '18080' }}
     steps:
       - name: Check deployment configuration
@@ -49,8 +48,7 @@ jobs:
           fi
           [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
           [[ "$DEPLOY_USER" =~ ^[a-zA-Z_][a-zA-Z0-9_-]*$ ]]
-          [[ "$DEPLOY_PATH" =~ ^/[a-zA-Z0-9_./-]+/starbridge$ ]]
-          [[ "$DEPLOY_PATH" != *'/../'* && "$DEPLOY_PATH" != *'/./'* && "$DEPLOY_PATH" != *'//'* ]]
+          [[ "$DEPLOY_ADMIN_EMAIL" =~ ^[a-zA-Z0-9._+%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]
           [[ "$DEPLOY_PORT" =~ ^[1-9][0-9]{0,4}$ && "$DEPLOY_APP_PORT" =~ ^[1-9][0-9]{0,4}$ ]]
           (( DEPLOY_PORT <= 65535 && DEPLOY_APP_PORT >= 1024 && DEPLOY_APP_PORT <= 65535 ))
           echo 'enabled=true' >> "$GITHUB_OUTPUT"
@@ -86,9 +84,8 @@ jobs:
         id: server
         shell: bash
         run: |
-          printf -v args ' %q' prepare "$DEPLOY_PATH" "$DEPLOY_APP_PORT"
           platform=$(ssh -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes \
-            "$DEPLOY_USER@$DEPLOY_HOST" "bash -s --$args" < deploy/starbridge/deploy-server.sh)
+            "$DEPLOY_USER@$DEPLOY_HOST" "starbridge prepare $DEPLOY_APP_PORT")
           [[ "$platform" == linux/amd64 || "$platform" == linux/arm64 ]]
           echo "platform=$platform" >> "$GITHUB_OUTPUT"
 
@@ -114,25 +111,23 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Transfer image and deployment files
+      - name: Upload Starbridge image through restricted SSH command
         if: steps.guard.outputs.enabled == 'true'
+        env:
+          REVISION: ${{ steps.revision.outputs.sha }}
         shell: bash
         run: |
           gzip "$RUNNER_TEMP/starbridge-image.tar"
-          scp -P "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes \
-            "$RUNNER_TEMP/starbridge-image.tar.gz" "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
-          scp -P "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes \
-            deploy/starbridge/{compose.yaml,.env.example,init-env.py,deploy-server.sh,Caddyfile} \
-            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/deploy/starbridge/"
+          ssh -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" "starbridge upload $REVISION" < "$RUNNER_TEMP/starbridge-image.tar.gz"
 
       - name: Start Starbridge and check health
         if: steps.guard.outputs.enabled == 'true'
         env:
           DEPLOY_ADMIN_EMAIL: ${{ secrets.DEPLOY_ADMIN_EMAIL }}
-          IMAGE: starbridge-ai:${{ steps.revision.outputs.sha }}
+          REVISION: ${{ steps.revision.outputs.sha }}
         shell: bash
         run: |
-          printf -v args ' %q' apply "$DEPLOY_PATH" "$DEPLOY_APP_PORT" "$DEPLOY_ADMIN_EMAIL" "$IMAGE"
           ssh -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes \
-            "$DEPLOY_USER@$DEPLOY_HOST" "bash '$DEPLOY_PATH/deploy/starbridge/deploy-server.sh'$args"
-          echo "Starbridge deployed successfully: $IMAGE" >> "$GITHUB_STEP_SUMMARY"
+            "$DEPLOY_USER@$DEPLOY_HOST" "starbridge apply $DEPLOY_APP_PORT $DEPLOY_ADMIN_EMAIL $REVISION"
+          echo "Starbridge deployed successfully: starbridge-ai:$REVISION" >> "$GITHUB_STEP_SUMMARY"

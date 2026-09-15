@@ -9,6 +9,9 @@ services:
       args:
         VERSION: starbridge-0.1.0
     restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.8
+    pids_limit: 256
     ports:
       - "${BIND_HOST:-127.0.0.1}:${APP_PORT:-8080}:8080"
     extra_hosts:
@@ -19,6 +22,7 @@ services:
       SERVER_PORT: "8080"
       SERVER_MODE: release
       RUN_MODE: standard
+      GOMEMLIMIT: 384MiB
       DATABASE_HOST: postgres
       DATABASE_PORT: "5432"
       DATABASE_USER: starbridge
@@ -57,6 +61,9 @@ services:
   postgres:
     image: postgres:18-alpine
     restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
     environment:
       POSTGRES_USER: starbridge
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run init-env.py first}
@@ -72,6 +79,9 @@ services:
   redis:
     image: redis:8-alpine
     restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.3
+    pids_limit: 64
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Run init-env.py first}
       REDISCLI_AUTH: ${REDIS_PASSWORD:?Run init-env.py first}

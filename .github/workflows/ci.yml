@@ -38,6 +38,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: python3 deploy/starbridge/test_init_env.py
       - run: python3 deploy/starbridge/test_deploy_server.py
+      - run: python3 deploy/starbridge/test_restricted_ssh.py
       - run: bash -n deploy/starbridge/deploy-server.sh
       - run: |
           python3 - <<'PY'

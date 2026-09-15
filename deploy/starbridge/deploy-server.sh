@@ -45,7 +45,7 @@ import sys
 root, port = sys.argv[1], int(sys.argv[2])
 ids = subprocess.check_output([
     "docker", "ps", "-aq", "--filter", "label=com.docker.compose.project=starbridge"
-], text=True).split()
+], universal_newlines=True).split()
 owns_port = False
 if ids:
     for container in json.loads(subprocess.check_output(["docker", "inspect", *ids])):

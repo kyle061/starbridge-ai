@@ -23,9 +23,19 @@ docker compose logs -f gateway
 
 ## 2.1 使用 GitHub Actions 自动部署到独立服务器
 
-仓库包含 `.github/workflows/deploy.yml`。推送 `main` 且 **Starbridge CI** 全部通过后，它会根据服务器架构在 GitHub Runner 构建镜像，通过 SSH 上传镜像与部署文件，再使用固定 Compose 项目名 `starbridge` 启动自己的 `gateway`、PostgreSQL 和 Redis。也可以在 **Actions → Starbridge Deploy → Run workflow** 手动运行 `main`。
+仓库包含 `.github/workflows/deploy.yml`。推送 `main` 且 **Starbridge CI** 全部通过后，它会根据服务器架构在 GitHub Runner 构建镜像，通过受限 SSH 通道上传镜像，再使用固定 Compose 项目名 `starbridge` 启动自己的 `gateway`、PostgreSQL 和 Redis。也可以在 **Actions → Starbridge Deploy → Run workflow** 手动运行 `main`。
 
 默认独立目录为 `/opt/starbridge`，公网端口为 `18080`，服务地址为 `http://177.0.143.11:18080`（完成部署并放行端口后才能访问）。部署前会检查端口占用、目录归属，以及是否存在其他同名 Compose 资源；冲突时停止部署。PostgreSQL、Redis 不发布宿主机端口，自动部署不启动占用 80/443 的 Caddy。
+
+首次接入时，管理员在服务器安装专用部署账号。先在自己的电脑生成专用 Ed25519 密钥，只将公钥和 `deploy/starbridge` 目录中的脚本上传到服务器，然后在该目录执行：
+
+```bash
+bash install-restricted-ssh.sh /path/to/actions.pub 18080
+```
+
+安装器创建 `starbridge-deploy` 账号，将部署配置安装为 root 所有，并添加只允许执行固定部署脚本的 sudo 规则。部署账号不能登录普通 Shell、执行任意 Docker 命令、修改 Compose 文件或访问其他项目。SSH 私钥只保存在本机和 GitHub Secrets。容器镜像导入前会校验标签，避免覆盖其他项目的镜像。
+
+自动更新只替换星桥镜像。需要修改 Compose、资源上限或受限部署脚本时，由管理员检查后重新运行安装器。默认内存上限为 gateway 512 MiB、PostgreSQL 256 MiB、Redis 128 MiB，并分别限制 CPU，避免镜像编译和应用过载争抢已有服务的资源。
 
 在 GitHub 仓库 **Settings → Secrets and variables → Actions → New repository secret** 中添加：
 
@@ -33,14 +43,13 @@ docker compose logs -f gateway
 | --- | --- |
 | `DEPLOY_HOST` | 服务器 IP，例如 `177.0.143.11` |
 | `DEPLOY_PORT` | SSH 端口；留空时使用 `22` |
-| `DEPLOY_USER` | SSH 用户名，建议使用只负责部署的用户 |
-| `DEPLOY_PATH` | 可选，默认 `/opt/starbridge`；必须是以 `/starbridge` 结尾的绝对路径 |
+| `DEPLOY_USER` | `starbridge-deploy` |
 | `DEPLOY_APP_PORT` | 可选，默认 `18080`；必须是未占用的 1024–65535 端口 |
 | `DEPLOY_ADMIN_EMAIL` | 首次初始化时的管理员邮箱 |
 | `DEPLOY_SSH_KEY` | 上述用户的专用 SSH 私钥（完整 PEM 文本） |
 | `DEPLOY_KNOWN_HOSTS` | 经过核对的服务器 SSH host key，使用 `known_hosts` 格式；非 22 端口的主机名需包含 `[IP]:端口` |
 
-把 `DEPLOY_SSH_KEY` 对应的公钥放入服务器用户的 `~/.ssh/authorized_keys`。服务器需要 Docker Engine 24+、Docker Compose v2.20+、Python 3 和 `curl`；SSH 用户需要能使用 Docker 并创建/写入部署目录。服务器无需保存 GitHub 凭据，也无需安装 Node.js 或 Go。
+服务器需要 Docker Engine 24+、Docker Compose v2.20+、Python 3.6+、`sudo` 和 `curl`；安装器由管理员执行一次，之后 Actions 使用专用账号。服务器无需保存 GitHub 凭据，也无需安装 Node.js 或 Go。不要给部署账号加入 `docker` 或 `wheel` 组，也不要配置通用 sudo 权限。
 
 可在可信终端使用 `ssh-keyscan -p 22 177.0.143.11` 获取主机公钥，并与服务器控制台显示的 SSH 主机指纹核对后存入 `DEPLOY_KNOWN_HOSTS`。缺少必填 Secret 时，工作流会在运行摘要标明跳过部署。
 
