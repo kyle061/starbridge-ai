@@ -395,7 +395,7 @@
   }
 
   .modal-content {
-    @apply w-full;
+    @apply w-full min-w-0;
     @apply max-h-[95vh] sm:max-h-[90vh];
     @apply bg-white dark:bg-dark-800;
     @apply rounded-2xl shadow-2xl;
@@ -406,29 +406,31 @@
   .modal-header {
     @apply border-b border-gray-200 px-4 py-3 dark:border-dark-700;
     @apply sm:px-6 sm:py-4;
-    @apply flex items-center justify-between;
+    @apply flex items-center justify-between gap-3;
     @apply flex-shrink-0;
   }
 
   .modal-title {
-    @apply text-lg font-semibold text-gray-900 dark:text-white;
+    @apply min-w-0 break-words text-lg font-semibold text-gray-900 dark:text-white;
   }
 
   .modal-body {
     @apply px-4 py-3;
     @apply sm:px-6 sm:py-4;
-    @apply flex-1 overflow-y-auto;
+    @apply min-h-0 min-w-0 flex-1 overflow-y-auto;
+    overscroll-behavior: contain;
   }
 
   .modal-footer {
     @apply border-t border-gray-200 px-4 py-3 dark:border-dark-700;
     @apply sm:px-6 sm:py-4;
-    @apply flex items-center justify-end gap-3;
+    @apply flex flex-wrap items-center justify-end gap-3;
     @apply flex-shrink-0;
   }
 
   /* 防止body滚动的工具类 */
-  body.modal-open {
+  body.modal-open,
+  body.mobile-menu-open {
     overflow: hidden;
   }
 
@@ -544,6 +546,8 @@
     @apply flex flex-col;
     @apply transition-transform duration-300;
     transition-property: width, transform;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   .sidebar-header {
@@ -556,7 +560,8 @@
   }
 
   .sidebar-nav {
-    @apply flex-1 overflow-y-auto px-3 py-4;
+    @apply min-h-0 flex-1 overflow-y-auto px-3 py-4;
+    overscroll-behavior: contain;
   }
 
   .sidebar-link {
@@ -775,4 +780,43 @@
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
+}
+
+/* Phone layouts: keep controls reachable without preventing browser zoom. */
+@media (max-width: 1023px) {
+  .sidebar { width: min(20rem, calc(100vw - 3rem)); }
+}
+
+@media (max-width: 639px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']), textarea, select {
+    font-size: 16px;
+  }
+  .btn, .btn-icon, .select-trigger, .sidebar-link { min-height: 44px; }
+  .btn-icon { min-width: 44px; }
+  .app-main, .auth-layout {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .auth-layout {
+    min-height: 100dvh;
+    padding-top: max(1.5rem, env(safe-area-inset-top));
+  }
+  .modal-overlay {
+    padding: max(.5rem, env(safe-area-inset-top)) max(.5rem, env(safe-area-inset-right)) max(.5rem, env(safe-area-inset-bottom)) max(.5rem, env(safe-area-inset-left));
+  }
+  .modal-content {
+    max-height: calc(100dvh - max(.5rem, env(safe-area-inset-top)) - max(.5rem, env(safe-area-inset-bottom)));
+  }
+  .modal-body { overflow-wrap: anywhere; }
+  .modal-footer > .btn { flex: 1 1 auto; }
+  .modal-footer > [class~="flex"] { min-width: 0; flex-wrap: wrap; gap: .5rem; }
+}
+
+@media (max-width: 767px) {
+  .mobile-card-value { overflow-wrap: anywhere; }
+  .mobile-card-value > [class~="flex"], .mobile-card-actions > [class~="flex"] { min-width: 0; flex-wrap: wrap; }
+  .mobile-card-value > [class~="flex"] { align-items: flex-end; }
+  .mobile-card-value [class~="truncate"] { max-width: 100%; }
+  .mobile-card-actions button { min-height: 44px; min-width: 44px; }
 }

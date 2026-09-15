@@ -1,5 +1,5 @@
 <template>
-  <div class="relative flex min-h-screen items-center justify-center overflow-hidden p-4">
+  <div class="auth-layout relative flex min-h-screen items-center justify-center p-4">
     <!-- Background -->
     <div
       class="absolute inset-0 bg-gradient-to-br from-gray-50 via-primary-50/30 to-gray-100 dark:from-dark-950 dark:via-dark-900 dark:to-dark-950"
@@ -27,7 +27,7 @@
     <!-- Content Container -->
     <div class="relative z-10 w-full max-w-md">
       <!-- Logo/Brand -->
-      <div class="mb-8 text-center">
+      <div class="mb-6 text-center sm:mb-8">
         <!-- Custom Logo or Default Logo -->
         <template v-if="settingsLoaded">
           <div
@@ -45,7 +45,7 @@
       </div>
 
       <!-- Card Container -->
-      <div class="card-glass rounded-2xl p-8 shadow-glass">
+      <div class="card-glass rounded-2xl p-5 shadow-glass sm:p-8">
         <slot />
       </div>
 

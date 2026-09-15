@@ -2,30 +2,30 @@
   <div
     class="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 dark:border-dark-700 dark:bg-dark-800 sm:px-6"
   >
-    <div class="flex flex-1 items-center justify-between sm:hidden">
+    <div class="flex min-w-0 flex-1 items-center justify-between gap-2 sm:hidden">
       <!-- Mobile pagination -->
       <button
         @click="goToPage(page - 1)"
         :disabled="page === 1"
-        class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-600 dark:bg-dark-700 dark:text-gray-200 dark:hover:bg-dark-600"
+        class="relative inline-flex min-h-11 shrink-0 items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-600 dark:bg-dark-700 dark:text-gray-200 dark:hover:bg-dark-600"
       >
         {{ t('pagination.previous') }}
       </button>
-      <span class="text-sm text-gray-700 dark:text-gray-300">
+      <span class="min-w-0 text-center text-xs text-gray-700 dark:text-gray-300">
         {{ t('pagination.pageOf', { page, total: totalPages }) }}
       </span>
       <button
         @click="goToPage(page + 1)"
         :disabled="page === totalPages"
-        class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-600 dark:bg-dark-700 dark:text-gray-200 dark:hover:bg-dark-600"
+        class="relative inline-flex min-h-11 shrink-0 items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-600 dark:bg-dark-700 dark:text-gray-200 dark:hover:bg-dark-600"
       >
         {{ t('pagination.next') }}
       </button>
     </div>
 
-    <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+    <div class="hidden gap-4 sm:flex sm:flex-1 sm:flex-wrap sm:items-center sm:justify-between">
       <!-- Desktop pagination info -->
-      <div class="flex items-center space-x-4">
+      <div class="flex flex-wrap items-center gap-4">
         <p class="text-sm text-gray-700 dark:text-gray-300">
           {{ t('pagination.showing') }}
           <span class="font-medium">{{ fromItem }}</span>
@@ -149,7 +149,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
-const totalPages = computed(() => Math.ceil(props.total / props.pageSize))
+const totalPages = computed(() => Math.max(1, Math.ceil(props.total / props.pageSize)))
 
 const fromItem = computed(() => {
   if (props.total === 0) return 0

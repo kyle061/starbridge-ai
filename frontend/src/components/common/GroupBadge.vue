@@ -1,7 +1,7 @@
 <template>
   <span
     :class="[
-      'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
+      'inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
       badgeClass
     ]"
   >
@@ -10,7 +10,7 @@
     <!-- Group name -->
     <span class="truncate">{{ name }}</span>
     <!-- Right side label -->
-    <span v-if="showLabel" :class="labelClass">
+    <span v-if="showLabel" class="shrink-0 whitespace-nowrap" :class="labelClass">
       <template v-if="hasCustomRate">
         <!-- 原倍率删除线 + 专属倍率高亮 -->
         <span class="line-through opacity-50 mr-0.5">{{ rateMultiplier }}x</span>

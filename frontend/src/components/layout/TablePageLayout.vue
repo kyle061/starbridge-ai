@@ -46,16 +46,17 @@ onUnmounted(() => {
 <style scoped>
 /* 桌面端：Flexbox 布局 */
 .table-page-layout {
-  @apply flex flex-col gap-6;
+  @apply flex min-w-0 flex-col gap-4 md:gap-6;
   height: calc(100vh - 64px - 4rem); /* 减去 header + lg:p-8 的上下padding */
+  height: calc(100dvh - 64px - 4rem);
 }
 
 .layout-section-fixed {
-  @apply flex-shrink-0;
+  @apply min-w-0 flex-shrink-0;
 }
 
 .layout-section-scrollable {
-  @apply flex-1 min-h-0 flex flex-col;
+  @apply flex-1 min-h-0 min-w-0 flex flex-col;
 }
 
 /* 表格滚动容器 - 增强版表体滚动方案 */
@@ -92,12 +93,21 @@ onUnmounted(() => {
 }
 
 /* 移动端：恢复正常滚动 */
+.table-page-layout.mobile-mode {
+  height: auto;
+}
+
 .table-page-layout.mobile-mode .table-scroll-container {
-  @apply h-auto overflow-visible border-none shadow-none bg-transparent;
+  @apply h-auto min-w-0 border-none shadow-none bg-transparent;
 }
 
 .table-page-layout.mobile-mode .layout-section-scrollable {
   @apply flex-none min-h-fit;
+}
+
+.table-page-layout.mobile-mode .table-scroll-container :deep(.table-wrapper) {
+  flex: none;
+  max-height: 65dvh;
 }
 
 .table-page-layout.mobile-mode .table-scroll-container :deep(table) {

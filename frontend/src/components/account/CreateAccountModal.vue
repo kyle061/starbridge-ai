@@ -6,8 +6,8 @@
     @close="handleClose"
   >
     <!-- Step Indicator for OAuth accounts -->
-    <div v-if="isOAuthFlow" class="mb-6 flex items-center justify-center">
-      <div class="flex items-center space-x-4">
+    <div v-if="isOAuthFlow" class="mb-6 flex min-w-0 items-center justify-center">
+      <div class="flex min-w-0 items-center gap-2 sm:gap-4">
         <div class="flex items-center">
           <div
             :class="[
@@ -70,7 +70,7 @@
       <!-- Platform Selection - Segmented Control Style -->
       <div>
         <label class="input-label">{{ t('admin.accounts.platform') }}</label>
-        <div class="mt-2 flex flex-wrap rounded-lg bg-gray-100 p-1 dark:bg-dark-700" data-tour="account-form-platform">
+        <div class="account-platform-options mt-2 grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1 dark:bg-dark-700 sm:flex sm:flex-wrap" data-tour="account-form-platform">
           <button
             type="button"
             @click="form.platform = 'anthropic'"
@@ -162,7 +162,7 @@
           </button>
         </div>
         <!-- Multi-protocol API-key providers: Kimi / Zhipu GLM / DeepSeek / OpenCode -->
-        <div class="mt-2 flex flex-wrap rounded-lg bg-gray-100 p-1 dark:bg-dark-700">
+        <div class="account-platform-options mt-2 grid grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1 dark:bg-dark-700 sm:flex sm:flex-wrap">
           <button
             type="button"
             @click="selectCNPlatform('kimi')"
@@ -3140,8 +3140,8 @@
         data-testid="create-openai-ws-mode"
         class="border-t border-gray-200 pt-4 dark:border-dark-600"
       >
-        <div class="flex items-center justify-between">
-          <div>
+        <div class="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
+          <div class="min-w-0">
             <label class="input-label mb-0">{{ t('admin.accounts.openai.wsMode') }}</label>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {{ t('admin.accounts.openai.wsModeDesc') }}
@@ -3150,7 +3150,7 @@
               {{ t(openAIWSModeHintKey) }}
             </p>
           </div>
-          <div class="w-52">
+          <div class="w-full shrink-0 sm:w-52">
             <Select v-model="openaiResponsesWebSocketV2Mode" :options="openAIWSModeOptions" />
           </div>
         </div>
@@ -3190,14 +3190,14 @@
         v-if="form.platform === 'anthropic' && accountCategory === 'apikey'"
         class="border-t border-gray-200 pt-4 dark:border-dark-600"
       >
-        <div class="flex items-center justify-between gap-4">
-          <div>
+        <div class="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
+          <div class="min-w-0">
             <label class="input-label mb-0">{{ t('admin.accounts.anthropic.apiKeyAuthScheme') }}</label>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {{ t('admin.accounts.anthropic.apiKeyAuthSchemeDesc') }}
             </p>
           </div>
-          <select v-model="anthropicAPIKeyAuthScheme" class="input w-52 text-sm">
+          <select v-model="anthropicAPIKeyAuthScheme" class="input w-full shrink-0 text-sm sm:w-52">
             <option value="x_api_key">{{ t('admin.accounts.anthropic.apiKeyAuthSchemeXApiKey') }}</option>
             <option value="authorization_bearer">{{ t('admin.accounts.anthropic.apiKeyAuthSchemeBearer') }}</option>
           </select>
@@ -3317,14 +3317,14 @@
         v-if="form.platform === 'openai' && accountCategory === 'oauth-based'"
         class="border-t border-gray-200 pt-4 dark:border-dark-600"
       >
-        <div class="flex items-center justify-between gap-4">
+        <div class="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
           <div class="min-w-0">
             <label class="input-label mb-0">{{ t('admin.accounts.openai.codexFingerprintMode') }}</label>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {{ t('admin.accounts.openai.codexFingerprintModeDesc') }}
             </p>
           </div>
-          <div class="w-52 flex-shrink-0">
+          <div class="w-full shrink-0 sm:w-52">
             <Select v-model="codexFingerprintMode" data-testid="create-codex-fingerprint-mode-select" :options="codexFingerprintModeOptions" />
           </div>
         </div>
@@ -3335,14 +3335,14 @@
         v-if="form.platform === 'openai' && (accountCategory === 'oauth-based' || accountCategory === 'apikey')"
         class="border-t border-gray-200 pt-4 dark:border-dark-600 space-y-4"
       >
-        <div class="flex items-center justify-between">
-          <div>
+        <div class="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
+          <div class="min-w-0">
             <label class="input-label mb-0">{{ t('admin.accounts.openai.compactMode') }}</label>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {{ t('admin.accounts.openai.compactModeDesc') }}
             </p>
           </div>
-          <div class="w-44">
+          <div class="w-full shrink-0 sm:w-44">
             <Select v-model="openAICompactMode" :options="openAICompactModeOptions" />
           </div>
         </div>
@@ -7160,3 +7160,14 @@ const handleCookieAuth = async (sessionKey: string) => {
   }
 }
 </script>
+
+<style scoped>
+@media (max-width: 639px) {
+  .account-platform-options > button {
+    min-width: 0;
+    min-height: 44px;
+    padding-left: .5rem;
+    padding-right: .5rem;
+  }
+}
+</style>

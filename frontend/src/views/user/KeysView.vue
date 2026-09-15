@@ -3,22 +3,22 @@
     <TablePageLayout>
       <template #filters>
         <div class="flex flex-col gap-3">
-          <div class="flex flex-wrap items-center gap-3">
+          <div class="grid grid-cols-2 items-center gap-3 sm:flex sm:flex-wrap">
             <SearchInput
               v-model="filterSearch"
               :placeholder="t('keys.searchPlaceholder')"
-              class="w-full sm:w-64"
+              class="col-span-2 w-full sm:w-64"
               @search="onFilterChange"
             />
             <Select
               :model-value="filterGroupId"
-              class="w-40"
+              class="min-w-0 w-full sm:w-40"
               :options="groupFilterOptions"
               @update:model-value="onGroupFilterChange"
             />
             <Select
               :model-value="filterStatus"
-              class="w-40"
+              class="min-w-0 w-full sm:w-40"
               :options="statusFilterOptions"
               @update:model-value="onStatusFilterChange"
             />
@@ -48,7 +48,7 @@
       </template>
 
       <template #actions>
-        <div class="flex justify-end gap-3">
+        <div class="flex flex-wrap justify-end gap-3">
           <button
             @click="loadApiKeys"
             :disabled="loading"
@@ -70,7 +70,7 @@
             </button>
             <div
               v-if="showColumnDropdown"
-              class="absolute right-0 top-full z-50 mt-1 max-h-80 w-48 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-dark-600 dark:bg-dark-800"
+              class="absolute left-1/2 top-full z-50 mt-1 max-h-80 w-48 -translate-x-1/2 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-dark-600 dark:bg-dark-800 md:left-auto md:right-0 md:translate-x-0"
             >
               <button
                 v-for="col in toggleableColumns"
@@ -159,7 +159,7 @@
               <button
                 :ref="(el) => setGroupButtonRef(row.id, el)"
                 @click="openGroupSelector(row)"
-                class="-mx-2 -my-1 flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 transition-all duration-200 hover:bg-gray-100 dark:hover:bg-dark-700"
+                class="-my-1 flex w-full min-w-0 cursor-pointer flex-wrap items-center justify-end gap-2 rounded-lg px-2 py-1 transition-all duration-200 hover:bg-gray-100 dark:hover:bg-dark-700 md:-mx-2 md:w-auto md:flex-nowrap md:justify-start"
                 :title="t('keys.clickToChangeGroup')"
               >
                 <GroupBadge

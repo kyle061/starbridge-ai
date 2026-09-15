@@ -1872,8 +1872,8 @@
         v-if="account?.platform === 'openai' && (account?.type === 'oauth' || account?.type === 'setup-token' || account?.type === 'apikey')"
         class="border-t border-gray-200 pt-4 dark:border-dark-600"
       >
-        <div class="flex items-center justify-between">
-          <div>
+        <div class="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
+          <div class="min-w-0">
             <label class="input-label mb-0">{{ t('admin.accounts.openai.wsMode') }}</label>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {{ t('admin.accounts.openai.wsModeDesc') }}
@@ -1882,7 +1882,7 @@
               {{ t(openAIWSModeHintKey) }}
             </p>
           </div>
-          <div class="w-52">
+          <div class="w-full shrink-0 sm:w-52">
             <Select v-model="openaiResponsesWebSocketV2Mode" data-testid="edit-openai-ws-mode-select" :options="openAIWSModeOptions" />
           </div>
         </div>
@@ -2033,14 +2033,14 @@
         v-if="account?.platform === 'anthropic' && account?.type === 'apikey'"
         class="border-t border-gray-200 pt-4 dark:border-dark-600"
       >
-        <div class="flex items-center justify-between gap-4">
-          <div>
+        <div class="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
+          <div class="min-w-0">
             <label class="input-label mb-0">{{ t('admin.accounts.anthropic.apiKeyAuthScheme') }}</label>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {{ t('admin.accounts.anthropic.apiKeyAuthSchemeDesc') }}
             </p>
           </div>
-          <select v-model="anthropicAPIKeyAuthScheme" class="input w-52 text-sm">
+          <select v-model="anthropicAPIKeyAuthScheme" class="input w-full shrink-0 text-sm sm:w-52">
             <option value="x_api_key">{{ t('admin.accounts.anthropic.apiKeyAuthSchemeXApiKey') }}</option>
             <option value="authorization_bearer">{{ t('admin.accounts.anthropic.apiKeyAuthSchemeBearer') }}</option>
           </select>
@@ -2263,14 +2263,14 @@
         v-if="account?.platform === 'openai' && account?.type === 'oauth'"
         class="border-t border-gray-200 pt-4 dark:border-dark-600"
       >
-        <div class="flex items-center justify-between gap-4">
+        <div class="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
           <div class="min-w-0">
             <label class="input-label mb-0">{{ t('admin.accounts.openai.codexFingerprintMode') }}</label>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {{ t('admin.accounts.openai.codexFingerprintModeDesc') }}
             </p>
           </div>
-          <div class="w-52 flex-shrink-0">
+          <div class="w-full shrink-0 sm:w-52">
             <Select v-model="codexFingerprintMode" data-testid="edit-codex-fingerprint-mode-select" :options="codexFingerprintModeOptions" />
           </div>
         </div>
@@ -2281,14 +2281,14 @@
         v-if="account?.platform === 'openai' && account?.type === 'oauth' && !isSparkShadow"
         class="border-t border-gray-200 pt-4 dark:border-dark-600"
       >
-        <div class="flex items-center justify-between gap-4">
+        <div class="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
           <div class="min-w-0">
             <label class="input-label mb-0">{{ t('admin.accounts.openai.planType') }}</label>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {{ t('admin.accounts.openai.planTypeDesc') }}
             </p>
           </div>
-          <div class="w-44 flex-shrink-0">
+          <div class="w-full shrink-0 sm:w-44">
             <Select v-model="editPlanType" :options="planTypeOptions" />
           </div>
         </div>
@@ -2298,14 +2298,14 @@
         v-if="account?.platform === 'openai' && (account?.type === 'oauth' || account?.type === 'setup-token' || account?.type === 'apikey')"
         class="border-t border-gray-200 pt-4 dark:border-dark-600 space-y-4"
       >
-        <div class="flex items-center justify-between">
-          <div>
+        <div class="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
+          <div class="min-w-0">
             <label class="input-label mb-0">{{ t('admin.accounts.openai.compactMode') }}</label>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {{ t('admin.accounts.openai.compactModeDesc') }}
             </p>
           </div>
-          <div class="w-44">
+          <div class="w-full shrink-0 sm:w-44">
             <Select v-model="openAICompactMode" :options="openAICompactModeOptions" />
           </div>
         </div>

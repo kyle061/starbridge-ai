@@ -20,7 +20,17 @@ jobs:
         working-directory: frontend
       - run: pnpm run build
         working-directory: frontend
-      - run: pnpm exec vitest run src/components/account/__tests__/OpenAIProviderPresets.spec.ts src/components/account/__tests__/CreateAccountModal.spec.ts src/i18n/__tests__/localeKeyCompleteness.spec.ts
+      - run: >-
+          pnpm exec vitest run
+          src/components/account/__tests__/OpenAIProviderPresets.spec.ts
+          src/components/account/__tests__/CreateAccountModal.spec.ts
+          src/components/common/__tests__/Pagination.spec.ts
+          src/components/common/__tests__/DataTable.spec.ts
+          src/components/layout/__tests__/AppSidebar.spec.ts
+          src/components/layout/__tests__/TablePageLayout.spec.ts
+          src/components/keys/__tests__/EndpointPopover.spec.ts
+          src/views/user/__tests__/KeysView.spec.ts
+          src/i18n/__tests__/localeKeyCompleteness.spec.ts
         working-directory: frontend
 
   backend:

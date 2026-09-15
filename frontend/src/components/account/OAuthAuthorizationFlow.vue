@@ -2,11 +2,11 @@
   <div
     class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-700 dark:bg-blue-900/30"
   >
-      <div class="flex items-start gap-4">
-      <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-500">
+    <div class="flex min-w-0 items-start gap-3 sm:gap-4">
+      <div class="hidden h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-500 sm:flex">
         <Icon name="link" size="md" class="text-white" />
       </div>
-      <div class="flex-1">
+      <div class="min-w-0 flex-1">
         <h4 class="mb-3 font-semibold text-blue-900 dark:text-blue-200">{{ oauthTitle }}</h4>
 
         <!-- Auth Method Selection -->

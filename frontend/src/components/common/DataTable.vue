@@ -1,5 +1,5 @@
 <template>
-  <div v-if="!isDesktopViewport" class="space-y-3">
+  <div v-if="!isDesktopViewport" class="mobile-data-cards min-w-0 space-y-3">
     <template v-if="loading">
       <div v-for="i in 5" :key="i" class="rounded-lg border border-gray-200 bg-white p-4 dark:border-dark-700 dark:bg-dark-900">
         <div class="space-y-3">
@@ -71,18 +71,18 @@
             v-for="column in dataColumns"
             :key="column.key"
             :data-field="column.key"
-            class="flex min-w-0 items-start justify-between gap-4"
+            class="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-start gap-3"
           >
             <span class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-dark-400">
               {{ column.label }}
             </span>
-            <div class="min-w-0 max-w-full text-right text-sm text-gray-900 dark:text-gray-100">
+            <div class="mobile-card-value min-w-0 max-w-full text-right text-sm text-gray-900 dark:text-gray-100">
               <slot :name="`cell-${column.key}`" :row="row" :value="row[column.key]" :expanded="actionsExpanded">
                 {{ column.formatter ? column.formatter(row[column.key], row) : row[column.key] }}
               </slot>
             </div>
           </div>
-          <div v-if="hasActionsColumn" class="border-t border-gray-200 pt-3 dark:border-dark-700">
+          <div v-if="hasActionsColumn" class="mobile-card-actions border-t border-gray-200 pt-3 dark:border-dark-700">
             <slot name="cell-actions" :row="row" :value="row['actions']" :expanded="actionsExpanded"></slot>
           </div>
         </div>

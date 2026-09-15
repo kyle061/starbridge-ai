@@ -1,6 +1,8 @@
 <template>
   <aside
+    id="app-sidebar"
     class="sidebar"
+    :inert="!isDesktop && !mobileOpen ? true : undefined"
     :class="[
       sidebarCollapsed ? 'w-[72px]' : 'w-64',
       { '-translate-x-full lg:translate-x-0': !mobileOpen }
@@ -27,6 +29,9 @@
         <!-- Version Badge -->
         <VersionBadge :version="siteVersion" />
       </div>
+      <button class="btn-ghost btn-icon ml-auto shrink-0 lg:hidden" :aria-label="t('common.close')" @click="closeMobile">
+        <Icon name="x" size="md" />
+      </button>
     </div>
 
     <!-- Navigation -->
@@ -166,7 +171,7 @@
       <!-- Collapse Button -->
       <button
         @click="toggleSidebar"
-        class="sidebar-link w-full"
+        class="sidebar-link hidden w-full lg:flex"
         :class="{ 'sidebar-link-collapsed': sidebarCollapsed }"
         :title="sidebarCollapsed ? t('nav.expand') : t('nav.collapse')"
       >
@@ -191,6 +196,7 @@
 import { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useMediaQuery, onKeyStroke } from '@vueuse/core'
 import { useAdminSettingsStore, useAppStore, useAuthStore, useOnboardingStore } from '@/stores'
 import VersionBadge from '@/components/common/VersionBadge.vue'
 import Icon from '@/components/icons/Icon.vue'
@@ -246,8 +252,19 @@ const onboardingStore = useOnboardingStore()
 const adminSettingsStore = useAdminSettingsStore()
 const { canUseBatchImage, refreshBatchImageAccess } = useBatchImageAccess()
 
-const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)
+const isDesktop = useMediaQuery('(min-width: 1024px)')
+const sidebarCollapsed = computed(() => isDesktop.value && appStore.sidebarCollapsed)
 const mobileOpen = computed(() => appStore.mobileOpen)
+watch([mobileOpen, isDesktop], ([open, desktop]) => {
+  document.body.classList.toggle('mobile-menu-open', open && !desktop)
+  if (desktop && open) appStore.setMobileOpen(false)
+}, { immediate: true })
+onKeyStroke('Escape', () => {
+  if (mobileOpen.value && !isDesktop.value) {
+    closeMobile()
+    document.getElementById('mobile-menu-toggle')?.focus()
+  }
+})
 const isAdmin = computed(() => authStore.isAdmin)
 const sidebarNavRef = ref<HTMLElement | null>(null)
 const isDark = ref(document.documentElement.classList.contains('dark'))
@@ -875,9 +892,7 @@ function closeMobile() {
 
 function handleMenuItemClick(itemPath: string) {
   if (mobileOpen.value) {
-    setTimeout(() => {
-      appStore.setMobileOpen(false)
-    }, 150)
+    appStore.setMobileOpen(false)
   }
 
   // Map paths to tour selectors
@@ -969,6 +984,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  document.body.classList.remove('mobile-menu-open')
   if (sidebarNavRef.value) {
     appStore.sidebarScrollTop = sidebarNavRef.value.scrollTop
   }
