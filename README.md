@@ -7,6 +7,8 @@ Starbridge AI（星桥 AI）是一个自托管的多模型 API 中转站，基�
 - 品牌默认名称改为 **Starbridge AI**，保留后台设置中的自定义站点名称和 Logo。
 - 添加 OpenAI 上游快捷配置：OpenAI、DeepSeek、SiliconFlow、OpenRouter、Ollama。
 - 支持 OpenAI OAuth：管理员可以登录 ChatGPT / OpenAI Pro 账号，把订阅账号加入账号池，再生成星桥 API Key 使用该账号的 Codex 订阅用量（受账号权限和用量限制）。
+- OpenAI 账号默认使用设备码授权，适合手机与远程服务器；绑定结果在当前站点接收，保留手动回调和会话导入。
+- 手机弹窗只纵向滚动，长授权链接换行，组合线路以卡片布局显示。
 - 支持同一平台绑定多个 OAuth / API Key 账号，并为同一公开模型配置跨平台主备线路；主账号池不可用时按优先级自动切换到下一条兼容线路。
 - 预设会同时填入 Base URL 和文本协议：OpenAI 使用 Responses；其他预设默认使用 Chat Completions。
 - 支持继续手动填写任何 OpenAI-compatible Base URL、API Key 和模型 ID。

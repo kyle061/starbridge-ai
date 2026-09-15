@@ -3572,9 +3572,11 @@
         :show-sso-option="form.platform === 'grok'"
         :show-email-password-option="false"
         :show-manual-option="true"
-        :initial-input-method="'manual'"
+        :initial-input-method="form.platform === 'openai' ? 'device' : 'manual'"
         :platform="form.platform"
         :show-project-id="geminiOAuthType === 'code_assist'"
+        :proxy-id="form.proxy_id"
+        @device-authorized="handleOpenAIDeviceAuthorized"
         @generate-url="handleGenerateUrl"
         @cookie-auth="handleCookieAuth"
         @validate-refresh-token="handleValidateRefreshToken"
@@ -3921,7 +3923,7 @@ import {
   type AddMethod,
   type AuthInputMethod
 } from '@/composables/useAccountOAuth'
-import { useOpenAIOAuth } from '@/composables/useOpenAIOAuth'
+import { useOpenAIOAuth, type OpenAITokenInfo } from '@/composables/useOpenAIOAuth'
 import { useGeminiOAuth } from '@/composables/useGeminiOAuth'
 import { useAntigravityOAuth } from '@/composables/useAntigravityOAuth'
 import { useGrokOAuth } from '@/composables/useGrokOAuth'
@@ -6326,6 +6328,21 @@ const handleOpenAIExchange = async (authCode: string) => {
     )
     if (!tokenInfo) return
 
+    await handleOpenAIDeviceAuthorized(tokenInfo)
+  } catch (error: any) {
+    oauthClient.error.value = error.response?.data?.detail || t('admin.accounts.oauth.authFailed')
+    appStore.showError(oauthClient.error.value)
+  } finally {
+    oauthClient.loading.value = false
+  }
+}
+
+const handleOpenAIDeviceAuthorized = async (tokenInfo: OpenAITokenInfo) => {
+  const oauthClient = openaiOAuth
+  if (oauthClient.loading.value) return
+  oauthClient.loading.value = true
+  oauthClient.error.value = ''
+  try {
     const credentials = oauthClient.buildCredentials(tokenInfo)
     const oauthExtra = oauthClient.buildExtraInfo(tokenInfo) as Record<string, unknown> | undefined
     const extra = buildOpenAIExtra(oauthExtra)

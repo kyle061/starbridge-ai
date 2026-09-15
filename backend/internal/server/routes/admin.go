@@ -445,6 +445,9 @@ func registerAnnouncementRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 func registerOpenAIOAuthRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 	openai := admin.Group("/openai")
 	{
+		openai.POST("/device/start", h.Admin.OpenAIOAuth.StartDeviceAuth)
+		openai.POST("/device/poll", h.Admin.OpenAIOAuth.PollDeviceAuth)
+		openai.POST("/device/cancel", h.Admin.OpenAIOAuth.CancelDeviceAuth)
 		openai.POST("/generate-auth-url", h.Admin.OpenAIOAuth.GenerateAuthURL)
 		openai.POST("/exchange-code", h.Admin.OpenAIOAuth.ExchangeCode)
 		openai.POST("/refresh-token", h.Admin.OpenAIOAuth.RefreshToken)

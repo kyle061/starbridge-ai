@@ -86,7 +86,7 @@ const OAuthAuthorizationFlowStub = defineComponent({
     initialInputMethod: String,
   },
   data: () => ({ inputMethod: 'manual' }),
-  emits: ['import-codex-session', 'import-codex-pat'],
+  emits: ['import-codex-session', 'import-codex-pat', 'device-authorized'],
   template: `
     <div>
       <button data-testid="import-codex-session" @click="$emit('import-codex-session', 'session-json')">session</button>
@@ -623,7 +623,25 @@ describe('CreateAccountModal OpenAI long-context billing', () => {
     expect(flow.props('showCodexSessionImportOption')).toBe(true)
     expect(flow.props('showAgentIdentityOption')).toBe(true)
     expect(flow.props('showCodexPatOption')).toBe(true)
-    expect(flow.props('initialInputMethod')).toBe('manual')
+    expect(flow.props('initialInputMethod')).toBe('device')
+  })
+
+  it('saves a device-authorized OpenAI account with its refresh token and selected groups', async () => {
+    const wrapper = mountModal()
+    await selectButtonByText(wrapper, 'OpenAI')
+    await wrapper.get('form#create-account-form input[type="text"]').setValue('Device account')
+    await wrapper.get('[data-testid="select-pricing-groups"]').trigger('click')
+    await wrapper.get('form#create-account-form').trigger('submit.prevent')
+    wrapper.getComponent(OAuthAuthorizationFlowStub).vm.$emit('device-authorized', {
+      access_token: 'device-access', refresh_token: 'device-refresh', expires_at: 2000000000,
+      chatgpt_account_id: 'account-1', plan_type: 'plus'
+    })
+    await flushPromises()
+    expect(createAccountMock).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Device account', platform: 'openai', type: 'oauth', group_ids: [1, 2],
+      credentials: expect.objectContaining({ access_token: 'device-access', refresh_token: 'device-refresh', chatgpt_account_id: 'account-1' })
+    }))
+    expect(wrapper.emitted('created')).toHaveLength(1)
   })
 
   it.each([

@@ -1,6 +1,6 @@
 <template>
   <div
-    class="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-700 dark:bg-blue-900/30"
+    class="oauth-authorization-flow min-w-0 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-700 dark:bg-blue-900/30"
   >
     <div class="flex min-w-0 items-start gap-3 sm:gap-4">
       <div class="hidden h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-blue-500 sm:flex">
@@ -15,6 +15,10 @@
             {{ methodLabel }}
           </label>
           <div class="flex flex-wrap gap-4">
+            <label v-if="platform === 'openai'" class="flex cursor-pointer items-center gap-2">
+              <input v-model="inputMethod" type="radio" value="device" class="text-blue-600 focus:ring-blue-500" />
+              <span class="text-sm text-blue-900 dark:text-blue-200">{{ t('admin.accounts.oauth.openai.device.label') }}</span>
+            </label>
             <label v-if="showManualOption" class="flex cursor-pointer items-center gap-2">
               <input
                 v-model="inputMethod"
@@ -138,6 +142,14 @@
             </label>
           </div>
         </div>
+
+        <OpenAIDeviceAuthorization
+          v-if="platform === 'openai' && inputMethod === 'device'"
+          :proxy-id="proxyId"
+          :loading="loading"
+          :error="error"
+          @authorized="emit('device-authorized', $event)"
+        />
 
         <!-- Refresh Token Input (OpenAI / Antigravity / Mobile RT) -->
         <div v-if="inputMethod === 'refresh_token' || inputMethod === 'mobile_refresh_token'" class="space-y-4">
@@ -671,7 +683,7 @@
               >
                 1
               </div>
-              <div class="flex-1">
+              <div class="min-w-0 flex-1">
                 <p class="mb-2 font-medium text-blue-900 dark:text-blue-200">
                   {{ oauthStep1GenerateUrl }}
                 </p>
@@ -732,11 +744,12 @@
                 </button>
                 <div v-else class="space-y-3">
                   <div class="flex items-center gap-2">
-                    <input
+                    <textarea
                       :value="authUrl"
                       readonly
-                      type="text"
-                      class="input flex-1 bg-gray-50 font-mono text-xs dark:bg-gray-700"
+                      rows="3"
+                      aria-label="Authorization URL"
+                      class="input min-w-0 flex-1 resize-none break-all bg-gray-50 font-mono text-xs dark:bg-gray-700"
                     />
                     <button
                       type="button"
@@ -800,7 +813,7 @@
               >
                 2
               </div>
-              <div class="flex-1">
+              <div class="min-w-0 flex-1">
                 <p class="mb-2 font-medium text-blue-900 dark:text-blue-200">
                   {{ oauthStep2OpenUrl }}
                 </p>
@@ -841,7 +854,7 @@
               >
                 3
               </div>
-              <div class="flex-1">
+              <div class="min-w-0 flex-1">
                 <p class="mb-2 font-medium text-blue-900 dark:text-blue-200">
                   {{ oauthStep3EnterCode }}
                 </p>
@@ -919,9 +932,12 @@ import Icon from '@/components/icons/Icon.vue'
 import type { AddMethod, AuthInputMethod } from '@/composables/useAccountOAuth'
 import type { AccountPlatform } from '@/types'
 import { adminAPI } from '@/api/admin'
+import OpenAIDeviceAuthorization from './OpenAIDeviceAuthorization.vue'
+import type { OpenAITokenInfo } from '@/composables/useOpenAIOAuth'
 import { parseOAuthCallbackInput } from '@/utils/oauthCallback'
 
 interface Props {
+  proxyId?: number | null
   addMethod: AddMethod
   authUrl?: string
   sessionId?: string
@@ -980,6 +996,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
+  'device-authorized': [tokenInfo: OpenAITokenInfo]
   'generate-url': []
   'exchange-code': [code: string]
   'cookie-auth': [sessionKey: string]
@@ -1082,6 +1099,7 @@ watch(emailPasswordOptionEnabled, (enabled) => {
 
 // Computed: show method selection only when there is something to choose.
 const methodOptionCount = computed(() => [
+  props.platform === 'openai',
   props.showManualOption,
   props.showCookieOption,
   props.showRefreshTokenOption,

@@ -129,7 +129,10 @@
         :allow-multiple="false"
         :method-label="t('admin.accounts.inputMethod')"
         :platform="isOpenAI ? 'openai' : isGemini ? 'gemini' : isAntigravity ? 'antigravity' : 'anthropic'"
+        :initial-input-method="isOpenAI ? 'device' : 'manual'"
         :show-project-id="isGemini && geminiOAuthType === 'code_assist'"
+        :proxy-id="account?.proxy_id"
+        @device-authorized="handleOpenAIDeviceAuthorized"
         @generate-url="handleGenerateUrl"
         @cookie-auth="handleCookieAuth"
       />
@@ -189,7 +192,7 @@ import {
   type AddMethod,
   type AuthInputMethod
 } from '@/composables/useAccountOAuth'
-import { useOpenAIOAuth } from '@/composables/useOpenAIOAuth'
+import { useOpenAIOAuth, type OpenAITokenInfo } from '@/composables/useOpenAIOAuth'
 import { useGeminiOAuth } from '@/composables/useGeminiOAuth'
 import { useAntigravityOAuth } from '@/composables/useAntigravityOAuth'
 import type { Account } from '@/types'
@@ -269,10 +272,7 @@ const currentError = computed(() => {
 })
 
 // Computed
-const isManualInputMethod = computed(() => {
-  // OpenAI/Gemini/Antigravity always use manual input (no cookie auth option)
-  return isOpenAILike.value || isGemini.value || isAntigravity.value || oauthFlowRef.value?.inputMethod === 'manual'
-})
+const isManualInputMethod = computed(() => oauthFlowRef.value?.inputMethod === 'manual')
 
 const canExchangeCode = computed(() => {
   const authCode = oauthFlowRef.value?.authCode || ''
@@ -340,6 +340,37 @@ const handleGenerateUrl = async () => {
   }
 }
 
+const handleOpenAIDeviceAuthorized = async (tokenInfo: OpenAITokenInfo) => {
+  if (!props.account || openaiOAuth.loading.value) return
+  const oauthClient = openaiOAuth
+  oauthClient.loading.value = true
+  oauthClient.error.value = ''
+  // Build credentials and extra info
+  const credentials = oauthClient.buildCredentials(tokenInfo)
+  const extra = oauthClient.buildExtraInfo(tokenInfo)
+
+  try {
+    // Update account with new credentials
+    await adminAPI.accounts.update(props.account.id, {
+      type: 'oauth', // OpenAI OAuth is always 'oauth' type
+      credentials,
+      extra
+    })
+
+    // Clear error status after successful re-authorization
+    await adminAPI.accounts.clearError(props.account.id)
+
+    appStore.showSuccess(t('admin.accounts.reAuthorizedSuccess'))
+    emit('reauthorized')
+    handleClose()
+  } catch (error: any) {
+    oauthClient.error.value = error.response?.data?.detail || t('admin.accounts.oauth.authFailed')
+    appStore.showError(oauthClient.error.value)
+  } finally {
+    oauthClient.loading.value = false
+  }
+}
+
 const handleExchangeCode = async () => {
   if (!props.account) return
 
@@ -366,28 +397,7 @@ const handleExchangeCode = async () => {
     )
     if (!tokenInfo) return
 
-    // Build credentials and extra info
-    const credentials = oauthClient.buildCredentials(tokenInfo)
-    const extra = oauthClient.buildExtraInfo(tokenInfo)
-
-    try {
-      // Update account with new credentials
-      await adminAPI.accounts.update(props.account.id, {
-        type: 'oauth', // OpenAI OAuth is always 'oauth' type
-        credentials,
-        extra
-      })
-
-      // Clear error status after successful re-authorization
-      await adminAPI.accounts.clearError(props.account.id)
-
-      appStore.showSuccess(t('admin.accounts.reAuthorizedSuccess'))
-      emit('reauthorized')
-      handleClose()
-    } catch (error: any) {
-      oauthClient.error.value = error.response?.data?.detail || t('admin.accounts.oauth.authFailed')
-      appStore.showError(oauthClient.error.value)
-    }
+    await handleOpenAIDeviceAuthorized(tokenInfo)
   } else if (isGemini.value) {
     const sessionId = geminiOAuth.sessionId.value
     if (!sessionId) return

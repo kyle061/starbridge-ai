@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
@@ -18,14 +19,17 @@ type OpenAIOAuthService struct {
 	proxyRepo            ProxyRepository
 	oauthClient          OpenAIOAuthClient
 	privacyClientFactory PrivacyClientFactory // 用于调用 chatgpt.com/backend-api（ImpersonateChrome）
+	deviceMu             sync.Mutex
+	deviceSessions       map[string]*openAIDeviceSession
 }
 
 // NewOpenAIOAuthService creates a new OpenAI OAuth service
 func NewOpenAIOAuthService(proxyRepo ProxyRepository, oauthClient OpenAIOAuthClient) *OpenAIOAuthService {
 	return &OpenAIOAuthService{
-		sessionStore: openai.NewSessionStore(),
-		proxyRepo:    proxyRepo,
-		oauthClient:  oauthClient,
+		sessionStore:   openai.NewSessionStore(),
+		proxyRepo:      proxyRepo,
+		oauthClient:    oauthClient,
+		deviceSessions: make(map[string]*openAIDeviceSession),
 	}
 }
 
@@ -171,6 +175,11 @@ func (s *OpenAIOAuthService) ExchangeCode(ctx context.Context, input *OpenAIExch
 		return nil, err
 	}
 
+	s.sessionStore.Delete(input.SessionID)
+	return s.tokenInfoFromResponse(ctx, tokenResp, clientID, proxyURL), nil
+}
+
+func (s *OpenAIOAuthService) tokenInfoFromResponse(ctx context.Context, tokenResp *openai.TokenResponse, clientID, proxyURL string) *OpenAITokenInfo {
 	// Parse ID token to get user info
 	var userInfo *openai.UserInfo
 	if tokenResp.IDToken != "" {
@@ -181,9 +190,6 @@ func (s *OpenAIOAuthService) ExchangeCode(ctx context.Context, input *OpenAIExch
 			userInfo = claims.GetUserInfo()
 		}
 	}
-
-	// Delete session after successful exchange
-	s.sessionStore.Delete(input.SessionID)
 
 	tokenInfo := &OpenAITokenInfo{
 		AccessToken:  tokenResp.AccessToken,
@@ -204,7 +210,7 @@ func (s *OpenAIOAuthService) ExchangeCode(ctx context.Context, input *OpenAIExch
 
 	s.enrichTokenInfo(ctx, tokenInfo, proxyURL)
 
-	return tokenInfo, nil
+	return tokenInfo
 }
 
 // RefreshToken refreshes an OpenAI OAuth token

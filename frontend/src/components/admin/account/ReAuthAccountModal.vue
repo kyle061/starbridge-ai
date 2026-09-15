@@ -138,6 +138,8 @@
         :platform="isOpenAI ? 'openai' : isGemini ? 'gemini' : isAntigravity ? 'antigravity' : isGrok ? 'grok' : 'anthropic'"
         :show-project-id="isGemini && geminiOAuthType === 'code_assist'"
         :initial-input-method="grokInitialInputMethod"
+        :proxy-id="account?.proxy_id"
+        @device-authorized="handleOpenAIDeviceAuthorized"
         @generate-url="handleGenerateUrl"
         @cookie-auth="handleCookieAuth"
         @validate-refresh-token="handleValidateRefreshToken"
@@ -199,7 +201,7 @@ import {
   type AddMethod,
   type AuthInputMethod
 } from '@/composables/useAccountOAuth'
-import { useOpenAIOAuth } from '@/composables/useOpenAIOAuth'
+import { useOpenAIOAuth, type OpenAITokenInfo } from '@/composables/useOpenAIOAuth'
 import { useGeminiOAuth } from '@/composables/useGeminiOAuth'
 import { useAntigravityOAuth } from '@/composables/useAntigravityOAuth'
 import { useGrokOAuth } from '@/composables/useGrokOAuth'
@@ -261,6 +263,7 @@ const isGrok = computed(() => props.account?.platform === 'grok')
  * - SSO cookie otherwise
  */
 const grokInitialInputMethod = computed<AuthInputMethod>(() => {
+  if (isOpenAI.value) return 'device'
   if (!isGrok.value) return 'manual'
   const creds = (props.account?.credentials || {}) as Record<string, unknown>
   const hasRT =
@@ -303,10 +306,10 @@ const currentError = computed(() => {
 // Computed — footer "complete auth" only for code-exchange flows, not SSO/password/RT.
 const isManualInputMethod = computed(() => {
   const method = oauthFlowRef.value?.inputMethod
-  if (method === 'sso_cookie' || method === 'email_password' || method === 'refresh_token') {
+  if (method === 'device' || method === 'sso_cookie' || method === 'email_password' || method === 'refresh_token') {
     return false
   }
-  // OpenAI/Gemini/Antigravity/Grok use manual code paste by default (no cookie auth)
+  // Other code-exchange platforms retain the manual footer.
   return (
     isOpenAILike.value ||
     isGemini.value ||
@@ -385,6 +388,33 @@ const handleGenerateUrl = async () => {
   }
 }
 
+const handleOpenAIDeviceAuthorized = async (tokenInfo: OpenAITokenInfo) => {
+  if (!props.account || openaiOAuth.loading.value) return
+  const oauthClient = openaiOAuth
+  oauthClient.loading.value = true
+  oauthClient.error.value = ''
+  // Build credentials and extra info
+  const credentials = oauthClient.buildCredentials(tokenInfo)
+  const extra = oauthClient.buildExtraInfo(tokenInfo)
+
+  try {
+    const updatedAccount = await adminAPI.accounts.applyOAuthCredentials(props.account.id, {
+      type: 'oauth',
+      credentials,
+      extra
+    })
+
+    appStore.showSuccess(t('admin.accounts.reAuthorizedSuccess'))
+    emit('reauthorized', updatedAccount)
+    handleClose()
+  } catch (error: any) {
+    oauthClient.error.value = error.response?.data?.detail || t('admin.accounts.oauth.authFailed')
+    appStore.showError(oauthClient.error.value)
+  } finally {
+    oauthClient.loading.value = false
+  }
+}
+
 const handleExchangeCode = async () => {
   if (!props.account) return
 
@@ -411,24 +441,7 @@ const handleExchangeCode = async () => {
     )
     if (!tokenInfo) return
 
-    // Build credentials and extra info
-    const credentials = oauthClient.buildCredentials(tokenInfo)
-    const extra = oauthClient.buildExtraInfo(tokenInfo)
-
-    try {
-      const updatedAccount = await adminAPI.accounts.applyOAuthCredentials(props.account.id, {
-        type: 'oauth',
-        credentials,
-        extra
-      })
-
-      appStore.showSuccess(t('admin.accounts.reAuthorizedSuccess'))
-      emit('reauthorized', updatedAccount)
-      handleClose()
-    } catch (error: any) {
-      oauthClient.error.value = error.response?.data?.detail || t('admin.accounts.oauth.authFailed')
-      appStore.showError(oauthClient.error.value)
-    }
+    await handleOpenAIDeviceAuthorized(tokenInfo)
   } else if (isGemini.value) {
     const sessionId = geminiOAuth.sessionId.value
     if (!sessionId) return

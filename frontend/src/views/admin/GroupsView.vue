@@ -3941,7 +3941,7 @@
               {{ t("admin.groups.compositeRoutes.empty") }}
             </div>
             <div v-else class="overflow-x-auto">
-              <table class="min-w-full divide-y divide-gray-200 text-sm dark:divide-dark-600">
+              <table class="modal-mobile-table min-w-full divide-y divide-gray-200 text-sm dark:divide-dark-600">
                 <thead class="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:bg-dark-800 dark:text-gray-400">
                   <tr>
                     <th class="px-3 py-2">
@@ -3964,7 +3964,7 @@
                     :key="route.id"
                     :class="!route.enabled && 'opacity-60'"
                   >
-                    <td class="max-w-[15rem] px-3 py-2">
+                    <td :data-label="t('admin.groups.compositeRoutes.publicModel')" class="max-w-[15rem] px-3 py-2">
                       <div class="break-all font-medium text-gray-900 dark:text-white">
                         {{ route.public_model }}
                       </div>
@@ -3991,7 +3991,7 @@
                         </span>
                       </div>
                     </td>
-                    <td class="px-3 py-2">
+                    <td :data-label="t('admin.groups.compositeRoutes.target')" class="px-3 py-2">
                       <div class="flex items-center gap-1.5 text-gray-900 dark:text-white">
                         <PlatformIcon :platform="route.target_platform" size="xs" />
                         <span>{{ formatCompositePlatform(route.target_platform) }}</span>
@@ -4000,7 +4000,7 @@
                         {{ route.upstream_model || route.public_model }}
                       </div>
                     </td>
-                    <td class="px-3 py-2">
+                    <td :data-label="t('admin.groups.compositeRoutes.scope')" class="px-3 py-2">
                       <div class="text-gray-700 dark:text-gray-300">
                         {{ formatCompositeEndpoint(route.endpoint) }}
                       </div>

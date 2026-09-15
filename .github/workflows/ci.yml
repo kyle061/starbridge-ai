@@ -23,6 +23,7 @@ jobs:
       - run: >-
           pnpm exec vitest run
           src/components/account/__tests__/OAuthAuthorizationFlow.openai.spec.ts
+          src/components/account/__tests__/OpenAIDeviceAuthorization.spec.ts
           src/components/account/__tests__/OpenAIProviderPresets.spec.ts
           src/components/account/__tests__/CreateAccountModal.spec.ts
           src/components/common/__tests__/Pagination.spec.ts
@@ -42,6 +43,8 @@ jobs:
       - uses: actions/setup-go@v5
         with: { go-version-file: backend/go.mod, cache: true, cache-dependency-path: backend/go.sum }
       - run: go test ./internal/pkg/apicompat ./internal/service -run 'TestOpenAIOAuthService_|TestForwardResponses_ForceChatCompletions|TestResolveOpenAIForwardModel|TestChatCompletionsToResponses'
+        working-directory: backend
+      - run: go test ./internal/service ./internal/repository ./internal/handler/admin -run TestOpenAIDevice
         working-directory: backend
       - run: >-
           go test ./migrations ./internal/service ./internal/server/routes

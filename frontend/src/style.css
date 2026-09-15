@@ -417,7 +417,7 @@
   .modal-body {
     @apply px-4 py-3;
     @apply sm:px-6 sm:py-4;
-    @apply min-h-0 min-w-0 flex-1 overflow-y-auto;
+    @apply min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden;
     overscroll-behavior: contain;
   }
 
@@ -809,6 +809,22 @@
     max-height: calc(100dvh - max(.5rem, env(safe-area-inset-top)) - max(.5rem, env(safe-area-inset-bottom)));
   }
   .modal-body { overflow-wrap: anywhere; }
+  .modal-content { overflow-x: clip; }
+  .modal-body :where(.flex > *, .grid > *) { min-width: 0; }
+  .modal-body :where(input, textarea, select, pre) { max-width: 100%; }
+  .modal-body :where(pre) { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .modal-body .btn { white-space: normal; overflow-wrap: anywhere; }
+  .modal-body .modal-mobile-table { display: block; min-width: 0; width: 100%; }
+  .modal-mobile-table thead { display: none; }
+  .modal-mobile-table :where(tbody, tr) { display: block; width: 100%; }
+  .modal-mobile-table td { display: block; width: 100%; max-width: none; }
+  .modal-mobile-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: .25rem;
+    font-size: .75rem;
+    opacity: .7;
+  }
   .modal-footer > .btn { flex: 1 1 auto; }
   .modal-footer > [class~="flex"] { min-width: 0; flex-wrap: wrap; gap: .5rem; }
 }
