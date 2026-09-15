@@ -1,0 +1,16 @@
+{
+    email {$ACME_EMAIL}
+}
+
+{$PUBLIC_IP} {
+    tls {
+        issuer acme https://acme-v02.api.letsencrypt.org/directory {
+            profile shortlived
+        }
+    }
+
+    encode zstd gzip
+    reverse_proxy gateway:8080 {
+        flush_interval -1
+    }
+}

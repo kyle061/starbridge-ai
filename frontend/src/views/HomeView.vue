@@ -58,11 +58,28 @@
             <Icon v-else name="moon" size="md" />
           </button>
           <router-link
-            :to="isAuthenticated ? dashboardPath : '/login'"
+            v-if="isAuthenticated"
+            :to="dashboardPath"
             class="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
           >
-            {{ isAuthenticated ? t('home.dashboard') : t('home.login') }}
+            {{ t('home.dashboard') }}
           </router-link>
+          <template v-else>
+            <router-link
+              to="/login"
+              class="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-dark-300 dark:hover:bg-dark-800"
+            >
+              {{ t('home.login') }}
+            </router-link>
+            <router-link
+              v-if="registrationEnabled"
+              data-testid="compact-register-link"
+              to="/register"
+              class="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
+            >
+              {{ t('home.register') }}
+            </router-link>
+          </template>
         </div>
       </nav>
     </header>
@@ -76,12 +93,22 @@
         />
         <h1 class="[overflow-wrap:anywhere] text-3xl font-bold md:text-4xl">{{ siteName }}</h1>
         <p class="mt-4 whitespace-pre-wrap [overflow-wrap:anywhere] text-base text-gray-600 dark:text-dark-300">{{ siteSubtitle }}</p>
-        <router-link
-          :to="isAuthenticated ? dashboardPath : '/login'"
-          class="mt-8 inline-flex min-h-10 items-center justify-center rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-700"
-        >
-          {{ isAuthenticated ? t('home.goToDashboard') : t('home.login') }}
-        </router-link>
+        <p class="mt-3 text-sm leading-6 text-gray-500 dark:text-dark-400">{{ t('home.heroDescription') }}</p>
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <router-link
+            :to="primaryActionPath"
+            class="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-700"
+          >
+            {{ primaryActionLabel }}
+          </router-link>
+          <router-link
+            v-if="!isAuthenticated && registrationEnabled"
+            to="/login"
+            class="inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-dark-600 dark:text-dark-200 dark:hover:bg-dark-800"
+          >
+            {{ t('home.login') }}
+          </router-link>
+        </div>
       </div>
     </main>
 
@@ -188,13 +215,22 @@
               />
             </svg>
           </router-link>
-          <router-link
-            v-else
-            to="/login"
-            class="inline-flex items-center rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 dark:bg-gray-800 dark:hover:bg-gray-700"
-          >
-            {{ t('home.login') }}
-          </router-link>
+          <template v-else>
+            <router-link
+              to="/login"
+              class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 dark:text-dark-300 dark:hover:bg-dark-800"
+            >
+              {{ t('home.login') }}
+            </router-link>
+            <router-link
+              v-if="registrationEnabled"
+              data-testid="default-register-link"
+              to="/register"
+              class="inline-flex items-center rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
+            >
+              {{ t('home.register') }}
+            </router-link>
+          </template>
         </div>
       </nav>
     </header>
@@ -211,18 +247,28 @@
             >
               {{ siteName }}
             </h1>
-            <p class="mb-8 text-lg text-gray-600 dark:text-dark-300 md:text-xl">
+            <p class="mb-3 text-lg text-gray-600 dark:text-dark-300 md:text-xl">
               {{ siteSubtitle }}
             </p>
+            <p class="mb-8 max-w-xl text-sm leading-6 text-gray-500 dark:text-dark-400 md:text-base">
+              {{ t('home.heroDescription') }}
+            </p>
 
-            <!-- CTA Button -->
-            <div>
+            <!-- CTA Buttons -->
+            <div class="flex flex-wrap items-center justify-center gap-3 lg:justify-start">
               <router-link
-                :to="isAuthenticated ? dashboardPath : '/login'"
+                :to="primaryActionPath"
                 class="btn btn-primary px-8 py-3 text-base shadow-lg shadow-primary-500/30"
               >
-                {{ isAuthenticated ? t('home.goToDashboard') : t('home.getStarted') }}
+                {{ primaryActionLabel }}
                 <Icon name="arrowRight" size="md" class="ml-2" :stroke-width="2" />
+              </router-link>
+              <router-link
+                v-if="!isAuthenticated && registrationEnabled"
+                to="/login"
+                class="btn btn-secondary px-8 py-3 text-base"
+              >
+                {{ t('home.login') }}
               </router-link>
             </div>
           </div>
@@ -516,6 +562,7 @@ const homeContent = computed(() => appStore.cachedPublicSettings?.home_content |
 const hasHomeContent = computed(() => homeContent.value.trim().length > 0)
 const compactHomeEnabled = computed(() => appStore.cachedPublicSettings?.compact_home_enabled === true)
 const modelPlazaEnabled = computed(() => isFeatureFlagEnabled(FeatureFlags.modelPlaza))
+const registrationEnabled = computed(() => appStore.cachedPublicSettings?.registration_enabled === true)
 
 // Check if homeContent is a URL (for iframe display)
 const isHomeContentUrl = computed(() => {
@@ -539,6 +586,14 @@ const showModelPlazaEntry = computed(
 )
 const isAdmin = computed(() => authStore.isAdmin)
 const dashboardPath = computed(() => isAdmin.value ? '/admin/dashboard' : '/dashboard')
+const primaryActionPath = computed(() => {
+  if (isAuthenticated.value) return dashboardPath.value
+  return registrationEnabled.value ? '/register' : '/login'
+})
+const primaryActionLabel = computed(() => {
+  if (isAuthenticated.value) return t('home.goToDashboard')
+  return registrationEnabled.value ? t('home.register') : t('home.getStarted')
+})
 const userInitial = computed(() => {
   const user = authStore.user
   if (!user || !user.email) return ''

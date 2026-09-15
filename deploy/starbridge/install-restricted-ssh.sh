@@ -3,7 +3,7 @@
 set -euo pipefail
 [[ $EUID == 0 ]] || { echo 'Run this installer as root.' >&2; exit 1; }
 public_key_file=${1:?public key file required}
-app_port=${2:-18080}
+app_port=${2:-19090}
 source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 deploy_root=/opt/starbridge
 deploy_home=/var/lib/starbridge-deploy
@@ -19,7 +19,7 @@ fi
 
 bash "$source_dir/deploy-server.sh" prepare "$deploy_root" "$app_port"
 install -d -m 755 "$deploy_root/deploy/starbridge" /usr/local/libexec
-for name in compose.yaml .env.example init-env.py deploy-server.sh Caddyfile; do
+for name in compose.yaml .env.example init-env.py deploy-server.sh Caddyfile Caddyfile.ip; do
   install -o root -g root -m 644 "$source_dir/$name" "$deploy_root/deploy/starbridge/$name"
 done
 install -o root -g root -m 755 "$source_dir/ssh-gateway.py" /usr/local/libexec/starbridge-ssh-gateway.py

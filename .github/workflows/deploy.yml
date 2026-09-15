@@ -27,7 +27,7 @@ jobs:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
       DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-      DEPLOY_APP_PORT: ${{ secrets.DEPLOY_APP_PORT || '18080' }}
+      DEPLOY_APP_PORT: ${{ secrets.DEPLOY_APP_PORT || '19090' }}
     steps:
       - name: Check deployment configuration
         id: guard

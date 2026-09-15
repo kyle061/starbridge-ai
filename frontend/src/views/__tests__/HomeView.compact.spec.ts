@@ -66,6 +66,10 @@ function modelPlazaDestination(wrapper: ReturnType<typeof mountHome>) {
     ?.props('to')
 }
 
+function destinations(wrapper: ReturnType<typeof mountHome>) {
+  return wrapper.findAllComponents(RouterLinkStub).map((link) => link.props('to'))
+}
+
 describe('HomeView compact mode', () => {
   beforeEach(() => {
     authStore.isAuthenticated = false
@@ -113,6 +117,27 @@ describe('HomeView compact mode', () => {
 
   it('links unauthenticated visitors to login', () => {
     expect(compactDestination(mountHome({ compact_home_enabled: true }))).toBe('/login')
+  })
+
+  it('uses registration as the primary anonymous action when registration is enabled', () => {
+    const wrapper = mountHome({ compact_home_enabled: true, registration_enabled: true })
+
+    expect(wrapper.get('[data-testid="compact-register-link"]').findComponent(RouterLinkStub).props('to')).toBe('/register')
+    expect(destinations(wrapper)).toContain('/login')
+  })
+
+  it('shows registration in the default home header when enabled', () => {
+    const wrapper = mountHome({ registration_enabled: true })
+
+    expect(wrapper.get('[data-testid="default-register-link"]').findComponent(RouterLinkStub).props('to')).toBe('/register')
+    expect(destinations(wrapper)).toContain('/login')
+  })
+
+  it('keeps registration links hidden when registration is disabled', () => {
+    const wrapper = mountHome({ registration_enabled: false })
+
+    expect(wrapper.find('[data-testid="default-register-link"]').exists()).toBe(false)
+    expect(destinations(wrapper)).not.toContain('/register')
   })
 
   it('links authenticated users to their dashboard', () => {

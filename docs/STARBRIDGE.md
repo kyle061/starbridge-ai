@@ -25,12 +25,12 @@ docker compose logs -f gateway
 
 仓库包含 `.github/workflows/deploy.yml`。推送 `main` 且 **Starbridge CI** 全部通过后，它会根据服务器架构在 GitHub Runner 构建镜像，通过受限 SSH 通道上传镜像，再使用固定 Compose 项目名 `starbridge` 启动自己的 `gateway`、PostgreSQL 和 Redis。也可以在 **Actions → Starbridge Deploy → Run workflow** 手动运行 `main`。
 
-默认独立目录为 `/opt/starbridge`，公网端口为 `18080`，服务地址为 `http://177.0.143.11:18080`（完成部署并放行端口后才能访问）。部署前会检查端口占用、目录归属，以及是否存在其他同名 Compose 资源；冲突时停止部署。PostgreSQL、Redis 不发布宿主机端口，自动部署不启动占用 80/443 的 Caddy。
+默认独立目录为 `/opt/starbridge`，公网端口为 `19090`，服务地址为 `http://177.0.143.11:19090`（完成部署并放行端口后才能访问）。部署前会检查端口占用、目录归属，以及是否存在其他同名 Compose 资源；冲突时停止部署。PostgreSQL、Redis 不发布宿主机端口，自动部署不启动占用 80/443 的 Caddy。
 
 首次接入时，管理员在服务器安装专用部署账号。先在自己的电脑生成专用 Ed25519 密钥，只将公钥和 `deploy/starbridge` 目录中的脚本上传到服务器，然后在该目录执行：
 
 ```bash
-bash install-restricted-ssh.sh /path/to/actions.pub 18080
+bash install-restricted-ssh.sh /path/to/actions.pub 19090
 ```
 
 安装器创建 `starbridge-deploy` 账号，将部署配置安装为 root 所有，并添加只允许执行固定部署脚本的 sudo 规则。部署账号不能登录普通 Shell、执行任意 Docker 命令、修改 Compose 文件或访问其他项目。SSH 私钥只保存在本机和 GitHub Secrets。容器镜像导入前会校验标签，避免覆盖其他项目的镜像。
@@ -44,7 +44,7 @@ bash install-restricted-ssh.sh /path/to/actions.pub 18080
 | `DEPLOY_HOST` | 服务器 IP，例如 `177.0.143.11` |
 | `DEPLOY_PORT` | SSH 端口；留空时使用 `22` |
 | `DEPLOY_USER` | `starbridge-deploy` |
-| `DEPLOY_APP_PORT` | 可选，默认 `18080`；必须是未占用的 1024–65535 端口 |
+| `DEPLOY_APP_PORT` | 可选，默认 `19090`；必须是未占用的 1024–65535 端口 |
 | `DEPLOY_ADMIN_EMAIL` | 首次初始化时的管理员邮箱 |
 | `DEPLOY_SSH_KEY` | 上述用户的专用 SSH 私钥（完整 PEM 文本） |
 | `DEPLOY_KNOWN_HOSTS` | 经过核对的服务器 SSH host key，使用 `known_hosts` 格式；非 22 端口的主机名需包含 `[IP]:端口` |
@@ -56,6 +56,34 @@ bash install-restricted-ssh.sh /path/to/actions.pub 18080
 首次部署在 `/opt/starbridge/deploy/starbridge/.env`（或指定目录的对应路径）生成管理员和数据库密码。通过 SSH 在服务器本地查看其中的 `ADMIN_PASSWORD` 登录；后续部署保留已有密码、JWT/TOTP 密钥和数据卷，只更新绑定端口、绑定地址与镜像版本。健康检查通过才会报告成功。若容器未就绪，使用 `docker compose -p starbridge --env-file /opt/starbridge/deploy/starbridge/.env -f /opt/starbridge/deploy/starbridge/compose.yaml logs --tail=100 gateway` 检查日志。
 
 建议在服务器防火墙只放行你选择的端口，并使用 HTTPS 反向代理。不要把 `.env`、SSH 私钥或管理员密码提交到仓库。
+
+### 2.2 HTTPS 与证书自动轮换
+
+有正式域名时，在 `.env` 中设置 `DOMAIN=你的域名`，保持 `CADDYFILE=./Caddyfile`，再启动 Caddy：
+
+```bash
+docker compose --profile https up -d caddy
+```
+
+没有域名时也可以直接为公网 IP 申请受浏览器信任的 Let’s Encrypt 短期证书。IP 证书有效期约 6 天，因此必须自动续期；Caddy 会使用持久化的 `caddy_data` 卷自动申请和轮换。先确认公网的 80/443 端口都指向本机且未被其他服务占用，然后设置：
+
+```dotenv
+CADDYFILE=./Caddyfile.ip
+PUBLIC_IP=177.0.143.11
+ACME_EMAIL=你的通知邮箱
+```
+
+再执行：
+
+```bash
+docker compose pull caddy
+docker compose --profile https up -d caddy
+docker compose logs --tail=100 caddy
+```
+
+首次启用 IP HTTPS 前，需要用本版本的 `install-restricted-ssh.sh` 重新安装一次部署配置，使服务器获得 `Caddyfile.ip` 和对应的 Compose 配置；该操作需要服务器 root 管理员执行。成功后入口为 `https://177.0.143.11`，应用端口 `19090` 可只保留作健康检查或在防火墙中限制来源。
+
+也可以直接使用无需注册的免费通配 DNS，例如 `starbridge-177-0-143-11.nip.io` 会解析到 `177.0.143.11`。将它写入 `DOMAIN` 后即可按“正式域名”方式签发和自动续期普通 Let’s Encrypt 证书。该地址依赖第三方免费 DNS，适合 MVP；长期商用建议换成自己持有的域名。
 
 ## 3. 添加 OpenAI 或兼容上游
 
