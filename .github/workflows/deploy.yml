@@ -1,0 +1,121 @@
+name: Starbridge Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: starbridge-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      DEPLOY_APP_PORT: ${{ secrets.DEPLOY_APP_PORT }}
+      DEPLOY_ADMIN_EMAIL: ${{ secrets.DEPLOY_ADMIN_EMAIL }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+    steps:
+      - name: Check deployment configuration
+        id: guard
+        shell: bash
+        run: |
+          missing=()
+          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_PATH DEPLOY_APP_PORT DEPLOY_ADMIN_EMAIL DEPLOY_SSH_KEY; do
+            if [[ -z "${!name}" ]]; then missing+=("$name"); fi
+          done
+          if (( ${#missing[@]} )); then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Deployment skipped: configure repository secrets ${missing[*]}."
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.guard.outputs.enabled == 'true'
+
+      - name: Start SSH agent
+        if: steps.guard.outputs.enabled == 'true'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Configure SSH host key
+        if: steps.guard.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          if [[ -n "$DEPLOY_KNOWN_HOSTS" ]]; then
+            printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          else
+            echo "DEPLOY_KNOWN_HOSTS is not set; obtaining the host key with ssh-keyscan. Pin it for production."
+            ssh-keyscan -p "${DEPLOY_PORT:-22}" -H "$DEPLOY_HOST" >> "$HOME/.ssh/known_hosts"
+          fi
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Create isolated deployment directory
+        if: steps.guard.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          ssh -p "${DEPLOY_PORT:-22}" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "mkdir -p -- '$DEPLOY_PATH'"
+
+      - name: Sync source
+        if: steps.guard.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          rsync -az --delete-delay \
+            --exclude='.git/' \
+            --exclude='deploy/starbridge/.env' \
+            ./ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
+
+      - name: Build and restart Starbridge only
+        if: steps.guard.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          ssh -p "${DEPLOY_PORT:-22}" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "DEPLOY_PATH='$DEPLOY_PATH' APP_PORT='$DEPLOY_APP_PORT' ADMIN_EMAIL='$DEPLOY_ADMIN_EMAIL' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$DEPLOY_PATH"
+          if [[ ! -f deploy/starbridge/.env ]]; then
+            python3 deploy/starbridge/init-env.py --admin-email "$ADMIN_EMAIL"
+          fi
+          APP_PORT="$APP_PORT" python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          path = Path("deploy/starbridge/.env")
+          values = {}
+          for line in path.read_text().splitlines():
+              if line and not line.startswith("#") and "=" in line:
+                  key, value = line.split("=", 1)
+                  values[key] = value
+          values["BIND_HOST"] = "0.0.0.0"
+          values["APP_PORT"] = os.environ["APP_PORT"]
+          path.write_text("\n".join(f"{key}={value}" for key, value in values.items()) + "\n")
+          path.chmod(0o600)
+          PY
+          docker compose -p starbridge -f deploy/starbridge/compose.yaml \
+            --env-file deploy/starbridge/.env up -d --build --remove-orphans
+          docker compose -p starbridge -f deploy/starbridge/compose.yaml \
+            --env-file deploy/starbridge/.env ps
+          for _ in {1..30}; do
+            if curl --fail --silent --show-error --max-time 5 "http://127.0.0.1:${APP_PORT}/health" >/dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+          docker compose -p starbridge -f deploy/starbridge/compose.yaml \
+            --env-file deploy/starbridge/.env logs --tail=100 gateway
+          exit 1
+          REMOTE
