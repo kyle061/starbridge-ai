@@ -2,7 +2,7 @@ name: starbridge
 
 services:
   gateway:
-    image: starbridge-ai:local
+    image: ${STARBRIDGE_IMAGE:-starbridge-ai:local}
     build:
       context: ../..
       dockerfile: Dockerfile

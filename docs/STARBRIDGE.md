@@ -23,7 +23,9 @@ docker compose logs -f gateway
 
 ## 2.1 使用 GitHub Actions 自动部署到独立服务器
 
-仓库包含 `.github/workflows/deploy.yml`。它只同步代码到你指定的目录，并使用固定的 Compose 项目名 `starbridge` 启动自己的 `gateway`、PostgreSQL 和 Redis，不会执行其他项目的 `docker compose down`。
+仓库包含 `.github/workflows/deploy.yml`。推送 `main` 且 **Starbridge CI** 全部通过后，它会根据服务器架构在 GitHub Runner 构建镜像，通过 SSH 上传镜像与部署文件，再使用固定 Compose 项目名 `starbridge` 启动自己的 `gateway`、PostgreSQL 和 Redis。也可以在 **Actions → Starbridge Deploy → Run workflow** 手动运行 `main`。
+
+默认独立目录为 `/opt/starbridge`，公网端口为 `18080`，服务地址为 `http://177.0.143.11:18080`（完成部署并放行端口后才能访问）。部署前会检查端口占用、目录归属，以及是否存在其他同名 Compose 资源；冲突时停止部署。PostgreSQL、Redis 不发布宿主机端口，自动部署不启动占用 80/443 的 Caddy。
 
 在 GitHub 仓库 **Settings → Secrets and variables → Actions → New repository secret** 中添加：
 
@@ -32,13 +34,17 @@ docker compose logs -f gateway
 | `DEPLOY_HOST` | 服务器 IP，例如 `177.0.143.11` |
 | `DEPLOY_PORT` | SSH 端口；留空时使用 `22` |
 | `DEPLOY_USER` | SSH 用户名，建议使用只负责部署的用户 |
-| `DEPLOY_PATH` | 独立目录，建议 `/opt/starbridge` |
-| `DEPLOY_APP_PORT` | 对外端口，选择一个未被占用的端口，例如 `18080` |
+| `DEPLOY_PATH` | 可选，默认 `/opt/starbridge`；必须是以 `/starbridge` 结尾的绝对路径 |
+| `DEPLOY_APP_PORT` | 可选，默认 `18080`；必须是未占用的 1024–65535 端口 |
 | `DEPLOY_ADMIN_EMAIL` | 首次初始化时的管理员邮箱 |
 | `DEPLOY_SSH_KEY` | 上述用户的专用 SSH 私钥（完整 PEM 文本） |
-| `DEPLOY_KNOWN_HOSTS` | 可选，服务器的固定 `ssh-keyscan` 输出；不填时工作流会临时执行 `ssh-keyscan` |
+| `DEPLOY_KNOWN_HOSTS` | 经过核对的服务器 SSH host key，使用 `known_hosts` 格式；非 22 端口的主机名需包含 `[IP]:端口` |
 
-把 `DEPLOY_SSH_KEY` 对应的公钥放入服务器用户的 `~/.ssh/authorized_keys`。服务器需要安装 Docker Engine 24+、Docker Compose v2、Python 3 和 `curl`。首次推送到 `main` 或手动运行 **Starbridge Deploy** 后，工作流会在 `DEPLOY_PATH` 中创建 `.env`，并把 `BIND_HOST` 设置为 `0.0.0.0`、`APP_PORT` 设置为 `DEPLOY_APP_PORT`。
+把 `DEPLOY_SSH_KEY` 对应的公钥放入服务器用户的 `~/.ssh/authorized_keys`。服务器需要 Docker Engine 24+、Docker Compose v2.20+、Python 3 和 `curl`；SSH 用户需要能使用 Docker 并创建/写入部署目录。服务器无需保存 GitHub 凭据，也无需安装 Node.js 或 Go。
+
+可在可信终端使用 `ssh-keyscan -p 22 177.0.143.11` 获取主机公钥，并与服务器控制台显示的 SSH 主机指纹核对后存入 `DEPLOY_KNOWN_HOSTS`。缺少必填 Secret 时，工作流会在运行摘要标明跳过部署。
+
+首次部署在 `/opt/starbridge/deploy/starbridge/.env`（或指定目录的对应路径）生成管理员和数据库密码。通过 SSH 在服务器本地查看其中的 `ADMIN_PASSWORD` 登录；后续部署保留已有密码、JWT/TOTP 密钥和数据卷，只更新绑定端口、绑定地址与镜像版本。健康检查通过才会报告成功。若容器未就绪，使用 `docker compose -p starbridge --env-file /opt/starbridge/deploy/starbridge/.env -f /opt/starbridge/deploy/starbridge/compose.yaml logs --tail=100 gateway` 检查日志。
 
 建议在服务器防火墙只放行你选择的端口，并使用 HTTPS 反向代理。不要把 `.env`、SSH 私钥或管理员密码提交到仓库。
 

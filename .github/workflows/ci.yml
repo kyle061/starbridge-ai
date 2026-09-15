@@ -37,6 +37,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: python3 deploy/starbridge/test_init_env.py
+      - run: python3 deploy/starbridge/test_deploy_server.py
+      - run: bash -n deploy/starbridge/deploy-server.sh
       - run: |
           python3 - <<'PY'
           import pathlib, subprocess, tempfile
