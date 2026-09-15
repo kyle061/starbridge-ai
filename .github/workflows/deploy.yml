@@ -27,7 +27,10 @@ jobs:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
       DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-      DEPLOY_APP_PORT: ${{ secrets.DEPLOY_APP_PORT || '19090' }}
+      # Starbridge deliberately uses a fixed isolated port. Keeping this out of
+      # repository secrets prevents a stale DEPLOY_APP_PORT value from silently
+      # moving production back to the previous 18080 port.
+      DEPLOY_APP_PORT: '19090'
     steps:
       - name: Check deployment configuration
         id: guard

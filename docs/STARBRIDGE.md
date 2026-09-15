@@ -44,7 +44,7 @@ bash install-restricted-ssh.sh /path/to/actions.pub 19090
 | `DEPLOY_HOST` | 服务器 IP，例如 `177.0.143.11` |
 | `DEPLOY_PORT` | SSH 端口；留空时使用 `22` |
 | `DEPLOY_USER` | `starbridge-deploy` |
-| `DEPLOY_APP_PORT` | 可选，默认 `19090`；必须是未占用的 1024–65535 端口 |
+| 生产应用端口 | 固定为 `19090`，避免历史 Secret 把服务静默切回旧端口；部署前仍会检查端口是否可用 |
 | `DEPLOY_ADMIN_EMAIL` | 首次初始化时的管理员邮箱 |
 | `DEPLOY_SSH_KEY` | 上述用户的专用 SSH 私钥（完整 PEM 文本） |
 | `DEPLOY_KNOWN_HOSTS` | 经过核对的服务器 SSH host key，使用 `known_hosts` 格式；非 22 端口的主机名需包含 `[IP]:端口` |
