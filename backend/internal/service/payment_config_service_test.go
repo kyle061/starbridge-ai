@@ -95,6 +95,9 @@ func TestParsePaymentConfig(t *testing.T) {
 	t.Run("empty vals uses defaults", func(t *testing.T) {
 		t.Parallel()
 		cfg := svc.parsePaymentConfig(map[string]string{})
+		if !cfg.BalanceDisabled {
+			t.Fatal("expected balance recharge to be closed by default")
+		}
 		if cfg.Enabled {
 			t.Fatal("expected Enabled=false by default")
 		}
@@ -553,4 +556,23 @@ func TestUpdatePaymentConfig_PersistsExplicitEmptyAndFalseValues(t *testing.T) {
 
 func paymentConfigStrPtr(value string) *string {
 	return &value
+}
+
+func TestPaymentRechargePreviewRejectsNewOrdersUntilEnabled(t *testing.T) {
+	ctx := context.Background()
+	configService := &PaymentConfigService{settingRepo: &paymentConfigSettingRepoStub{
+		values: map[string]string{SettingPaymentEnabled: "true"},
+	}}
+	// No user repository or provider: closure must happen before checkout work.
+	svc := &PaymentService{configService: configService}
+	for _, orderType := range []string{"", payment.OrderTypeBalance} {
+		_, err := svc.CreateOrder(ctx, CreateOrderRequest{UserID: 1, Amount: 10, OrderType: orderType})
+		if err == nil || !strings.Contains(err.Error(), "balance recharge has been disabled") {
+			t.Fatalf("expected closed recharge, got %v", err)
+		}
+	}
+	cfg := configService.parsePaymentConfig(map[string]string{SettingBalancePayDisabled: "false"})
+	if _, err := svc.validateOrderInput(ctx, CreateOrderRequest{Amount: 0.5, OrderType: payment.OrderTypeBalance}, cfg); err != nil {
+		t.Fatalf("explicitly enabled recharge should accept launch price: %v", err)
+	}
 }

@@ -833,3 +833,24 @@ func (s *stubAdminService) CreateShadow(ctx context.Context, parentID int64, opt
 
 // Ensure stub implements interface.
 var _ service.AdminService = (*stubAdminService)(nil)
+
+func (s *stubAdminService) AdminUpdateAPIKeyLimits(ctx context.Context, keyID int64, req service.AdminAPIKeyLimits) (*service.APIKey, error) {
+	for _, key := range s.apiKeys {
+		if key.ID == keyID {
+			if req.Quota != nil {
+				key.Quota = *req.Quota
+			}
+			if req.RateLimit5h != nil {
+				key.RateLimit5h = *req.RateLimit5h
+			}
+			if req.RateLimit1d != nil {
+				key.RateLimit1d = *req.RateLimit1d
+			}
+			if req.RateLimit7d != nil {
+				key.RateLimit7d = *req.RateLimit7d
+			}
+			return &key, nil
+		}
+	}
+	return nil, service.ErrAPIKeyNotFound
+}

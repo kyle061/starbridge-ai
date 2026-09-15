@@ -47,9 +47,11 @@ func TestPrepaidAuthPausesEveryKeyAndResumesOriginalCredentials(t *testing.T) {
 				paid    bool
 				status  int
 			}{
-				{20, false, http.StatusForbidden}, {20, true, http.StatusOK},
+				{20, false, http.StatusOK}, {20, true, http.StatusOK},
 				{0, true, http.StatusForbidden}, {-1, true, http.StatusForbidden},
-				{19, true, http.StatusOK},
+				{19, false, http.StatusOK},
+				{0, false, http.StatusForbidden},
+				{9, false, http.StatusOK},
 			} {
 				users.balance = service.PrepaidBalance{Balance: state.balance, HasPurchased: state.paid}
 				for _, credential := range []string{"sk-first", "sk-second"} {

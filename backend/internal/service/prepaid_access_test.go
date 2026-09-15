@@ -43,14 +43,16 @@ func prepaidTestService() (*APIKeyService, *prepaidUserRepoStub, *prepaidKeyRepo
 	return NewAPIKeyService(keys, users, nil, nil, nil, nil, cfg), users, keys
 }
 
-func TestPrepaidCreateRequiresPaidOrderAndPositiveBalance(t *testing.T) {
+func TestPrepaidCreateAcceptsOfflineCreditAndRequiresPositiveBalance(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
 		balance float64
 		paid    bool
 		want    error
 	}{
-		{"gifted balance is not payment", 20, false, ErrBalancePurchaseRequired},
+		{"admin or redeem credit without an online order", 20, false, nil},
+		{"first recharge required", 0, false, ErrPrepaidBalanceExhausted},
+		{"offline credit exhausted", 0, false, ErrPrepaidBalanceExhausted},
 		{"exhausted", 0, true, ErrPrepaidBalanceExhausted},
 		{"debt", -1, true, ErrPrepaidBalanceExhausted},
 		{"paid", 20, true, nil},
@@ -86,15 +88,17 @@ func TestPrepaidBalancePauseAndRenewalUsesDatabase(t *testing.T) {
 	require.ErrorIs(t, svc.CheckPrepaidAccess(ctx, users.owner, nil), ErrPrepaidAccessUnavailable)
 }
 
-func TestPrepaidCannotBypassUsingSubscriptionOrExpiryUpdate(t *testing.T) {
+func TestPrepaidGroupGateAndEditsPreserveAdminExpiration(t *testing.T) {
 	svc, users, keys := prepaidTestService()
 	require.ErrorIs(t, svc.CheckPrepaidAccess(context.Background(), users.owner, &Group{SubscriptionType: SubscriptionTypeSubscription}), ErrPrepaidGroupRequired)
 	require.ErrorIs(t, svc.CheckPrepaidAccess(context.Background(), users.owner, nil), ErrPrepaidGroupRequired)
 	expiration := time.Now().Add(time.Hour)
-	keys.key = &APIKey{ID: 1, UserID: 7, Key: "same-key", Status: StatusActive}
-	key, err := svc.Update(context.Background(), 1, 7, UpdateAPIKeyRequest{ExpiresAt: &expiration})
+	keys.key = &APIKey{ID: 1, UserID: 7, Key: "same-key", Status: StatusActive, ExpiresAt: &expiration}
+	name := "Renamed"
+	key, err := svc.Update(context.Background(), 1, 7, UpdateAPIKeyRequest{Name: &name})
 	require.NoError(t, err)
-	require.Nil(t, key.ExpiresAt)
+	require.Equal(t, &expiration, key.ExpiresAt)
+	require.Equal(t, "Renamed", key.Name)
 	require.Equal(t, "same-key", key.Key)
 }
 

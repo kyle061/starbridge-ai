@@ -8,6 +8,7 @@ import KeysView from '../KeysView.vue'
 const {
   getAccess,
   listKeys,
+  createKey,
   updateKey,
   getPublicSettings,
   getDashboardApiKeysUsage,
@@ -21,6 +22,7 @@ const {
 } = vi.hoisted(() => ({
   getAccess: vi.fn(),
   listKeys: vi.fn(),
+  createKey: vi.fn(),
   updateKey: vi.fn(),
   getPublicSettings: vi.fn(),
   getDashboardApiKeysUsage: vi.fn(),
@@ -63,7 +65,7 @@ vi.mock('@/api', () => ({
   keysAPI: {
     getAccess,
     list: listKeys,
-    create: vi.fn(),
+    create: createKey,
     update: updateKey,
     delete: vi.fn(),
     toggleStatus: vi.fn(),
@@ -273,6 +275,7 @@ describe('user KeysView column settings', () => {
     getAccess.mockReset()
     getAccess.mockResolvedValue({ enabled: false, can_create_key: true, requests_allowed: true, has_purchased: false, balance: 10 })
     listKeys.mockReset()
+    createKey.mockReset().mockResolvedValue(createApiKey())
     updateKey.mockReset()
     getPublicSettings.mockReset()
     getDashboardApiKeysUsage.mockReset()
@@ -298,12 +301,12 @@ describe('user KeysView column settings', () => {
     isCurrentStep.mockReturnValue(false)
   })
 
-  it('requires a completed purchase before creating keys, even with gifted balance', async () => {
-    getAccess.mockResolvedValue({ enabled: true, has_purchased: false, balance: 10, can_create_key: false, requests_allowed: false })
+  it('requires credit before creating keys and links to code redemption', async () => {
+    getAccess.mockResolvedValue({ enabled: true, has_purchased: false, balance: 0, can_create_key: false, requests_allowed: false })
     const wrapper = await mountView()
     expect(wrapper.get('[data-tour="keys-create-btn"]').attributes('disabled')).toBeDefined()
     expect(wrapper.get('[data-test="prepaid-access"]').text()).toContain('keys.prepaidPurchaseRequired')
-    expect(wrapper.get('[data-test="prepaid-access"] a').attributes('href')).toBe('/purchase')
+    expect(wrapper.get('[data-test="prepaid-access"] a').attributes('href')).toBe('/redeem')
     wrapper.unmount()
   })
 
@@ -321,7 +324,7 @@ describe('user KeysView column settings', () => {
     wrapper.unmount()
   })
 
-  it('disables key creation when purchase verification fails', async () => {
+  it('disables key creation when balance verification fails', async () => {
     getAccess.mockRejectedValue(new Error('unavailable'))
     const wrapper = await mountView()
     expect(wrapper.get('[data-tour="keys-create-btn"]').attributes('disabled')).toBeDefined()
@@ -329,40 +332,41 @@ describe('user KeysView column settings', () => {
     wrapper.unmount()
   })
 
-  it.each([
-    { initialStatus: 'quota_exhausted', status: 'active', formStatus: 'active' },
-    { initialStatus: 'inactive', status: 'inactive', formStatus: 'inactive' },
-    { initialStatus: 'active', status: 'active', formStatus: 'inactive' },
-  ] as const)('syncs quota reset from $initialStatus to $status with form status $formStatus', async ({ initialStatus, status, formStatus }) => {
-    const key: ApiKey = {
-      ...createApiKey(), group_id: 1, quota: 10, quota_used: 10,
-      status: initialStatus,
-    }
-    listKeys.mockResolvedValueOnce({ items: [key], total: 1, page: 1, page_size: 20, pages: 1 })
-    updateKey.mockResolvedValue({ ...key, status, quota_used: 0 })
+  it('creates a funded key using only its name and group', async () => {
+    getAccess.mockResolvedValue({ enabled: true, has_purchased: true, balance: 20, can_create_key: true, requests_allowed: true })
+    getAvailableGroups.mockResolvedValue([{ id: 1, name: 'Default', rate_multiplier: 2, peak_rate_enabled: true }])
     const wrapper = await mountView()
-    await getButtonByText(wrapper, 'common.edit').trigger('click')
-    await wrapper.get('[data-tour="key-form-name"]').setValue('Unsaved name')
-    const statusSelect = wrapper.findAllComponents({ name: 'Select' })
-      .find((select) => select.props('options').length === 2 &&
-        select.props('options')[0].value === 'active')!
-    statusSelect.vm.$emit('update:modelValue', 'inactive')
-    await wrapper.get('button[title="keys.resetQuotaUsed"]').trigger('click')
-    const confirmation = wrapper.findAllComponents({ name: 'ConfirmDialog' })
-      .find((dialog) => dialog.props('title') === 'keys.resetQuotaTitle')!
-    confirmation.vm.$emit('confirm')
-    await flushPromises()
-
-    expect(updateKey).toHaveBeenNthCalledWith(1, key.id, { reset_quota: true })
-    expect(wrapper.findComponent({ name: 'DataTable' }).props('data')[0])
-      .toMatchObject({ status, quota_used: 0 })
-    expect(statusSelect.props('modelValue')).toBe(formStatus)
-    expect((wrapper.get('[data-tour="key-form-name"]').element as HTMLInputElement).value)
-      .toBe('Unsaved name')
-
+    await wrapper.get('[data-tour="keys-create-btn"]').trigger('click')
+    await wrapper.get('[data-tour="key-form-name"]').setValue('My key')
+    const groupSelect = wrapper.findAllComponents({ name: 'Select' })
+      .find(select => select.attributes('data-tour') === 'key-form-group')!
+    expect(groupSelect.props('options')[0]).not.toHaveProperty('rate')
+    expect(groupSelect.props('options')[0]).not.toHaveProperty('peakRateMultiplier')
+    groupSelect.vm.$emit('update:modelValue', 1)
+    await nextTick()
+    expect(wrapper.get('#key-form').find('input[type="number"]').exists()).toBe(false)
     await wrapper.get('#key-form').trigger('submit')
     await flushPromises()
-    expect(updateKey).toHaveBeenNthCalledWith(2, key.id, expect.objectContaining({ name: 'Unsaved name', status: formStatus }))
+    expect(createKey).toHaveBeenCalledWith('My key', 1)
+    wrapper.unmount()
+  })
+
+  it('preserves administrator limits when renaming a key', async () => {
+    const key = { ...createApiKey(), group_id: 1, quota: 10, quota_used: 4,
+      rate_limit_5h: 2, rate_limit_1d: 8, rate_limit_7d: 30, expires_at: '2030-01-01T00:00:00Z' }
+    listKeys.mockResolvedValue({ items: [key], total: 1, page: 1, page_size: 20, pages: 1 })
+    updateKey.mockResolvedValue(key)
+    const wrapper = await mountView()
+    await getButtonByText(wrapper, 'common.edit').trigger('click')
+    const form = wrapper.get('#key-form')
+    expect(form.find('input[type="number"]').exists()).toBe(false)
+    expect(form.find('input[type="datetime-local"]').exists()).toBe(false)
+    expect(form.text()).not.toContain('keys.rateLimitSection')
+    expect(form.text()).not.toContain('keys.customKeyLabel')
+    await wrapper.get('[data-tour="key-form-name"]').setValue('Renamed')
+    await form.trigger('submit')
+    await flushPromises()
+    expect(updateKey).toHaveBeenCalledWith(key.id, { name: 'Renamed', group_id: 1, status: 'active' })
     wrapper.unmount()
   })
 
@@ -450,12 +454,12 @@ describe('user KeysView column settings', () => {
     const wrapper = await mountView()
 
     await wrapper.get('button[title="Column Settings"]').trigger('click')
-    await getButtonByText(wrapper, 'Rate Limit').trigger('click')
+    await getButtonByText(wrapper, 'Last Used').trigger('click')
     await nextTick()
 
-    expect(visibleColumnKeys(wrapper)).toContain('rate_limit')
+    expect(visibleColumnKeys(wrapper)).toContain('last_used_at')
     expect(localStorage.getItem('api-key-hidden-columns')).toBe(
-      JSON.stringify(['id', 'last_used_at', 'last_used_ip'])
+      JSON.stringify(['id', 'last_used_ip'])
     )
     expect(localStorage.getItem('api-key-column-settings-version')).toBe('3')
   })
@@ -501,7 +505,6 @@ describe('user KeysView column settings', () => {
       'key',
       'current_concurrency',
       'usage',
-      'rate_limit',
       'expires_at',
       'status',
       'last_used_at',
@@ -523,7 +526,7 @@ describe('user KeysView column settings', () => {
     expect(columnMenuText).toContain('API Key')
     expect(columnMenuText).toContain('ID')
     expect(columnMenuText).toContain('Current Concurrency')
-    expect(columnMenuText).toContain('Rate Limit')
+    expect(columnMenuText).not.toContain('Rate Limit')
     expect(columnMenuText).toContain('Last Used IP')
     expect(columnMenuText).not.toContain('Name')
     expect(columnMenuText).not.toContain('Actions')

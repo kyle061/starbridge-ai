@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	ErrBalancePurchaseRequired  = infraerrors.Forbidden("BALANCE_PURCHASE_REQUIRED", "请先支付购买 API 美元额度，再生成和使用 Key")
+	ErrBalancePurchaseRequired  = infraerrors.Forbidden("BALANCE_PURCHASE_REQUIRED", "请先充值 API 美元额度，再生成和使用 Key")
 	ErrPrepaidBalanceExhausted  = infraerrors.Forbidden("INSUFFICIENT_BALANCE", "账户余额已用完，请充值后继续使用原 Key")
 	ErrPrepaidAccessUnavailable = infraerrors.ServiceUnavailable("PREPAID_ACCESS_UNAVAILABLE", "暂时无法核对充值余额，请稍后重试")
 	ErrPrepaidGroupRequired     = infraerrors.Forbidden("PREPAID_GROUP_REQUIRED", "预付费 Key 需要使用按余额计费的分组")
@@ -55,8 +55,10 @@ func loadPrepaidAccess(ctx context.Context, userRepo UserRepository, user *User,
 		return nil, ErrPrepaidAccessUnavailable
 	}
 	access.Balance = balance.Balance
-	access.HasPurchased = balance.HasPurchased
-	access.RequestsAllowed = user.IsActive() && balance.HasPurchased && balance.Balance > 0
+	// Existing clients use has_purchased for recharge prompts. Offline credit
+	// also unlocks access; an online payment order is no longer required.
+	access.HasPurchased = balance.HasPurchased || balance.Balance > 0
+	access.RequestsAllowed = user.IsActive() && balance.Balance > 0
 	access.CanCreateKey = access.RequestsAllowed
 	return access, nil
 }
@@ -89,9 +91,6 @@ func checkPrepaidBalance(ctx context.Context, userRepo UserRepository, user *Use
 	access, err := loadPrepaidAccess(ctx, userRepo, user, true)
 	if err != nil {
 		return err
-	}
-	if !access.HasPurchased {
-		return ErrBalancePurchaseRequired
 	}
 	if !access.RequestsAllowed {
 		return ErrPrepaidBalanceExhausted

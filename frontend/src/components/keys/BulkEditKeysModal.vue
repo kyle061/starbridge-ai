@@ -48,74 +48,6 @@
           />
         </div>
 
-        <div v-for="field in limitFields" :key="field.key" class="space-y-2">
-          <label class="flex items-center gap-2 text-sm font-medium">
-            <input
-              v-model="enabled[field.key]"
-              type="checkbox"
-              class="checkbox"
-              :data-test="`enable-${field.key}`"
-            />
-            {{ t(field.label) }}
-          </label>
-          <div v-if="enabled[field.key]">
-            <input
-              v-model="limits[field.key]"
-              type="number"
-              min="0"
-              step="any"
-              required
-              class="input"
-              :aria-label="t(field.label)"
-              :data-test="`${field.key}-input`"
-            />
-            <p class="input-hint">{{ t('keys.bulkEdit.limitHint') }}</p>
-          </div>
-        </div>
-
-        <div class="space-y-2">
-          <label class="flex items-center gap-2 text-sm font-medium">
-            <input v-model="enabled.expires_at" type="checkbox" class="checkbox" data-test="enable-expiration" />
-            {{ t('keys.expiration') }}
-          </label>
-          <div v-if="enabled.expires_at" class="space-y-2">
-            <label class="flex items-center gap-2 text-sm">
-              <input v-model="neverExpires" type="checkbox" class="checkbox" data-test="never-expires" />
-              {{ t('keys.noExpiration') }}
-            </label>
-            <input
-              v-if="!neverExpires"
-              v-model="expirationDate"
-              type="datetime-local"
-              required
-              class="input"
-              :aria-label="t('keys.expirationDate')"
-              data-test="expiration-input"
-            />
-          </div>
-        </div>
-
-        <div v-for="field in ipFields" :key="field.key" class="space-y-2">
-          <label class="flex items-center gap-2 text-sm font-medium">
-            <input
-              v-model="enabled[field.key]"
-              type="checkbox"
-              class="checkbox"
-              :data-test="`enable-${field.key}`"
-            />
-            {{ t(field.label) }}
-          </label>
-          <div v-if="enabled[field.key]">
-            <textarea
-              v-model="ipLists[field.key]"
-              rows="3"
-              class="input font-mono text-sm"
-              :aria-label="t(field.label)"
-              :data-test="`${field.key}-input`"
-            />
-            <p class="input-hint">{{ t('keys.bulkEdit.ipHint') }}</p>
-          </div>
-        </div>
       </fieldset>
 
       <p v-if="validationError" role="alert" class="text-sm text-red-600 dark:text-red-400">
@@ -158,9 +90,7 @@ import Select from '@/components/common/Select.vue'
 import type { ApiKey, Group, UpdateApiKeyRequest } from '@/types'
 
 type SelectedKey = Pick<ApiKey, 'id' | 'name'>
-type LimitField = 'quota' | 'rate_limit_5h' | 'rate_limit_1d' | 'rate_limit_7d'
-type IPField = 'ip_whitelist' | 'ip_blacklist'
-type EditableField = LimitField | IPField | 'group_id' | 'status' | 'expires_at'
+type EditableField = 'group_id' | 'status'
 
 const props = defineProps<{
   show: boolean
@@ -179,33 +109,10 @@ const pendingKeys = ref<SelectedKey[]>([])
 const failures = ref<Array<{ id: number; name: string; message: string }>>([])
 const enabled = reactive<Record<EditableField, boolean>>({
   group_id: false,
-  status: false,
-  quota: false,
-  rate_limit_5h: false,
-  rate_limit_1d: false,
-  rate_limit_7d: false,
-  expires_at: false,
-  ip_whitelist: false,
-  ip_blacklist: false
+  status: false
 })
 const groupId = ref<number | null>(null)
 const status = ref<'active' | 'inactive'>('active')
-const limits = reactive<Record<LimitField, string | number>>({
-  quota: '', rate_limit_5h: '', rate_limit_1d: '', rate_limit_7d: ''
-})
-const ipLists = reactive<Record<IPField, string>>({ ip_whitelist: '', ip_blacklist: '' })
-const neverExpires = ref(false)
-const expirationDate = ref('')
-const limitFields: Array<{ key: LimitField; label: string }> = [
-  { key: 'quota', label: 'keys.quotaAmount' },
-  { key: 'rate_limit_5h', label: 'keys.rateLimit5h' },
-  { key: 'rate_limit_1d', label: 'keys.rateLimit1d' },
-  { key: 'rate_limit_7d', label: 'keys.rateLimit7d' }
-]
-const ipFields: Array<{ key: IPField; label: string }> = [
-  { key: 'ip_whitelist', label: 'keys.ipWhitelist' },
-  { key: 'ip_blacklist', label: 'keys.ipBlacklist' }
-]
 const groupOptions = computed(() => props.groups.map((group) => ({ value: group.id, label: group.name })))
 const statusOptions = computed(() => [
   { value: 'active', label: t('keys.enable') },
@@ -215,16 +122,6 @@ const statusOptions = computed(() => [
 const validationError = computed(() => {
   if (enabled.group_id && !props.groups.some((group) => group.id === groupId.value)) {
     return t('keys.groupRequired')
-  }
-  for (const { key } of limitFields) {
-    if (!enabled[key]) continue
-    const value = String(limits[key]).trim()
-    if (!value || !Number.isFinite(Number(value)) || Number(value) < 0) {
-      return t('keys.bulkEdit.invalidLimit')
-    }
-  }
-  if (enabled.expires_at && !neverExpires.value && !Number.isFinite(Date.parse(expirationDate.value))) {
-    return t('keys.bulkEdit.invalidExpiration')
   }
   return ''
 })
@@ -238,12 +135,8 @@ watch(() => props.show, (show) => {
   pendingKeys.value = props.selectedKeys.map(({ id, name }) => ({ id, name }))
   failures.value = []
   for (const field of Object.keys(enabled) as EditableField[]) enabled[field] = false
-  for (const { key } of limitFields) limits[key] = ''
-  for (const { key } of ipFields) ipLists[key] = ''
   groupId.value = null
   status.value = 'active'
-  neverExpires.value = false
-  expirationDate.value = ''
 }, { immediate: true })
 
 const close = () => {
@@ -260,16 +153,6 @@ const submit = async () => {
   const updates: UpdateApiKeyRequest = {}
   if (enabled.group_id) updates.group_id = groupId.value
   if (enabled.status) updates.status = status.value
-  for (const { key } of limitFields) {
-    if (enabled[key]) updates[key] = Number(limits[key])
-  }
-  for (const { key } of ipFields) {
-    if (enabled[key]) updates[key] = ipLists[key].split('\n').map((ip) => ip.trim()).filter(Boolean)
-  }
-  if (enabled.expires_at) {
-    updates.expires_at = neverExpires.value ? '' : new Date(expirationDate.value).toISOString()
-  }
-
   submitting.value = true
   try {
     const result = await keysAPI.bulkUpdate(pendingKeys.value.map((key) => key.id), updates)

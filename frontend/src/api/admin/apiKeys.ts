@@ -13,6 +13,13 @@ export interface UpdateApiKeyGroupResult {
   granted_group_name?: string
 }
 
+export type ApiKeyLimits = Pick<ApiKey, 'quota' | 'rate_limit_5h' | 'rate_limit_1d' | 'rate_limit_7d'>
+
+export async function updateApiKeyLimits(id: number, limits: Partial<ApiKeyLimits>): Promise<ApiKey> {
+  const { data } = await apiClient.put<ApiKey>(`/admin/api-keys/${id}/limits`, limits)
+  return data
+}
+
 /**
  * Update an API key's group binding
  * @param id - API Key ID
@@ -27,7 +34,8 @@ export async function updateApiKeyGroup(id: number, groupId: number | null): Pro
 }
 
 export const apiKeysAPI = {
-  updateApiKeyGroup
+  updateApiKeyGroup,
+  updateApiKeyLimits
 }
 
 export default apiKeysAPI

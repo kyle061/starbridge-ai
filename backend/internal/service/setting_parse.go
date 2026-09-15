@@ -205,6 +205,7 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		// Starbridge users purchase balance credit through the payment flow.
 		SettingKeySubscriptionEnabled: "false",
 		SettingPaymentEnabled:         "true",
+		SettingBalancePayDisabled:     "true",
 
 		// Model plaza feature (default disabled; opt-in, public unless require_auth)
 		SettingKeyModelPlazaEnabled:       "false",

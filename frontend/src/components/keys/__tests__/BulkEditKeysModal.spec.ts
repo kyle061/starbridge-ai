@@ -59,22 +59,11 @@ describe('BulkEditKeysModal', () => {
     expect(wrapper.emitted('close')).toHaveLength(1)
   })
 
-  it('preserves other fields when changing one window limit, including zero', async () => {
+  it('does not expose administrator-managed fields', () => {
     const wrapper = mountModal()
-    await wrapper.get('[data-test="enable-rate_limit_1d"]').setValue(true)
-    await wrapper.get('[data-test="rate_limit_1d-input"]').setValue('0')
-    await wrapper.get('form').trigger('submit')
-    await flushPromises()
-    expect(bulkUpdate).toHaveBeenCalledWith([1, 2], { rate_limit_1d: 0 })
-  })
-
-  it.each(['', '-1', 'not-a-number'])('rejects an invalid selected quota: %s', async (value) => {
-    const wrapper = mountModal()
-    await wrapper.get('[data-test="enable-quota"]').setValue(true)
-    await wrapper.get('[data-test="quota-input"]').setValue(value)
-    await wrapper.get('form').trigger('submit')
-    expect(bulkUpdate).not.toHaveBeenCalled()
-    expect(wrapper.get('[data-test="submit"]').attributes('disabled')).toBeDefined()
+    for (const field of ['quota', 'rate_limit_5h', 'rate_limit_1d', 'rate_limit_7d', 'expiration', 'ip_whitelist', 'ip_blacklist']) {
+      expect(wrapper.find(`[data-test="enable-${field}"]`).exists()).toBe(false)
+    }
   })
 
   it('requires an available group when changing group', async () => {
@@ -87,38 +76,13 @@ describe('BulkEditKeysModal', () => {
     expect(bulkUpdate).toHaveBeenCalledWith([1, 2], { group_id: 7 })
   })
 
-  it('clears only an explicitly selected IP list and expiration', async () => {
-    const wrapper = mountModal()
-    await wrapper.get('[data-test="enable-ip_whitelist"]').setValue(true)
-    await wrapper.get('[data-test="enable-expiration"]').setValue(true)
-    await wrapper.get('form').trigger('submit')
-    expect(bulkUpdate).not.toHaveBeenCalled()
-    await wrapper.get('[data-test="never-expires"]').setValue(true)
-    await wrapper.get('form').trigger('submit')
-    expect(bulkUpdate).toHaveBeenCalledWith([1, 2], { ip_whitelist: [], expires_at: '' })
-  })
-
-  it('normalizes IP lines and converts the chosen local date to ISO', async () => {
-    const wrapper = mountModal()
-    await wrapper.get('[data-test="enable-ip_blacklist"]').setValue(true)
-    await wrapper.get('[data-test="ip_blacklist-input"]').setValue(' 192.0.2.1 \n\n 198.51.100.0/24\n')
-    await wrapper.get('[data-test="enable-expiration"]').setValue(true)
-    await wrapper.get('[data-test="expiration-input"]').setValue('2030-01-02T03:04')
-    await wrapper.get('form').trigger('submit')
-    expect(bulkUpdate).toHaveBeenCalledWith([1, 2], {
-      ip_blacklist: ['192.0.2.1', '198.51.100.0/24'],
-      expires_at: new Date('2030-01-02T03:04').toISOString()
-    })
-  })
-
   it('reports individual failures and retries only failed keys', async () => {
     bulkUpdate.mockResolvedValueOnce({
       succeededIds: [1],
       failures: [{ id: 2, error: { status: 403, message: 'Group access denied' } }]
     }).mockResolvedValueOnce({ succeededIds: [2], failures: [] })
     const wrapper = mountModal()
-    await wrapper.get('[data-test="enable-quota"]').setValue(true)
-    await wrapper.get('[data-test="quota-input"]').setValue('25.50')
+    await wrapper.get('[data-test="enable-status"]').setValue(true)
     await wrapper.get('form').trigger('submit')
     await flushPromises()
 
@@ -129,7 +93,7 @@ describe('BulkEditKeysModal', () => {
     await wrapper.setProps({ selectedKeys: [{ id: 2, name: 'Second' }, { id: 3, name: 'New selection' }] })
     await wrapper.get('form').trigger('submit')
     await flushPromises()
-    expect(bulkUpdate).toHaveBeenLastCalledWith([2], { quota: 25.5 })
+    expect(bulkUpdate).toHaveBeenLastCalledWith([2], { status: 'active' })
     expect(wrapper.emitted('updated')).toEqual([[[1]], [[2]]])
     expect(wrapper.emitted('close')).toHaveLength(1)
   })
@@ -151,12 +115,11 @@ describe('BulkEditKeysModal', () => {
 
   it('resets all field choices when reopened for a new selection', async () => {
     const wrapper = mountModal()
-    await wrapper.get('[data-test="enable-quota"]').setValue(true)
-    await wrapper.get('[data-test="quota-input"]').setValue('12')
+    await wrapper.get('[data-test="enable-status"]').setValue(true)
     await wrapper.setProps({ show: false })
     await wrapper.setProps({ show: true, selectedKeys: [{ id: 3, name: 'Third' }] })
     expect(wrapper.get('[data-test="submit"]').attributes('disabled')).toBeDefined()
-    expect(wrapper.find('[data-test="quota-input"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="status-input"]').exists()).toBe(false)
     await wrapper.get('[data-test="enable-status"]').setValue(true)
     await wrapper.get('form').trigger('submit')
     expect(bulkUpdate).toHaveBeenCalledWith([3], { status: 'active' })

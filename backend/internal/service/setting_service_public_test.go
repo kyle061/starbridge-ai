@@ -282,14 +282,14 @@ func TestSettingService_GetPublicSettingsForInjection_MirrorsSubscriptionEnabled
 
 // payment_balance_disabled is exposed publicly so the user shell can derive the site
 // billing mode (recharge & subscription / recharge only / subscription only) before any
-// authenticated checkout call. Strict true, mirroring the payment-config parser.
-func TestSettingService_GetPublicSettings_PaymentBalanceDisabledStrictTrue(t *testing.T) {
+// authenticated checkout call. Explicit false opens recharge, mirroring the payment-config parser.
+func TestSettingService_GetPublicSettings_PaymentBalanceDisabledDefaultsClosed(t *testing.T) {
 	cases := []struct {
 		name  string
 		value map[string]string
 		want  bool
 	}{
-		{name: "missing key stays enabled", value: map[string]string{}, want: false},
+		{name: "missing key stays closed", value: map[string]string{}, want: true},
 		{name: "explicit false", value: map[string]string{SettingBalancePayDisabled: "false"}, want: false},
 		{name: "explicit true disables balance recharge", value: map[string]string{SettingBalancePayDisabled: "true"}, want: true},
 	}

@@ -246,6 +246,7 @@ async function mountSubscriptionConfirm(options: Parameters<typeof checkoutInfoW
         AppLayout: {
           template: '<div><slot /></div>',
         },
+        RechargeComingSoon: false,
         Teleport: true,
         Transition: false,
       },
@@ -286,6 +287,7 @@ async function mountSubscriptionPlanList(planCount: number) {
         AppLayout: {
           template: '<div><slot /></div>',
         },
+        RechargeComingSoon: false,
         Teleport: true,
         Transition: false,
       },
@@ -311,7 +313,8 @@ describe('PaymentView help text', () => {
       global: {
         stubs: {
           AppLayout: { template: '<div><slot /></div>' },
-          Teleport: true,
+          RechargeComingSoon: false,
+        Teleport: true,
           Transition: false,
         },
       },
@@ -393,7 +396,8 @@ describe('PaymentView recharge rate preview', () => {
       global: {
         stubs: {
           AppLayout: { template: '<div><slot /></div>' },
-          Teleport: true,
+          RechargeComingSoon: false,
+        Teleport: true,
           Transition: false,
         },
       },
@@ -569,7 +573,8 @@ describe('PaymentView payment recovery', () => {
             props: ['selected'],
             template: '<div data-test="method-selector">{{ selected }}</div>',
           },
-          Teleport: true,
+          RechargeComingSoon: false,
+        Teleport: true,
           Transition: false,
         },
       },
@@ -616,7 +621,8 @@ describe('PaymentView WeChat JSAPI flow', () => {
     shallowMount(PaymentView, {
       global: {
         stubs: {
-          Teleport: true,
+          RechargeComingSoon: false,
+        Teleport: true,
           Transition: false,
         },
       },
@@ -645,7 +651,8 @@ describe('PaymentView WeChat JSAPI flow', () => {
     shallowMount(PaymentView, {
       global: {
         stubs: {
-          Teleport: true,
+          RechargeComingSoon: false,
+        Teleport: true,
           Transition: false,
         },
       },
@@ -666,7 +673,8 @@ describe('PaymentView WeChat JSAPI flow', () => {
     const wrapper = shallowMount(PaymentView, {
       global: {
         stubs: {
-          Teleport: true,
+          RechargeComingSoon: false,
+        Teleport: true,
           Transition: false,
         },
       },
@@ -710,7 +718,8 @@ describe('PaymentView WeChat JSAPI flow', () => {
     shallowMount(PaymentView, {
       global: {
         stubs: {
-          Teleport: true,
+          RechargeComingSoon: false,
+        Teleport: true,
           Transition: false,
         },
       },
@@ -748,7 +757,8 @@ describe('PaymentView WeChat JSAPI flow', () => {
     shallowMount(PaymentView, {
       global: {
         stubs: {
-          Teleport: true,
+          RechargeComingSoon: false,
+        Teleport: true,
           Transition: false,
         },
       },
@@ -796,7 +806,8 @@ describe('PaymentView WeChat JSAPI flow', () => {
     shallowMount(PaymentView, {
       global: {
         stubs: {
-          Teleport: true,
+          RechargeComingSoon: false,
+        Teleport: true,
           Transition: false,
         },
       },
@@ -848,7 +859,7 @@ describe('PaymentView subscription feature flag', () => {
     expect(wrapper.text()).toContain('payment.rechargeAccount')
   })
 
-  it('shows an unavailable notice instead of a doomed top-up form when balance recharge is disabled too', async () => {
+  it('previews Alipay and WeChat without a payment form when recharge is disabled', async () => {
     appStoreState.setPublicSettings({ subscription_enabled: false })
     const wrapper = await mountSubscriptionConfirm({ checkout: { balance_disabled: true } })
 
@@ -856,7 +867,14 @@ describe('PaymentView subscription feature flag', () => {
     expect(wrapper.findAllComponents(SubscriptionPlanCard)).toHaveLength(0)
     expect(wrapper.text()).not.toContain('payment.confirmSubscription')
     expect(wrapper.text()).not.toContain('payment.rechargeAccount')
-    expect(wrapper.text()).toContain('payment.billingUnavailable')
+    expect(wrapper.text()).toContain('payment.comingSoon.title')
+    expect(wrapper.text()).toContain('payment.methods.alipay')
+    expect(wrapper.text()).toContain('payment.methods.wxpay')
+    expect(wrapper.text()).toContain('payment.comingSoon.availableDescription')
+    expect(wrapper.get('[data-testid="offline-recharge"] a').attributes('href')).toBe('/redeem')
+    expect(wrapper.findComponent(AmountInput).exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('payment.createOrder')
+    expect(createOrder).not.toHaveBeenCalled()
     wrapper.unmount()
   })
 
@@ -876,12 +894,12 @@ describe('PaymentView subscription feature flag', () => {
   it('enters the subscribe tab when a subscription-only site turns subscriptions back on', async () => {
     appStoreState.setPublicSettings({ subscription_enabled: false })
     const wrapper = await mountSubscriptionConfirm({ checkout: { balance_disabled: true } })
-    expect(wrapper.text()).toContain('payment.billingUnavailable')
+    expect(wrapper.text()).toContain('payment.comingSoon.title')
 
     appStoreState.setPublicSettings({ subscription_enabled: true })
     await flushPromises()
 
-    expect(wrapper.text()).not.toContain('payment.billingUnavailable')
+    expect(wrapper.text()).not.toContain('payment.comingSoon.title')
     expect(wrapper.text()).not.toContain('payment.rechargeAccount')
     expect(wrapper.findAllComponents(SubscriptionPlanCard).length).toBeGreaterThan(0)
     wrapper.unmount()

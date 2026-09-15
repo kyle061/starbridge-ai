@@ -211,6 +211,11 @@ func (h *APIKeyHandler) Create(c *gin.Context) {
 		return
 	}
 
+	if req.Quota != nil || req.ExpiresInDays != nil || req.RateLimit5h != nil || req.RateLimit1d != nil || req.RateLimit7d != nil {
+		response.Forbidden(c, "API key limits and expiration are managed by the administrator")
+		return
+	}
+
 	svcReq := service.CreateAPIKeyRequest{
 		Name:          req.Name,
 		GroupID:       req.GroupID,
@@ -263,6 +268,11 @@ func (h *APIKeyHandler) Update(c *gin.Context) {
 	}
 	if err := validateAPIKeyUpdateRequest(req); err != nil {
 		response.BadRequest(c, "Invalid request: numeric limits must be finite and non-negative")
+		return
+	}
+
+	if req.Quota != nil || req.ExpiresAt != nil || req.ResetQuota != nil || req.RateLimit5h != nil || req.RateLimit1d != nil || req.RateLimit7d != nil || req.ResetRateLimitUsage != nil {
+		response.Forbidden(c, "API key limits and expiration are managed by the administrator")
 		return
 	}
 

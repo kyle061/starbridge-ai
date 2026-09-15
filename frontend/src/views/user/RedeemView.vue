@@ -118,6 +118,8 @@
                       {{ t('redeem.newBalance') }}:
                       <span class="font-semibold">${{ redeemResult.new_balance.toFixed(2) }}</span>
                     </p>
+                    <a v-if="redeemResult.type === 'balance' && (redeemResult.new_balance ?? 0) > 0"
+                      href="/keys" class="btn btn-primary mt-3">{{ t('nav.apiKeys') }}</a>
                     <p v-if="redeemResult.new_concurrency !== undefined">
                       {{ t('redeem.newConcurrency') }}:
                       <span class="font-semibold"

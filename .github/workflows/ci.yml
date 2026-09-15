@@ -32,6 +32,10 @@ jobs:
           src/components/layout/__tests__/TablePageLayout.spec.ts
           src/components/keys/__tests__/EndpointPopover.spec.ts
           src/views/user/__tests__/KeysView.spec.ts
+          src/views/user/__tests__/PaymentView.spec.ts
+          src/views/user/__tests__/RedeemView.spec.ts
+          src/components/keys/__tests__/BulkEditKeysModal.spec.ts
+          src/components/admin/user/__tests__/ApiKeyLimitsForm.spec.ts
           src/utils/__tests__/oauthCallback.spec.ts
           src/i18n/__tests__/localeKeyCompleteness.spec.ts
         working-directory: frontend
@@ -53,6 +57,11 @@ jobs:
       - run: >-
           go test -tags unit ./internal/service
           -run 'TestAdminService_PreviewCompositeRoute|TestGatewayService_SelectAccountForModelWithExclusions_FallsBackAcrossCompositePlatforms'
+        working-directory: backend
+
+      - run: >-
+          go test -tags unit ./internal/service ./internal/handler ./internal/handler/admin ./internal/server/middleware ./internal/repository
+          -run 'TestPrepaid|TestUserAPIKeyEndpoints|TestAdminUpdateAPIKeyLimits|TestAdminAPIKeyHandler|TestPaymentRechargePreview|TestParsePaymentConfig|TestSettingService_GetPublicSettings_PaymentBalance'
         working-directory: backend
 
   deployment:

@@ -795,17 +795,6 @@ func (s *APIKeyService) Update(ctx context.Context, id int64, userID int64, req 
 		}
 	}
 
-	if s.cfg != nil && s.cfg.Billing.RequireBalancePurchase {
-		owner, err := s.userRepo.GetByID(ctx, userID)
-		if err != nil {
-			return nil, err
-		}
-		if s.RequiresBalancePurchase(owner) {
-			req.ExpiresAt = nil
-			req.ClearExpiration = true
-		}
-	}
-
 	// fields 只登记本次请求真正要改的列。quota_used 与 usage_5h/1d/7d 由计费热路径
 	// 原子递增，除非用户显式点了"重置"，否则这里不用快照把它们写回去。
 	var fields APIKeyUpdateFields
