@@ -32,6 +32,27 @@ func (s *GatewayService) SelectAccountForModel(ctx context.Context, groupID *int
 
 // SelectAccountForModelWithExclusions selects an account supporting the requested model while excluding specified accounts.
 func (s *GatewayService) SelectAccountForModelWithExclusions(ctx context.Context, groupID *int64, sessionHash string, requestedModel string, excludedIDs map[int64]struct{}) (*Account, error) {
+	candidates := compositeRouteCandidatesForSelection(ctx, false)
+	if len(candidates) == 0 {
+		return s.selectAccountForModelWithExclusionsOnce(ctx, groupID, sessionHash, requestedModel, excludedIDs)
+	}
+
+	var lastErr error
+	for _, candidate := range candidates {
+		candidateCtx := WithCompositeRouteDecision(ctx, candidate)
+		account, err := s.selectAccountForModelWithExclusionsOnce(candidateCtx, groupID, sessionHash, candidate.UpstreamModel, excludedIDs)
+		if err == nil {
+			return applyCompositeRouteSelection(account, requestedModel, candidate), nil
+		}
+		if !isCompositeRouteSelectionExhausted(err) {
+			return nil, err
+		}
+		lastErr = err
+	}
+	return nil, lastErr
+}
+
+func (s *GatewayService) selectAccountForModelWithExclusionsOnce(ctx context.Context, groupID *int64, sessionHash string, requestedModel string, excludedIDs map[int64]struct{}) (*Account, error) {
 	// 优先检查 context 中的强制平台（/antigravity 路由）
 	var platform string
 	forcePlatform, hasForcePlatform := ctx.Value(ctxkey.ForcePlatform).(string)
@@ -98,6 +119,30 @@ func (s *GatewayService) SelectAccountForModelWithExclusions(ctx context.Context
 // metadataUserID: 用于客户端亲和调度，从中提取客户端 ID
 // sub2apiUserID: 系统用户 ID，用于二维亲和调度
 func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, groupID *int64, sessionHash string, requestedModel string, excludedIDs map[int64]struct{}, metadataUserID string, sub2apiUserID int64) (*AccountSelectionResult, error) {
+	candidates := compositeRouteCandidatesForSelection(ctx, false)
+	if len(candidates) == 0 {
+		return s.selectAccountWithLoadAwarenessOnce(ctx, groupID, sessionHash, requestedModel, excludedIDs, metadataUserID, sub2apiUserID)
+	}
+
+	var lastErr error
+	for _, candidate := range candidates {
+		candidateCtx := WithCompositeRouteDecision(ctx, candidate)
+		selection, err := s.selectAccountWithLoadAwarenessOnce(candidateCtx, groupID, sessionHash, candidate.UpstreamModel, excludedIDs, metadataUserID, sub2apiUserID)
+		if err == nil {
+			if selection != nil {
+				selection.Account = applyCompositeRouteSelection(selection.Account, requestedModel, candidate)
+			}
+			return selection, nil
+		}
+		if !isCompositeRouteSelectionExhausted(err) {
+			return nil, err
+		}
+		lastErr = err
+	}
+	return nil, lastErr
+}
+
+func (s *GatewayService) selectAccountWithLoadAwarenessOnce(ctx context.Context, groupID *int64, sessionHash string, requestedModel string, excludedIDs map[int64]struct{}, metadataUserID string, sub2apiUserID int64) (*AccountSelectionResult, error) {
 	// 调试日志：记录调度入口参数
 	excludedIDsList := make([]int64, 0, len(excludedIDs))
 	for id := range excludedIDs {
@@ -169,7 +214,7 @@ func (s *GatewayService) SelectAccountWithLoadAwareness(ctx context.Context, gro
 		}
 
 		for {
-			account, err := s.SelectAccountForModelWithExclusions(ctx, groupID, sessionHash, requestedModel, localExcluded)
+			account, err := s.selectAccountForModelWithExclusionsOnce(ctx, groupID, sessionHash, requestedModel, localExcluded)
 			if err != nil {
 				return nil, err
 			}

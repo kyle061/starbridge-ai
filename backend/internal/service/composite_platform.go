@@ -2,10 +2,69 @@ package service
 
 import (
 	"context"
+	"errors"
 	"strings"
+	"sync"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
 )
+
+type compositeRouteCandidatesContextKey struct{}
+type compositeRouteRuntimeContextKey struct{}
+
+type compositeRouteRuntimeState struct {
+	mu       sync.RWMutex
+	decision CompositeRouteDecision
+}
+
+func (s *compositeRouteRuntimeState) set(decision CompositeRouteDecision) {
+	if s == nil || !decision.Matched {
+		return
+	}
+	s.mu.Lock()
+	s.decision = decision
+	s.mu.Unlock()
+}
+
+func (s *compositeRouteRuntimeState) get() (CompositeRouteDecision, bool) {
+	if s == nil {
+		return CompositeRouteDecision{}, false
+	}
+	s.mu.RLock()
+	decision := s.decision
+	s.mu.RUnlock()
+	return decision, decision.Matched
+}
+
+func compositeRouteRuntimeStateFromContext(ctx context.Context) *compositeRouteRuntimeState {
+	if ctx == nil {
+		return nil
+	}
+	state, _ := ctx.Value(compositeRouteRuntimeContextKey{}).(*compositeRouteRuntimeState)
+	return state
+}
+
+// WithCompositeRouteCandidates stores the ordered explicit route chain for
+// account selection. The first item is the route used by request dispatch.
+func WithCompositeRouteCandidates(ctx context.Context, candidates []CompositeRouteDecision) context.Context {
+	if ctx == nil || len(candidates) == 0 {
+		return ctx
+	}
+	cloned := append([]CompositeRouteDecision(nil), candidates...)
+	ctx = context.WithValue(ctx, compositeRouteCandidatesContextKey{}, cloned)
+	if compositeRouteRuntimeStateFromContext(ctx) == nil {
+		ctx = context.WithValue(ctx, compositeRouteRuntimeContextKey{}, &compositeRouteRuntimeState{})
+	}
+	return ctx
+}
+
+func CompositeRouteCandidatesFromContext(ctx context.Context) []CompositeRouteDecision {
+	if ctx == nil {
+		return nil
+	}
+	candidates, _ := ctx.Value(compositeRouteCandidatesContextKey{}).([]CompositeRouteDecision)
+	return append([]CompositeRouteDecision(nil), candidates...)
+}
 
 // WithResolvedTargetPlatform stores the concrete provider chosen for a request
 // made through a composite group.
@@ -23,6 +82,10 @@ func ResolvedTargetPlatformFromContext(ctx context.Context) (string, bool) {
 	if ctx == nil {
 		return "", false
 	}
+	if decision, ok := compositeRouteRuntimeStateFromContext(ctx).get(); ok {
+		platform := strings.TrimSpace(decision.TargetPlatform)
+		return platform, platform != ""
+	}
 	platform, ok := ctx.Value(ctxkey.ResolvedTargetPlatform).(string)
 	platform = strings.TrimSpace(platform)
 	if !ok || platform == "" {
@@ -34,6 +97,9 @@ func ResolvedTargetPlatformFromContext(ctx context.Context) (string, bool) {
 func WithCompositeRouteDecision(ctx context.Context, decision CompositeRouteDecision) context.Context {
 	if ctx == nil || !decision.Matched {
 		return ctx
+	}
+	if state := compositeRouteRuntimeStateFromContext(ctx); state != nil {
+		state.set(decision)
 	}
 	ctx = WithResolvedTargetPlatform(ctx, decision.TargetPlatform)
 	if model := strings.TrimSpace(decision.UpstreamModel); model != "" {
@@ -52,6 +118,10 @@ func ResolvedUpstreamModelFromContext(ctx context.Context) (string, bool) {
 	if ctx == nil {
 		return "", false
 	}
+	if decision, ok := compositeRouteRuntimeStateFromContext(ctx).get(); ok {
+		model := strings.TrimSpace(decision.UpstreamModel)
+		return model, model != ""
+	}
 	model, ok := ctx.Value(ctxkey.ResolvedUpstreamModel).(string)
 	model = strings.TrimSpace(model)
 	if !ok || model == "" {
@@ -64,6 +134,10 @@ func RequestedPublicModelFromContext(ctx context.Context) (string, bool) {
 	if ctx == nil {
 		return "", false
 	}
+	if decision, ok := compositeRouteRuntimeStateFromContext(ctx).get(); ok {
+		model := strings.TrimSpace(decision.PublicModel)
+		return model, model != ""
+	}
 	model, ok := ctx.Value(ctxkey.RequestedPublicModel).(string)
 	model = strings.TrimSpace(model)
 	if !ok || model == "" {
@@ -75,6 +149,10 @@ func RequestedPublicModelFromContext(ctx context.Context) (string, bool) {
 func CompositeRouteSourceFromContext(ctx context.Context) (string, bool) {
 	if ctx == nil {
 		return "", false
+	}
+	if decision, ok := compositeRouteRuntimeStateFromContext(ctx).get(); ok {
+		source := strings.TrimSpace(decision.Source)
+		return source, source != ""
 	}
 	source, ok := ctx.Value(ctxkey.CompositeRouteSource).(string)
 	source = strings.TrimSpace(source)
@@ -207,4 +285,59 @@ func isConcreteRequestPlatform(platform string) bool {
 	default:
 		return false
 	}
+}
+
+func isOpenAICompatibleCompositePlatform(platform string) bool {
+	switch platform {
+	case PlatformOpenAI, PlatformGrok, PlatformKimi, PlatformZhipu, PlatformDeepseek, PlatformMiniMax, PlatformOpenCodeGo:
+		return true
+	default:
+		return false
+	}
+}
+
+func compositeRouteCandidatesForSelection(ctx context.Context, openAICompatible bool) []CompositeRouteDecision {
+	candidates := CompositeRouteCandidatesFromContext(ctx)
+	if len(candidates) < 2 || isOpenAICompatibleCompositePlatform(candidates[0].TargetPlatform) != openAICompatible {
+		return nil
+	}
+	filtered := make([]CompositeRouteDecision, 0, len(candidates))
+	for _, candidate := range candidates {
+		if !candidate.Matched || isOpenAICompatibleCompositePlatform(candidate.TargetPlatform) != openAICompatible {
+			continue
+		}
+		if candidates[0].Endpoint == CompositeRouteEndpointGemini &&
+			candidate.TargetPlatform != PlatformGemini && candidate.TargetPlatform != PlatformAntigravity {
+			continue
+		}
+		filtered = append(filtered, candidate)
+	}
+	if len(filtered) < 2 {
+		return nil
+	}
+	return filtered
+}
+
+func isCompositeRouteSelectionExhausted(err error) bool {
+	return errors.Is(err, ErrNoAvailableAccounts) || errors.Is(err, ErrNoAvailableCompactAccounts)
+}
+
+func applyCompositeRouteSelection(account *Account, requestedModel string, decision CompositeRouteDecision) *Account {
+	if account == nil {
+		return nil
+	}
+	cloned := *account
+	cloned.compositeRouteRequestedModel = strings.TrimSpace(requestedModel)
+	cloned.compositeRouteUpstreamModel = strings.TrimSpace(decision.UpstreamModel)
+	return &cloned
+}
+
+func inheritCompositeRouteSelection(account, selected *Account) *Account {
+	if account == nil || selected == nil || selected.compositeRouteUpstreamModel == "" {
+		return account
+	}
+	cloned := *account
+	cloned.compositeRouteRequestedModel = selected.compositeRouteRequestedModel
+	cloned.compositeRouteUpstreamModel = selected.compositeRouteUpstreamModel
+	return &cloned
 }

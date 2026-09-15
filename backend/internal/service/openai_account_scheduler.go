@@ -2170,6 +2170,46 @@ func (s *OpenAIGatewayService) selectAccountWithScheduler(
 	previousResponseCanMove bool,
 	useUpstreamTokenCost bool,
 ) (*AccountSelectionResult, OpenAIAccountScheduleDecision, error) {
+	candidates := compositeRouteCandidatesForSelection(ctx, true)
+	if len(candidates) == 0 {
+		return s.selectAccountWithSchedulerForPlatform(ctx, groupID, previousResponseID, sessionHash, requestedModel, excludedIDs, requiredTransport, requiredCapability, requiredImageCapability, requireCompact, platform, previousResponseCanMove, useUpstreamTokenCost)
+	}
+
+	var lastDecision OpenAIAccountScheduleDecision
+	var lastErr error
+	for _, candidate := range candidates {
+		candidateCtx := WithCompositeRouteDecision(ctx, candidate)
+		selection, decision, err := s.selectAccountWithSchedulerForPlatform(candidateCtx, groupID, previousResponseID, sessionHash, candidate.UpstreamModel, excludedIDs, requiredTransport, requiredCapability, requiredImageCapability, requireCompact, candidate.TargetPlatform, previousResponseCanMove, useUpstreamTokenCost)
+		if err == nil {
+			if selection != nil {
+				selection.Account = applyCompositeRouteSelection(selection.Account, requestedModel, candidate)
+			}
+			return selection, decision, nil
+		}
+		if !isCompositeRouteSelectionExhausted(err) {
+			return selection, decision, err
+		}
+		lastDecision = decision
+		lastErr = err
+	}
+	return nil, lastDecision, lastErr
+}
+
+func (s *OpenAIGatewayService) selectAccountWithSchedulerForPlatform(
+	ctx context.Context,
+	groupID *int64,
+	previousResponseID string,
+	sessionHash string,
+	requestedModel string,
+	excludedIDs map[int64]struct{},
+	requiredTransport OpenAIUpstreamTransport,
+	requiredCapability OpenAIEndpointCapability,
+	requiredImageCapability OpenAIImagesCapability,
+	requireCompact bool,
+	platform string,
+	previousResponseCanMove bool,
+	useUpstreamTokenCost bool,
+) (*AccountSelectionResult, OpenAIAccountScheduleDecision, error) {
 	selection, decision, err := s.selectAccountWithSchedulerOnce(ctx, groupID, previousResponseID, sessionHash, requestedModel, excludedIDs, requiredTransport, requiredCapability, requiredImageCapability, requireCompact, platform, previousResponseCanMove, useUpstreamTokenCost)
 	if err == nil || openAIProxyStreamQuarantineBypassed(ctx) {
 		return selection, decision, err

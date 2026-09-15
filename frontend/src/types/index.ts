@@ -724,6 +724,7 @@ export interface CompositeRouteDecision {
   endpoint: CompositeRouteEndpoint
   route?: CompositeModelRoute
   reason?: string
+  candidates?: CompositeRouteDecision[]
 }
 
 export interface ApiKey {

@@ -35,27 +35,10 @@ func (r *CompositeRouteResolver) Resolve(ctx context.Context, groupID int64, mod
 		return decision, nil
 	}
 
-	if r != nil && r.repo != nil && groupID > 0 {
-		routes, err := r.repo.ListByGroup(ctx, groupID, false)
-		if err != nil {
-			return decision, fmt.Errorf("list composite routes: %w", err)
-		}
-		if route, ok := matchCompositeRoute(routes, model, endpoint); ok {
-			upstreamModel := strings.TrimSpace(route.UpstreamModel)
-			if upstreamModel == "" {
-				upstreamModel = model
-			}
-			return CompositeRouteDecision{
-				Matched:        true,
-				Source:         CompositeRouteSourceExplicit,
-				GroupID:        groupID,
-				PublicModel:    model,
-				TargetPlatform: route.TargetPlatform,
-				UpstreamModel:  upstreamModel,
-				Endpoint:       endpoint,
-				Route:          &route,
-			}, nil
-		}
+	if routes, err := r.resolveExplicitCandidates(ctx, groupID, model, endpoint); err != nil {
+		return decision, err
+	} else if len(routes) > 0 {
+		return routes[0], nil
 	}
 
 	if r != nil && r.modelOwnershipResolver != nil && groupID > 0 {
@@ -102,11 +85,76 @@ func (r *CompositeRouteResolver) Resolve(ctx context.Context, groupID int64, mod
 	return decision, nil
 }
 
-func matchCompositeRoute(routes []CompositeModelRoute, model, endpoint string) (CompositeModelRoute, bool) {
-	if len(routes) == 0 {
-		return CompositeModelRoute{}, false
+// ResolveCandidates returns every explicit route that matches a public model,
+// ordered from primary to fallback. Account ownership and built-in detection
+// remain a single-candidate fallback when no explicit route exists.
+func (r *CompositeRouteResolver) ResolveCandidates(ctx context.Context, groupID int64, model, endpoint string) ([]CompositeRouteDecision, error) {
+	model = strings.TrimSpace(model)
+	endpoint = normalizeCompositeRouteEndpoint(endpoint)
+	if model == "" {
+		return nil, nil
 	}
 
+	routes, err := r.resolveExplicitCandidates(ctx, groupID, model, endpoint)
+	if err != nil {
+		return nil, err
+	}
+	if len(routes) > 0 {
+		return routes, nil
+	}
+
+	decision, err := r.Resolve(ctx, groupID, model, endpoint)
+	if err != nil {
+		return nil, err
+	}
+	if !decision.Matched {
+		return nil, nil
+	}
+	return []CompositeRouteDecision{decision}, nil
+}
+
+func (r *CompositeRouteResolver) resolveExplicitCandidates(ctx context.Context, groupID int64, model, endpoint string) ([]CompositeRouteDecision, error) {
+	if r == nil || r.repo == nil || groupID <= 0 {
+		return nil, nil
+	}
+	routes, err := r.repo.ListByGroup(ctx, groupID, false)
+	if err != nil {
+		return nil, fmt.Errorf("list composite routes: %w", err)
+	}
+	matches := matchCompositeRoutes(routes, model, endpoint)
+	decisions := make([]CompositeRouteDecision, 0, len(matches))
+	for i := range matches {
+		route := matches[i]
+		upstreamModel := strings.TrimSpace(route.UpstreamModel)
+		if upstreamModel == "" {
+			upstreamModel = model
+		}
+		decisions = append(decisions, CompositeRouteDecision{
+			Matched:        true,
+			Source:         CompositeRouteSourceExplicit,
+			GroupID:        groupID,
+			PublicModel:    model,
+			TargetPlatform: route.TargetPlatform,
+			UpstreamModel:  upstreamModel,
+			Endpoint:       endpoint,
+			Route:          &route,
+		})
+	}
+	return decisions, nil
+}
+
+func matchCompositeRoute(routes []CompositeModelRoute, model, endpoint string) (CompositeModelRoute, bool) {
+	matches := matchCompositeRoutes(routes, model, endpoint)
+	if len(matches) == 0 {
+		return CompositeModelRoute{}, false
+	}
+	return matches[0], true
+}
+
+func matchCompositeRoutes(routes []CompositeModelRoute, model, endpoint string) []CompositeModelRoute {
+	if len(routes) == 0 {
+		return nil
+	}
 	type candidate struct {
 		route          CompositeModelRoute
 		matchStrength  int
@@ -153,7 +201,7 @@ func matchCompositeRoute(routes []CompositeModelRoute, model, endpoint string) (
 		})
 	}
 	if len(candidates) == 0 {
-		return CompositeModelRoute{}, false
+		return nil
 	}
 
 	sort.SliceStable(candidates, func(i, j int) bool {
@@ -172,5 +220,15 @@ func matchCompositeRoute(routes []CompositeModelRoute, model, endpoint string) (
 		}
 		return a.route.ID < b.route.ID
 	})
-	return candidates[0].route, true
+	matches := make([]CompositeModelRoute, 0, len(candidates))
+	seen := make(map[string]struct{}, len(candidates))
+	for _, candidate := range candidates {
+		key := candidate.route.TargetPlatform + "\x00" + strings.TrimSpace(candidate.route.UpstreamModel)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		matches = append(matches, candidate.route)
+	}
+	return matches
 }

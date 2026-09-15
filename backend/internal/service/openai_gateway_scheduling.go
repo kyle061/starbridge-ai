@@ -255,7 +255,25 @@ func (s *OpenAIGatewayService) SelectAccountForModel(ctx context.Context, groupI
 // SelectAccountForModelWithExclusions selects an account supporting the requested model while excluding specified accounts.
 // SelectAccountForModelWithExclusions 选择支持指定模型的账号，同时排除指定的账号。
 func (s *OpenAIGatewayService) SelectAccountForModelWithExclusions(ctx context.Context, groupID *int64, sessionHash string, requestedModel string, excludedIDs map[int64]struct{}) (*Account, error) {
-	return s.selectAccountForModelWithExclusions(s.withOpenAIQuotaAutoPauseContext(ctx), groupID, PlatformOpenAI, sessionHash, requestedModel, excludedIDs, false, 0, "", false)
+	ctx = s.withOpenAIQuotaAutoPauseContext(ctx)
+	candidates := compositeRouteCandidatesForSelection(ctx, true)
+	if len(candidates) == 0 {
+		return s.selectAccountForModelWithExclusions(ctx, groupID, PlatformOpenAI, sessionHash, requestedModel, excludedIDs, false, 0, "", false)
+	}
+
+	var lastErr error
+	for _, candidate := range candidates {
+		candidateCtx := WithCompositeRouteDecision(ctx, candidate)
+		account, err := s.selectAccountForModelWithExclusions(candidateCtx, groupID, candidate.TargetPlatform, sessionHash, candidate.UpstreamModel, excludedIDs, false, 0, "", false)
+		if err == nil {
+			return applyCompositeRouteSelection(account, requestedModel, candidate), nil
+		}
+		if !isCompositeRouteSelectionExhausted(err) {
+			return nil, err
+		}
+		lastErr = err
+	}
+	return nil, lastErr
 }
 
 // SelectAccountForTokenCount selects an account for a non-billable token-count
@@ -271,18 +289,24 @@ func (s *OpenAIGatewayService) SelectAccountForTokenCount(
 ) (*Account, error) {
 	ctx = WithOpenAIProfitControlSuppressed(ctx)
 	ctx = s.withOpenAIQuotaAutoPauseContext(ctx)
-	return s.selectAccountForModelWithExclusions(
-		ctx,
-		groupID,
-		platform,
-		sessionHash,
-		requestedModel,
-		nil,
-		false,
-		0,
-		requiredCapability,
-		false,
-	)
+	candidates := compositeRouteCandidatesForSelection(ctx, true)
+	if len(candidates) == 0 {
+		return s.selectAccountForModelWithExclusions(ctx, groupID, platform, sessionHash, requestedModel, nil, false, 0, requiredCapability, false)
+	}
+
+	var lastErr error
+	for _, candidate := range candidates {
+		candidateCtx := WithCompositeRouteDecision(ctx, candidate)
+		account, err := s.selectAccountForModelWithExclusions(candidateCtx, groupID, candidate.TargetPlatform, sessionHash, candidate.UpstreamModel, nil, false, 0, requiredCapability, false)
+		if err == nil {
+			return applyCompositeRouteSelection(account, requestedModel, candidate), nil
+		}
+		if !isCompositeRouteSelectionExhausted(err) {
+			return nil, err
+		}
+		lastErr = err
+	}
+	return nil, lastErr
 }
 
 // NormalizeOpenAICompatiblePlatform 保留 grok 与国产 OpenAI 兼容供应商（kimi/zhipu/
@@ -1108,7 +1132,27 @@ func (s *OpenAIGatewayService) SelectAccountWithLoadAwareness(ctx context.Contex
 	// 分组利润控制：legacy 公共入口同样装门，保证不经
 	// selectAccountWithScheduler 的调用方也无法绕过利润准入。
 	ctx = s.withOpenAIProfitControlGate(ctx, groupID)
-	return s.selectAccountWithLoadAwareness(ctx, groupID, PlatformOpenAI, sessionHash, requestedModel, excludedIDs, false, "", true)
+	candidates := compositeRouteCandidatesForSelection(ctx, true)
+	if len(candidates) == 0 {
+		return s.selectAccountWithLoadAwareness(ctx, groupID, PlatformOpenAI, sessionHash, requestedModel, excludedIDs, false, "", true)
+	}
+
+	var lastErr error
+	for _, candidate := range candidates {
+		candidateCtx := WithCompositeRouteDecision(ctx, candidate)
+		selection, err := s.selectAccountWithLoadAwareness(candidateCtx, groupID, candidate.TargetPlatform, sessionHash, candidate.UpstreamModel, excludedIDs, false, "", true)
+		if err == nil {
+			if selection != nil {
+				selection.Account = applyCompositeRouteSelection(selection.Account, requestedModel, candidate)
+			}
+			return selection, nil
+		}
+		if !isCompositeRouteSelectionExhausted(err) {
+			return nil, err
+		}
+		lastErr = err
+	}
+	return nil, lastErr
 }
 
 func (s *OpenAIGatewayService) selectAccountWithLoadAwareness(ctx context.Context, groupID *int64, platform string, sessionHash string, requestedModel string, excludedIDs map[int64]struct{}, requireCompact bool, requiredCapability OpenAIEndpointCapability, useUpstreamTokenCost bool) (*AccountSelectionResult, error) {

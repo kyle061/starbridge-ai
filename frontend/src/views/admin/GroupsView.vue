@@ -3902,10 +3902,15 @@
     >
       <div class="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
         <section class="min-w-0">
-          <div class="mb-3 flex items-center justify-between gap-3">
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
-              {{ t("admin.groups.compositeRoutes.routes") }}
-            </h3>
+          <div class="mb-3 flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+                {{ t("admin.groups.compositeRoutes.routes") }}
+              </h3>
+              <p class="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">
+                {{ t("admin.groups.compositeRoutes.failoverHint") }}
+              </p>
+            </div>
             <button
               type="button"
               class="btn btn-secondary btn-sm"
@@ -3964,6 +3969,17 @@
                         {{ route.public_model }}
                       </div>
                       <div class="mt-1 flex flex-wrap items-center gap-1.5">
+                        <span
+                          v-if="route.enabled"
+                          :class="[
+                            'badge',
+                            compositeRouteChainPosition(route) === 0
+                              ? 'badge-success'
+                              : 'badge-warning',
+                          ]"
+                        >
+                          {{ compositeRouteChainLabel(route) }}
+                        </span>
                         <span class="badge badge-gray">{{
                           compositeRouteMatchLabel(route.match_type)
                         }}</span>
@@ -4219,6 +4235,32 @@
                   <div class="break-all">
                     {{ t("admin.groups.compositeRoutes.upstreamModel") }}:
                     {{ compositePreviewDecision.upstream_model }}
+                  </div>
+                  <div
+                    v-if="(compositePreviewDecision.candidates?.length || 0) > 1"
+                    class="pt-2"
+                  >
+                    <div class="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+                      {{ t("admin.groups.compositeRoutes.failoverChain") }}
+                    </div>
+                    <ol class="space-y-1.5">
+                      <li
+                        v-for="(candidate, index) in compositePreviewDecision.candidates"
+                        :key="candidate.route?.id || `${candidate.target_platform}-${candidate.upstream_model}-${index}`"
+                        class="flex min-w-0 items-center gap-2"
+                      >
+                        <span class="badge badge-gray shrink-0">{{ index + 1 }}</span>
+                        <PlatformIcon
+                          v-if="candidate.target_platform"
+                          :platform="candidate.target_platform"
+                          size="xs"
+                        />
+                        <span class="min-w-0 break-all">
+                          {{ formatCompositePlatform(candidate.target_platform) }} ·
+                          {{ candidate.upstream_model }}
+                        </span>
+                      </li>
+                    </ol>
                   </div>
                 </div>
                 <div
@@ -6439,6 +6481,23 @@ const compositeRouteSourceLabel = (source: string) => {
     return t("admin.groups.compositeRoutes.sources.detector");
   }
   return source || "—";
+};
+
+const compositeRouteChainPosition = (route: CompositeModelRoute) =>
+  compositeRoutes.value
+    .filter(
+      (candidate) =>
+        candidate.enabled &&
+        candidate.public_model === route.public_model &&
+        candidate.match_type === route.match_type &&
+        candidate.endpoint === route.endpoint,
+    )
+    .findIndex((candidate) => candidate.id === route.id);
+
+const compositeRouteChainLabel = (route: CompositeModelRoute) => {
+  const position = compositeRouteChainPosition(route);
+  if (position <= 0) return t("admin.groups.compositeRoutes.primaryRoute");
+  return t("admin.groups.compositeRoutes.fallbackRoute", { index: position });
 };
 
 const resetCompositeRouteForm = () => {

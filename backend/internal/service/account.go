@@ -82,6 +82,11 @@ type Account struct {
 	headerOverrideCacheRawPtr         uintptr
 	headerOverrideCacheRawLen         int
 	headerOverrideCacheRawSig         uint64
+
+	// Request-scoped override selected from a composite route fallback chain.
+	// These fields are never persisted or written to scheduler snapshots.
+	compositeRouteRequestedModel string
+	compositeRouteUpstreamModel  string
 }
 
 type OpenAIEndpointCapability string
@@ -880,6 +885,10 @@ func (a *Account) GetMappedModel(requestedModel string) string {
 // ResolveMappedModel 获取映射后的模型名，并返回是否命中了账号级映射。
 // matched=true 表示命中了精确映射或通配符映射，即使映射结果与原模型名相同。
 func (a *Account) ResolveMappedModel(requestedModel string) (mappedModel string, matched bool) {
+	if a != nil && a.compositeRouteUpstreamModel != "" &&
+		strings.TrimSpace(requestedModel) == a.compositeRouteRequestedModel {
+		return a.compositeRouteUpstreamModel, true
+	}
 	mapping := a.GetModelMapping()
 	if len(mapping) == 0 {
 		return requestedModel, false

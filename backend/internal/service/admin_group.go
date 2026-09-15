@@ -220,10 +220,19 @@ func (s *adminServiceImpl) PreviewCompositeRoute(ctx context.Context, groupID in
 	if resolver == nil {
 		resolver = NewCompositeRouteResolver(s.compositeRouteRepo)
 	}
-	decision, err := resolver.Resolve(ctx, groupID, input.Model, input.Endpoint)
+	candidates, err := resolver.ResolveCandidates(ctx, groupID, input.Model, input.Endpoint)
 	if err != nil {
 		return nil, err
 	}
+	if len(candidates) == 0 {
+		decision, resolveErr := resolver.Resolve(ctx, groupID, input.Model, input.Endpoint)
+		if resolveErr != nil {
+			return nil, resolveErr
+		}
+		return &decision, nil
+	}
+	decision := candidates[0]
+	decision.Candidates = candidates
 	return &decision, nil
 }
 

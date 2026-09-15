@@ -18,6 +18,7 @@ Composite groups can route to these concrete account platforms:
 - Zhipu GLM
 - DeepSeek
 - MiniMax
+- OpenCode Go
 
 The selected concrete platform is used for account selection, user platform
 quota checks, post-usage billing, ops error platform attribution, channel
@@ -51,6 +52,19 @@ Resolution order is explicit route first, then built-in detection. When more
 than one explicit route matches, exact matches beat prefix matches,
 endpoint-specific routes beat `any`, longer prefixes beat shorter prefixes,
 then lower `priority`, then lower route id.
+
+Multiple explicit routes may use the same `public_model`, `endpoint`, and
+`match_type`. They form a failover chain in the order above. The scheduler
+tries every eligible account on the first route, preserving account priority,
+health, quota, concurrency, and sticky-session checks. If that route has no
+available account, selection continues on the next compatible route. OAuth and
+API-key accounts can coexist in each platform account pool.
+
+Failover stays within the protocol family selected by the first route. OpenAI,
+Grok, Kimi, Zhipu, DeepSeek, MiniMax, and OpenCode Go can share OpenAI-compatible
+entry points. Gemini-native requests can switch only between Gemini and
+Antigravity. A streaming response that has already emitted output is never
+continued on another provider.
 
 For JSON-body endpoints, the gateway rewrites the request `model` field to the
 route's `upstream_model` before dispatch. For Gemini native paths such as
@@ -116,6 +130,18 @@ keys per provider.
    | `all/gemini-pro` | `gemini` | `gemini` | `gemini-2.5-pro` |
    | `all/grok` | `responses` | `grok` | `grok-4.3` |
 
+   To expose one stable model with provider failover, save more than one row
+   with the same public model and endpoint. For example:
+
+   | Priority | Public model | Endpoint | Target platform | Upstream model |
+   | --- | --- | --- | --- | --- |
+   | `10` | `team/reasoning` | `chat_completions` | `openai` | `gpt-5.1` |
+   | `20` | `team/reasoning` | `chat_completions` | `deepseek` | `deepseek-chat` |
+
+   Requests use all available OpenAI accounts first. When that pool is
+   exhausted or unavailable, the same request model automatically selects a
+   DeepSeek account and forwards `deepseek-chat` upstream.
+
 5. Configure channel pricing and model mapping under the concrete platforms
    named in each route. Composite routing does not create pricing records.
 6. Create a subscription payment plan for the composite group.
@@ -132,8 +158,7 @@ create synthetic model metadata, pricing, or upstream capability records by
 themselves. Keep channel pricing/model mapping configured for the concrete
 provider platforms that the routes target.
 
-This PR intentionally does not implement:
-
-- AUTO smart-routing among multiple providers for the same abstract task.
-- Direct API-key binding to several existing groups without a composite group.
-- Protocol-agnostic provider decoupling or a LiteLLM-style adapter rewrite.
+An API key still belongs to one group. Use a composite group to combine several
+provider account pools. Routes from incompatible protocol families remain
+separate because switching request wire formats after dispatch would corrupt
+streaming and endpoint semantics.

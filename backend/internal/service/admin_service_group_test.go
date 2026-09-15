@@ -2121,6 +2121,17 @@ func TestAdminService_PreviewCompositeRouteUsesExplicitRoutes(t *testing.T) {
 				Priority:       100,
 				Enabled:        true,
 			},
+			{
+				ID:             12,
+				GroupID:        7,
+				PublicModel:    "openrouter/claude",
+				MatchType:      CompositeRouteMatchExact,
+				TargetPlatform: PlatformGemini,
+				UpstreamModel:  "gemini-2.5-pro",
+				Endpoint:       CompositeRouteEndpointMessages,
+				Priority:       200,
+				Enabled:        true,
+			},
 		},
 	}
 	svc := &adminServiceImpl{groupRepo: groupRepo, compositeRouteRepo: routeRepo}
@@ -2138,6 +2149,9 @@ func TestAdminService_PreviewCompositeRouteUsesExplicitRoutes(t *testing.T) {
 	require.Equal(t, "claude-sonnet-4-6", decision.UpstreamModel)
 	require.NotNil(t, decision.Route)
 	require.Equal(t, int64(11), decision.Route.ID)
+	require.Len(t, decision.Candidates, 2)
+	require.Equal(t, PlatformAnthropic, decision.Candidates[0].TargetPlatform)
+	require.Equal(t, PlatformGemini, decision.Candidates[1].TargetPlatform)
 }
 
 // accountRepoStubForGroupCodexManifest 支撑固定账号 manifest 配置校验测试。

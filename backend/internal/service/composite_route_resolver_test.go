@@ -70,6 +70,85 @@ func TestCompositeRouteResolverExplicitExactRouteRewritesModel(t *testing.T) {
 	require.Equal(t, int64(10), decision.Route.ID)
 }
 
+func TestCompositeRouteResolverReturnsOrderedFailoverCandidates(t *testing.T) {
+	resolver := NewCompositeRouteResolver(compositeRouteRepoStub{
+		routes: []CompositeModelRoute{
+			{
+				ID:             30,
+				GroupID:        7,
+				PublicModel:    "shared-model",
+				MatchType:      CompositeRouteMatchExact,
+				TargetPlatform: PlatformDeepseek,
+				UpstreamModel:  "deepseek-chat",
+				Endpoint:       CompositeRouteEndpointChatCompletions,
+				Priority:       20,
+				Enabled:        true,
+			},
+			{
+				ID:             10,
+				GroupID:        7,
+				PublicModel:    "shared-model",
+				MatchType:      CompositeRouteMatchExact,
+				TargetPlatform: PlatformOpenAI,
+				UpstreamModel:  "gpt-5.1",
+				Endpoint:       CompositeRouteEndpointChatCompletions,
+				Priority:       10,
+				Enabled:        true,
+			},
+			{
+				ID:             11,
+				GroupID:        7,
+				PublicModel:    "shared-model",
+				MatchType:      CompositeRouteMatchExact,
+				TargetPlatform: PlatformOpenAI,
+				UpstreamModel:  "gpt-5.1",
+				Endpoint:       CompositeRouteEndpointChatCompletions,
+				Priority:       15,
+				Enabled:        true,
+			},
+		},
+	})
+
+	candidates, err := resolver.ResolveCandidates(context.Background(), 7, "shared-model", CompositeRouteEndpointChatCompletions)
+
+	require.NoError(t, err)
+	require.Len(t, candidates, 2)
+	require.Equal(t, PlatformOpenAI, candidates[0].TargetPlatform)
+	require.Equal(t, "gpt-5.1", candidates[0].UpstreamModel)
+	require.Equal(t, PlatformDeepseek, candidates[1].TargetPlatform)
+	require.Equal(t, "deepseek-chat", candidates[1].UpstreamModel)
+}
+
+func TestCompositeRouteRuntimeTracksSelectedFallback(t *testing.T) {
+	candidates := []CompositeRouteDecision{
+		{
+			Matched:        true,
+			Source:         CompositeRouteSourceExplicit,
+			PublicModel:    "shared-model",
+			TargetPlatform: PlatformOpenAI,
+			UpstreamModel:  "gpt-5.1",
+		},
+		{
+			Matched:        true,
+			Source:         CompositeRouteSourceExplicit,
+			PublicModel:    "shared-model",
+			TargetPlatform: PlatformDeepseek,
+			UpstreamModel:  "deepseek-chat",
+		},
+	}
+	requestCtx := WithCompositeRouteCandidates(context.Background(), candidates)
+	requestCtx = WithCompositeRouteDecision(requestCtx, candidates[0])
+
+	_ = WithCompositeRouteDecision(requestCtx, candidates[1])
+
+	platform, ok := ResolvedTargetPlatformFromContext(requestCtx)
+	require.True(t, ok)
+	require.Equal(t, PlatformDeepseek, platform)
+	upstreamModel, ok := ResolvedUpstreamModelFromContext(requestCtx)
+	require.True(t, ok)
+	require.Equal(t, "deepseek-chat", upstreamModel)
+}
+
 // Scenario: 唯一平台的精确别名可路由
 func TestCompositeRouteResolverUsesAccountModelOwnershipForUnprefixedAlias(t *testing.T) {
 	resolver := NewCompositeRouteResolver(nil)

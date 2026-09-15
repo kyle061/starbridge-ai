@@ -1358,6 +1358,84 @@ func TestOpenAISelectAccountForModelWithExclusions_NoAccounts(t *testing.T) {
 	}
 }
 
+func TestOpenAIAdvancedSchedulerFallsBackAcrossCompositePlatforms(t *testing.T) {
+	groupID := int64(77)
+	repo := stubOpenAIAccountRepo{
+		accounts: []Account{
+			{
+				ID:            1,
+				Platform:      PlatformOpenAI,
+				Type:          AccountTypeAPIKey,
+				Status:        StatusActive,
+				Schedulable:   false,
+				Concurrency:   1,
+				Priority:      1,
+				AccountGroups: []AccountGroup{{GroupID: groupID}},
+			},
+			{
+				ID:            2,
+				Platform:      PlatformDeepseek,
+				Type:          AccountTypeAPIKey,
+				Status:        StatusActive,
+				Schedulable:   true,
+				Concurrency:   1,
+				Priority:      1,
+				AccountGroups: []AccountGroup{{GroupID: groupID}},
+			},
+		},
+	}
+	svc := &OpenAIGatewayService{accountRepo: repo, cache: &stubGatewayCache{}}
+	candidates := []CompositeRouteDecision{
+		{
+			Matched:        true,
+			Source:         CompositeRouteSourceExplicit,
+			GroupID:        groupID,
+			PublicModel:    "shared-model",
+			TargetPlatform: PlatformOpenAI,
+			UpstreamModel:  "gpt-5.1",
+			Endpoint:       CompositeRouteEndpointChatCompletions,
+		},
+		{
+			Matched:        true,
+			Source:         CompositeRouteSourceExplicit,
+			GroupID:        groupID,
+			PublicModel:    "shared-model",
+			TargetPlatform: PlatformDeepseek,
+			UpstreamModel:  "deepseek-chat",
+			Endpoint:       CompositeRouteEndpointChatCompletions,
+		},
+	}
+	ctx := WithCompositeRouteCandidates(context.Background(), candidates)
+	ctx = WithCompositeRouteDecision(ctx, candidates[0])
+
+	selection, _, err := svc.SelectAccountWithSchedulerForCapability(
+		ctx,
+		&groupID,
+		"",
+		"",
+		"gpt-5.1",
+		nil,
+		OpenAIUpstreamTransportAny,
+		OpenAIEndpointCapabilityChatCompletions,
+		false,
+		false,
+		true,
+		PlatformOpenAI,
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, selection)
+	require.NotNil(t, selection.Account)
+	require.Equal(t, int64(2), selection.Account.ID)
+	require.Equal(t, PlatformDeepseek, selection.Account.Platform)
+	mapped, matched := selection.Account.ResolveMappedModel("gpt-5.1")
+	require.True(t, matched)
+	require.Equal(t, "deepseek-chat", mapped)
+	platform, ok := ResolvedTargetPlatformFromContext(ctx)
+	require.True(t, ok)
+	require.Equal(t, PlatformDeepseek, platform)
+}
+
 func TestOpenAISelectAccountWithLoadAwareness_NoCandidates(t *testing.T) {
 	groupID := int64(1)
 	resetAt := time.Now().Add(1 * time.Hour)

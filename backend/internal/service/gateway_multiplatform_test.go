@@ -450,6 +450,78 @@ func TestGatewayService_SelectAccountForModelWithExclusions_CompositeAliasRequir
 	require.Equal(t, int64(2), account.ID)
 }
 
+func TestGatewayService_SelectAccountForModelWithExclusions_FallsBackAcrossCompositePlatforms(t *testing.T) {
+	groupID := int64(78)
+	repo := &mockAccountRepoForPlatform{
+		accounts: []Account{
+			{
+				ID:            1,
+				Platform:      PlatformAnthropic,
+				Type:          AccountTypeOAuth,
+				Priority:      1,
+				Status:        StatusActive,
+				Schedulable:   false,
+				AccountGroups: []AccountGroup{{GroupID: groupID}},
+			},
+			{
+				ID:            2,
+				Platform:      PlatformGemini,
+				Type:          AccountTypeAPIKey,
+				Priority:      1,
+				Status:        StatusActive,
+				Schedulable:   true,
+				AccountGroups: []AccountGroup{{GroupID: groupID}},
+			},
+		},
+		accountsByID: map[int64]*Account{},
+	}
+	for i := range repo.accounts {
+		repo.accountsByID[repo.accounts[i].ID] = &repo.accounts[i]
+	}
+
+	group := &Group{ID: groupID, Platform: PlatformComposite, Status: StatusActive, Hydrated: true}
+	svc := &GatewayService{
+		accountRepo: repo,
+		groupRepo:   &mockGroupRepoForGateway{groups: map[int64]*Group{groupID: group}},
+		cfg:         testConfig(),
+	}
+	candidates := []CompositeRouteDecision{
+		{
+			Matched:        true,
+			Source:         CompositeRouteSourceExplicit,
+			GroupID:        groupID,
+			PublicModel:    "team/reasoning",
+			TargetPlatform: PlatformAnthropic,
+			UpstreamModel:  "claude-sonnet-4-6",
+			Endpoint:       CompositeRouteEndpointMessages,
+		},
+		{
+			Matched:        true,
+			Source:         CompositeRouteSourceExplicit,
+			GroupID:        groupID,
+			PublicModel:    "team/reasoning",
+			TargetPlatform: PlatformGemini,
+			UpstreamModel:  "gemini-2.5-pro",
+			Endpoint:       CompositeRouteEndpointMessages,
+		},
+	}
+	ctx := WithCompositeRouteCandidates(context.Background(), candidates)
+	ctx = WithCompositeRouteDecision(ctx, candidates[0])
+
+	account, err := svc.SelectAccountForModelWithExclusions(ctx, &groupID, "", "claude-sonnet-4-6", nil)
+
+	require.NoError(t, err)
+	require.NotNil(t, account)
+	require.Equal(t, int64(2), account.ID)
+	require.Equal(t, PlatformGemini, account.Platform)
+	mapped, matched := account.ResolveMappedModel("claude-sonnet-4-6")
+	require.True(t, matched)
+	require.Equal(t, "gemini-2.5-pro", mapped)
+	platform, ok := ResolvedTargetPlatformFromContext(ctx)
+	require.True(t, ok)
+	require.Equal(t, PlatformGemini, platform)
+}
+
 // TestGatewayService_SelectAccountForModelWithPlatform_Antigravity 测试 antigravity 单平台选择
 func TestGatewayService_SelectAccountForModelWithPlatform_Antigravity(t *testing.T) {
 	ctx := context.Background()

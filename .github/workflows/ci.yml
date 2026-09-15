@@ -43,6 +43,14 @@ jobs:
         with: { go-version-file: backend/go.mod, cache: true, cache-dependency-path: backend/go.sum }
       - run: go test ./internal/pkg/apicompat ./internal/service -run 'TestOpenAIOAuthService_|TestForwardResponses_ForceChatCompletions|TestResolveOpenAIForwardModel|TestChatCompletionsToResponses'
         working-directory: backend
+      - run: >-
+          go test ./migrations ./internal/service ./internal/server/routes
+          -run 'TestComposite|TestOpenAIAdvancedSchedulerFallsBackAcrossCompositePlatforms'
+        working-directory: backend
+      - run: >-
+          go test -tags unit ./internal/service
+          -run 'TestAdminService_PreviewCompositeRoute|TestGatewayService_SelectAccountForModelWithExclusions_FallsBackAcrossCompositePlatforms'
+        working-directory: backend
 
   deployment:
     runs-on: ubuntu-latest
