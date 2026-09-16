@@ -17,6 +17,7 @@ export default {
     goToDashboard: '进入控制台',
     // 新增：面向用户的价值主张
     heroSubtitle: '一个密钥，畅用多个 AI 模型',
+    seoTitle: 'Starbridge AI 多模型 AI API 中转站',
     heroDescription: '星桥 AI，一站式连接 OpenAI、Claude、Gemini 与自定义模型服务。统一接口、独立密钥，用量清晰可控。',
     tags: {
       subscriptionToApi: '多模型中转',

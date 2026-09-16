@@ -114,6 +114,35 @@ func TestInjectSiteTitle(t *testing.T) {
 	})
 }
 
+func TestInjectSiteDescription(t *testing.T) {
+	t.Run("replaces_description_with_site_subtitle", func(t *testing.T) {
+		html := []byte(`<html><head><meta name="description" content="Default description" /><title>Starbridge AI</title></head></html>`)
+		settingsJSON := []byte(`{"site_subtitle":"统一连接 OpenAI 与 Claude"}`)
+
+		result := injectSiteDescription(html, settingsJSON)
+
+		assert.Contains(t, string(result), `<meta name="description" content="统一连接 OpenAI 与 Claude" />`)
+		assert.NotContains(t, string(result), "Default description")
+	})
+
+	t.Run("escapes_html_in_site_subtitle", func(t *testing.T) {
+		html := []byte(`<meta name="description" content="Default" />`)
+		settingsJSON := []byte(`{"site_subtitle":"<script>alert(1)</script>"}`)
+
+		result := injectSiteDescription(html, settingsJSON)
+
+		assert.NotContains(t, string(result), "<script>")
+		assert.Contains(t, string(result), "&lt;script&gt;alert(1)&lt;/script&gt;")
+	})
+
+	t.Run("keeps_html_when_subtitle_is_empty", func(t *testing.T) {
+		html := []byte(`<meta name="description" content="Default" />`)
+		settingsJSON := []byte(`{"site_subtitle":""}`)
+
+		assert.Equal(t, string(html), string(injectSiteDescription(html, settingsJSON)))
+	})
+}
+
 func TestInjectSiteFavicon(t *testing.T) {
 	t.Run("replaces_favicon_with_site_logo", func(t *testing.T) {
 		html := []byte(`<html><head><link rel="icon" type="image/png" href="/logo.png" /></head></html>`)
@@ -298,6 +327,22 @@ func TestFrontendServer_ServeIndexHTML(t *testing.T) {
 		// Nonce placeholder should be replaced
 		assert.NotContains(t, body, NonceHTMLPlaceholder)
 		assert.Contains(t, body, `nonce="`+testNonce+`"`)
+		assert.Equal(t, "index, follow", w.Header().Get("X-Robots-Tag"))
+	})
+
+	t.Run("marks_private_spa_routes_noindex", func(t *testing.T) {
+		provider := &mockSettingsProvider{settings: map[string]string{"test": "value"}}
+		server, err := NewFrontendServer(provider)
+		require.NoError(t, err)
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodGet, "/admin/dashboard", nil)
+		c.Set(middleware.CSPNonceKey, "nonce123")
+
+		server.serveIndexHTML(c)
+
+		assert.Equal(t, "noindex, nofollow", w.Header().Get("X-Robots-Tag"))
 	})
 
 	t.Run("caches_html_content", func(t *testing.T) {

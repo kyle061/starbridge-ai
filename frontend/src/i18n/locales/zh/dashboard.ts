@@ -638,6 +638,7 @@ export default {
   // Model Plaza (public group/model pricing showcase)
   modelPlaza: {
     title: '模型广场',
+    seoTitle: 'Starbridge AI 模型广场与 AI API 价格',
     description: '按分组浏览可用模型与价格',
     loading: '加载中...',
     empty: '暂无可展示的分组',

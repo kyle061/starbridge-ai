@@ -12,7 +12,8 @@ import { useNavigationLoadingState } from '@/composables/useNavigationLoading'
 import { useRoutePrefetch } from '@/composables/useRoutePrefetch'
 import { getSetupStatus } from '@/api/setup'
 import { resolveCompletedSetupRedirectPath } from './setupRedirect'
-import { resolveRouteDocumentTitle } from './title'
+import { updateDocumentSeo } from '@/utils/seo'
+import { resolveSiteBillingMode } from '@/utils/siteBillingMode'
 
 /**
  * Route definitions with lazy loading
@@ -36,7 +37,10 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/HomeView.vue'),
     meta: {
       requiresAuth: false,
-      title: 'Home'
+      title: 'Home',
+      descriptionKey: 'home.heroDescription',
+      seoTitleKey: 'home.seoTitle',
+      indexable: true,
     }
   },
   {
@@ -172,7 +176,8 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/public/LegalDocumentView.vue'),
     meta: {
       requiresAuth: false,
-      title: 'Legal Document'
+      title: 'Legal Document',
+      indexable: true,
     }
   },
   {
@@ -182,7 +187,10 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: false,
       title: 'Model Plaza',
-      titleKey: 'modelPlaza.title'
+      titleKey: 'modelPlaza.title',
+      descriptionKey: 'modelPlaza.description',
+      seoTitleKey: 'modelPlaza.seoTitle',
+      indexable: true
     }
   },
 
@@ -798,7 +806,9 @@ router.beforeEach(async (to, _from, next) => {
     ...(appStore.cachedPublicSettings?.custom_menu_items ?? []),
     ...(authStore.isAdmin ? adminSettingsStore.customMenuItems : []),
   ]
-  document.title = resolveRouteDocumentTitle(to, appStore.siteName, customMenuItems)
+  updateDocumentSeo(to, appStore.siteName, customMenuItems, appStore.cachedPublicSettings?.site_subtitle, {
+    billingMode: resolveSiteBillingMode(appStore.cachedPublicSettings),
+  })
 
   // Check if route requires authentication
   const requiresAuth = to.meta.requiresAuth !== false // Default to true

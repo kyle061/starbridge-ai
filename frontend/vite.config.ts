@@ -26,7 +26,7 @@ function isSafeImageUrl(value: string): boolean {
   }
 }
 
-function injectBranding(html: string, config: { site_name?: string; site_logo?: string }): string {
+function injectBranding(html: string, config: { site_name?: string; site_logo?: string; site_subtitle?: string }): string {
   let brandedHtml = html
   const siteName = config.site_name?.trim()
   if (siteName) {
@@ -41,6 +41,14 @@ function injectBranding(html: string, config: { site_name?: string; site_logo?: 
     brandedHtml = brandedHtml.replace(
       /<link\s+rel=["']icon["'][^>]*>/i,
       `<link rel="icon" href="${escapeHtml(siteLogo)}" />`,
+    )
+  }
+
+  const siteSubtitle = config.site_subtitle?.trim()
+  if (siteSubtitle) {
+    brandedHtml = brandedHtml.replace(
+      /<meta\s+name=["']description["'][^>]*>/i,
+      `<meta name="description" content="${escapeHtml(siteSubtitle)}" />`,
     )
   }
   return brandedHtml

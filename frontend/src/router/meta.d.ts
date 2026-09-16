@@ -70,5 +70,14 @@ declare module 'vue-router' {
      * i18n key for the page description
      */
     descriptionKey?: string
+
+    /**
+     * Whether crawlers may index this route. Private and account-specific
+     * routes remain noindex even though the SPA shell is publicly reachable.
+     */
+    indexable?: boolean
+
+    /** Optional SEO title key, separate from the compact browser tab title. */
+    seoTitleKey?: string
   }
 }

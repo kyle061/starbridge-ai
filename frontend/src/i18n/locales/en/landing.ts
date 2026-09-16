@@ -17,6 +17,7 @@ export default {
     goToDashboard: 'Go to Dashboard',
     // User-focused value proposition
     heroSubtitle: 'One Key, All AI Models',
+    seoTitle: 'Starbridge AI Multi-model AI API Gateway',
     heroDescription: 'No need to manage multiple subscriptions. Access Claude, GPT, Gemini and more with a single API key',
     tags: {
       subscriptionToApi: 'Multi-model gateway',

@@ -1,0 +1,23 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /v1/
+Disallow: /setup
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /auth/
+Disallow: /dashboard
+Disallow: /keys
+Disallow: /usage
+Disallow: /redeem
+Disallow: /affiliate
+Disallow: /profile
+Disallow: /subscriptions
+Disallow: /purchase
+Disallow: /orders
+Disallow: /payment/
+Disallow: /admin/
+
+Sitemap: https://starbridaeai.top/sitemap.xml

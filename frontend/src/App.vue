@@ -4,13 +4,13 @@ import { computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import Toast from '@/components/common/Toast.vue'
 import NavigationProgress from '@/components/common/NavigationProgress.vue'
 import AdminComplianceDialog from '@/components/admin/AdminComplianceDialog.vue'
-import { resolveRouteDocumentTitle } from '@/router/title'
 import AnnouncementPopup from '@/components/common/AnnouncementPopup.vue'
 import { useAppStore, useAuthStore, useSubscriptionStore, useAnnouncementStore, useAdminComplianceStore, useAdminSettingsStore } from '@/stores'
 import { getSetupStatus } from '@/api/setup'
 import { updateFavicon } from '@/utils/branding'
 import { FeatureFlags, isFeatureFlagEnabled } from '@/utils/featureFlags'
 import { resolveSiteBillingMode } from '@/utils/siteBillingMode'
+import { updateDocumentSeo } from '@/utils/seo'
 
 const router = useRouter()
 const route = useRoute()
@@ -26,12 +26,12 @@ function updateDocumentTitle() {
     ...(appStore.cachedPublicSettings?.custom_menu_items ?? []),
     ...(authStore.isAdmin ? adminSettingsStore.customMenuItems : []),
   ]
-  document.title = resolveRouteDocumentTitle(route, appStore.siteName, customMenuItems, {
+  updateDocumentSeo(route, appStore.siteName, customMenuItems, appStore.cachedPublicSettings?.site_subtitle, {
     billingMode: resolveSiteBillingMode(appStore.cachedPublicSettings),
   })
 }
 
-// Watch for site settings changes and update favicon/title
+// Watch for site settings changes and keep browser/crawler metadata current.
 watch(
   () => appStore.siteLogo,
   (newLogo) => {
@@ -47,7 +47,11 @@ watch(
     () => route.fullPath,
     () => route.meta.title,
     () => route.meta.titleKey,
+    () => route.meta.descriptionKey,
+    () => route.meta.seoTitleKey,
+    () => route.meta.indexable,
     () => appStore.siteName,
+    () => appStore.cachedPublicSettings?.site_subtitle,
     () => appStore.cachedPublicSettings?.custom_menu_items,
     () => appStore.cachedPublicSettings?.subscription_enabled,
     () => appStore.cachedPublicSettings?.payment_balance_disabled,

@@ -633,6 +633,7 @@ export default {
   // Model Plaza (public group/model pricing showcase)
   modelPlaza: {
     title: 'Model Plaza',
+    seoTitle: 'Starbridge AI Model Plaza and AI API Pricing',
     description: 'Browse available models and pricing by group',
     loading: 'Loading...',
     empty: 'No groups to display',
