@@ -265,13 +265,13 @@ export default {
     ipRestrictionEnabled: 'IP restriction enabled',
     ccSwitchNotInstalled: 'CC-Switch is not installed or the protocol handler is not registered. Please install CC-Switch first or manually copy the API key.',
     ccsImportFallback: {
-      title: 'CCS did not open automatically',
-      description: 'The browser did not detect the CCS app. Confirm that CCS is installed and the ccswitch:// protocol is registered, then retry. You can also copy the import link and open it on a device with CCS installed.',
+      title: 'CCS import request sent',
+      description: 'The import request was sent. If CCS is already open, confirm the import in the app. If it did not open, confirm that CCS is installed and the ccswitch:// protocol is registered, or copy the import link and open it on a device with CCS installed.',
       linkLabel: 'CCS import link',
       warning: 'This link contains the current API key. Do not share it or publish it publicly.',
       copyLink: 'Copy import link',
       linkCopied: 'CCS import link copied',
-      retry: 'Retry opening'
+      retry: 'Send import request again'
     },
     ccsClientSelect: {
       title: 'Select Client',
