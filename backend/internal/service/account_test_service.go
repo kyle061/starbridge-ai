@@ -757,10 +757,16 @@ func (s *AccountTestService) testOpenAIAccountConnection(c *gin.Context, account
 	ctx := c.Request.Context()
 	mode = normalizeAccountTestMode(mode)
 
-	// Default to openai.DefaultTestModel for OpenAI testing
+	// ChatGPT/Codex OAuth accounts expose a separate model catalog from the
+	// OpenAI Platform API. Use the known Codex probe model for the empty-model
+	// admin test so a normal ChatGPT subscription is not sent an API-only model.
 	testModelID := modelID
 	if testModelID == "" {
-		testModelID = openai.DefaultTestModel
+		if account.IsOpenAIOAuthLike() {
+			testModelID = openai.CodexUsageProbeModel
+		} else {
+			testModelID = openai.DefaultTestModel
+		}
 	}
 
 	// Align test routing with gateway behavior: OpenAI accounts apply normal
