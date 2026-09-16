@@ -43,6 +43,7 @@ describe('updateDocumentSeo', () => {
       .toBe(new URL('/', window.location.origin).toString())
     expect(document.head.querySelector('meta[property="og:title"]')?.getAttribute('content'))
       .toContain('多模型 AI API 中转站')
+    expect(document.title).toContain('多模型 AI API 中转站')
   })
 
   it('uses the configured public subtitle for crawler descriptions', () => {

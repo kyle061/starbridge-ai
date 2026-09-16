@@ -69,7 +69,7 @@ export function updateDocumentSeo(
   const canonicalUrl = new URL(resolveCanonicalPath(route), window.location.origin).toString()
   const robots = indexable ? 'index,follow,max-image-preview:large' : 'noindex,nofollow'
 
-  document.title = browserTitle
+  document.title = indexable ? seoTitle : browserTitle
   document.documentElement.setAttribute('lang', locale === 'zh' ? 'zh-CN' : 'en')
   upsertMeta('name', 'description', description)
   upsertMeta('name', 'robots', robots)
