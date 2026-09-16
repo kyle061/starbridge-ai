@@ -420,7 +420,12 @@
             <!-- Model Pricing -->
             <div>
               <div class="mb-1 flex items-center justify-between">
-                <label class="input-label text-xs mb-0">{{ t('admin.channels.form.modelPricing', 'Model Pricing') }}</label>
+                <div>
+                  <label class="input-label text-xs mb-0">{{ t('admin.channels.form.modelPricing', 'Model Pricing') }}</label>
+                  <p class="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                    {{ t('admin.channels.form.rawPricingHint', '管理员视图：这里显示并编辑渠道原始定价，不含客户端全局计费倍率。') }}
+                  </p>
+                </div>
                 <div class="flex items-center gap-2">
                   <button
                     type="button"
