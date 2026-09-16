@@ -264,6 +264,15 @@ export default {
     ipBlacklistHint: 'One IP or CIDR per line. These IPs will be blocked from using this key.',
     ipRestrictionEnabled: 'IP restriction enabled',
     ccSwitchNotInstalled: 'CC-Switch is not installed or the protocol handler is not registered. Please install CC-Switch first or manually copy the API key.',
+    ccsImportFallback: {
+      title: 'CCS did not open automatically',
+      description: 'The browser did not detect the CCS app. Confirm that CCS is installed and the ccswitch:// protocol is registered, then retry. You can also copy the import link and open it on a device with CCS installed.',
+      linkLabel: 'CCS import link',
+      warning: 'This link contains the current API key. Do not share it or publish it publicly.',
+      copyLink: 'Copy import link',
+      linkCopied: 'CCS import link copied',
+      retry: 'Retry opening'
+    },
     ccsClientSelect: {
       title: 'Select Client',
       description: 'Please select the client type to import to CC-Switch:',

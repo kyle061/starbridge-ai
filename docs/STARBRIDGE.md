@@ -97,6 +97,18 @@ docker compose logs --tail=100 caddy
 6. 在密钥列表点击 **使用密钥 → Codex CLI**，复制生成的单文件 `~/.codex/config.toml`。默认配置包含 `model = "gpt-6-astra"`、`model_provider = "zero-inference"`、`model_reasoning_effort = "xhigh"`、`wire_api = "responses"`、`supports_websockets = true`、`requires_openai_auth = true` 和当前站点 `/v1` 地址。保存后重启 Codex 即可；也可以切换到环境变量模式。
 7. 标准模式下，星桥用户还需要有站内余额或分组订阅。管理员可以在用户管理中分配站内余额；这个余额是站内记账，与 OpenAI Pro 的上游额度分别管理。
 
+### 3.1 导入到 CC-Switch / CCS
+
+在 **API 密钥** 列表的操作栏点击 **导入到 CC Switch**：
+
+- OpenAI 和 `composite-default` 会生成 Codex 供应商，端点自动使用当前站点的 `/v1`，默认模型为 `gpt-6-astra`。
+- Anthropic、Gemini、Grok 和 Antigravity 会按对应客户端生成配置；Antigravity 会先让你选择 Claude Code 或 Gemini CLI。
+- 导入链接会同时配置 `GET /v1/usage` 用量查询，每 30 分钟由 CCS 自动刷新。查询结果包含余额、请求数和 Token 统计；不会因为查询本身扣费。
+- 浏览器已安装并注册 CCS 时会直接唤起客户端。唤起失败会显示诊断窗口，可复制完整 `ccswitch://` 链接，在安装了 CCS 的电脑或手机上重试。
+- 链接内包含当前 Starbridge API Key，只在自己的设备间传递；不要发到群聊、工单或公开仓库。导入后可在 CCS 的供应商详情中检查端点是否为 `https://你的域名/v1`，用量地址是否为 `https://你的域名/v1/usage`。
+
+如果导入后请求返回 404，先删除 CCS 中的旧供应商再重新导入，并确认没有把 `/v1` 重复填写成 `/v1/v1`。如果提示无法打开协议，重新安装 CCS 或按 CCS 的系统协议注册说明恢复 `ccswitch://` 关联；移动端优先使用诊断窗口里的复制链接。
+
 星桥保留上游的 OAuth 刷新能力，普通调用者只使用星桥 API Key。不要把客户端 API Key 发布到前端、日志、代码仓库或公共聊天中。可用模型及用量上限由 OpenAI 账号决定；Pro 不等于全部 API 模型都可用，也不会转换为 OpenAI Platform 的 API 余额。官方说明见 [Codex 身份验证](https://learn.chatgpt.com/docs/auth)。
 
 设备码登录通过当前站点接收授权结果，页面显示的绑定地址使用当前域名、协议和端口。手动回调登录也会把当前站点的 `/auth/callback` 作为回调地址，例如 `https://starbridaeai.top/auth/callback`；授权完成后复制完整回调地址回到星桥粘贴即可。若 OpenAI OAuth 客户端拒绝自定义回调地址，请优先使用设备码登录，或在 OAuth 客户端配置中登记当前站点地址。设备码不可用时，也可导入自己通过 Codex 官方客户端获得的会话。参考 [OpenAI 设备码登录说明](https://learn.chatgpt.com/docs/auth#preferred-device-code-authentication-beta)。

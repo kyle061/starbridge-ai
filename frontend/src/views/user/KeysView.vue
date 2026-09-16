@@ -570,6 +570,53 @@
       </template>
     </BaseDialog>
 
+    <!-- CCS import fallback and diagnostic details -->
+    <BaseDialog
+      :show="showCcsImportFallback"
+      :title="t('keys.ccsImportFallback.title')"
+      width="narrow"
+      @close="closeCcsImportFallback"
+    >
+      <div class="space-y-3">
+        <p class="text-sm leading-5 text-gray-600 dark:text-gray-300">
+          {{ t('keys.ccsImportFallback.description') }}
+        </p>
+        <textarea
+          :value="ccsImportUrl"
+          rows="5"
+          readonly
+          spellcheck="false"
+          class="block w-full max-w-full resize-y break-all rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs leading-5 text-gray-700 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-dark-600 dark:bg-dark-900 dark:text-gray-200"
+          :aria-label="t('keys.ccsImportFallback.linkLabel')"
+          @focus="selectCcsImportLink"
+          @click="selectCcsImportLink"
+        />
+        <p class="text-xs leading-5 text-amber-600 dark:text-amber-400">
+          {{ t('keys.ccsImportFallback.warning') }}
+        </p>
+      </div>
+      <template #footer>
+        <div class="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            class="btn btn-secondary w-full"
+            @click="copyCcsImportLink"
+          >
+            {{ t('keys.ccsImportFallback.copyLink') }}
+          </button>
+          <a
+            :href="ccsImportUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-primary w-full text-center"
+            @click="showCcsImportFallback = false"
+          >
+            {{ t('keys.ccsImportFallback.retry') }}
+          </a>
+        </div>
+      </template>
+    </BaseDialog>
+
     <!-- Group Selector Dropdown (Teleported to body to avoid overflow clipping) -->
     <Teleport to="body">
       <div
@@ -825,8 +872,10 @@ const showEditModal = ref(false)
 const showDeleteDialog = ref(false)
 const showUseKeyModal = ref(false)
 const showCcsClientSelect = ref(false)
+const showCcsImportFallback = ref(false)
 const showColumnDropdown = ref(false)
 const pendingCcsRow = ref<ApiKey | null>(null)
+const ccsImportUrl = ref('')
 const selectedKey = ref<ApiKey | null>(null)
 const copiedKeyId = ref<number | null>(null)
 const groupSelectorKeyId = ref<number | null>(null)
@@ -839,6 +888,9 @@ const prepaidStatusMessage = computed(() => !prepaidAccess.value?.has_purchased
   : prepaidAccess.value.requests_allowed ? 'keys.prepaidReady' : 'keys.prepaidPaused')
 let prepaidTimer: ReturnType<typeof setInterval> | null = null
 let prepaidController: AbortController | null = null
+let ccsImportTimer: number | null = null
+let ccsImportBlurHandler: (() => void) | null = null
+let ccsImportVisibilityHandler: (() => void) | null = null
 
 const loadPrepaidAccess = async () => {
   prepaidController?.abort()
@@ -1257,8 +1309,51 @@ const importToCcswitch = (row: ApiKey) => {
     return
   }
 
-  // For other platforms, execute directly
+  // Composite groups are routed through the OpenAI-compatible Codex app.
+  // Other platforms retain their existing client defaults.
   executeCcsImport(row, platform === 'gemini' ? 'gemini' : 'claude')
+}
+
+const clearCcsImportAttempt = () => {
+  if (ccsImportTimer !== null) {
+    window.clearTimeout(ccsImportTimer)
+    ccsImportTimer = null
+  }
+  if (ccsImportBlurHandler) {
+    window.removeEventListener('blur', ccsImportBlurHandler)
+    ccsImportBlurHandler = null
+  }
+  if (ccsImportVisibilityHandler) {
+    document.removeEventListener('visibilitychange', ccsImportVisibilityHandler)
+    ccsImportVisibilityHandler = null
+  }
+}
+
+const closeCcsImportFallback = () => {
+  clearCcsImportAttempt()
+  showCcsImportFallback.value = false
+  ccsImportUrl.value = ''
+}
+
+const selectCcsImportLink = (event: Event) => {
+  const target = event.currentTarget
+  if (target instanceof HTMLTextAreaElement) target.select()
+}
+
+const copyCcsImportLink = async () => {
+  if (!ccsImportUrl.value) return
+  await clipboardCopy(ccsImportUrl.value, t('keys.ccsImportFallback.linkCopied'))
+}
+
+const openCcsImportLink = (deeplink: string) => {
+  const anchor = document.createElement('a')
+  anchor.href = deeplink
+  anchor.target = '_blank'
+  anchor.rel = 'noopener noreferrer'
+  anchor.hidden = true
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
 }
 
 const executeCcsImport = (row: ApiKey, clientType: CcSwitchClientType) => {
@@ -1291,18 +1386,40 @@ const executeCcsImport = (row: ApiKey, clientType: CcSwitchClientType) => {
     usageScript
   })
 
-  try {
-    window.open(deeplink, '_self')
+  clearCcsImportAttempt()
+  ccsImportUrl.value = deeplink
+  showCcsImportFallback.value = false
 
-    // Check if the protocol handler worked by detecting if we're still focused
-    setTimeout(() => {
-      if (document.hasFocus()) {
-        // Still focused means the protocol handler likely failed
-        appStore.showError(t('keys.ccSwitchNotInstalled'))
+  let launchObserved = false
+  const markLaunchObserved = () => {
+    launchObserved = true
+    clearCcsImportAttempt()
+  }
+
+  try {
+    ccsImportBlurHandler = markLaunchObserved
+    ccsImportVisibilityHandler = () => {
+      if (document.hidden) markLaunchObserved()
+    }
+    window.addEventListener('blur', ccsImportBlurHandler)
+    document.addEventListener('visibilitychange', ccsImportVisibilityHandler)
+    openCcsImportLink(deeplink)
+
+    ccsImportTimer = window.setTimeout(() => {
+      ccsImportTimer = null
+      if (ccsImportBlurHandler) {
+        window.removeEventListener('blur', ccsImportBlurHandler)
+        ccsImportBlurHandler = null
       }
-    }, 100)
+      if (ccsImportVisibilityHandler) {
+        document.removeEventListener('visibilitychange', ccsImportVisibilityHandler)
+        ccsImportVisibilityHandler = null
+      }
+      if (!launchObserved) showCcsImportFallback.value = true
+    }, 1200)
   } catch (error) {
-    appStore.showError(t('keys.ccSwitchNotInstalled'))
+    clearCcsImportAttempt()
+    showCcsImportFallback.value = true
   }
 }
 
@@ -1331,6 +1448,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('focus', loadPrepaidAccess)
+  clearCcsImportAttempt()
   prepaidController?.abort()
   if (prepaidTimer) clearInterval(prepaidTimer)
   document.removeEventListener('click', closeGroupSelector)

@@ -13,7 +13,7 @@ function paramsFromDeeplink(deeplink: string): URLSearchParams {
 
 describe('ccswitchImport utils', () => {
   it('defaults OpenAI CC Switch imports to the current Codex model', () => {
-    expect(OPENAI_CC_SWITCH_CODEX_MODEL).toBe('gpt-5.5')
+    expect(OPENAI_CC_SWITCH_CODEX_MODEL).toBe('gpt-6-astra')
   })
 
   it('defaults Grok Build imports to the current Grok model', () => {
@@ -38,9 +38,40 @@ describe('ccswitchImport utils', () => {
 
     expect(params.get('resource')).toBe('provider')
     expect(params.get('app')).toBe('codex')
-    expect(params.get('endpoint')).toBe(baseInput.baseUrl)
+    expect(params.get('endpoint')).toBe(`${baseInput.baseUrl}/v1`)
     expect(params.get('model')).toBe(OPENAI_CC_SWITCH_CODEX_MODEL)
+    expect(params.get('usageBaseUrl')).toBe(baseInput.baseUrl)
     expect(atob(params.get('usageScript') || '')).toBe(baseInput.usageScript)
+  })
+
+  it('imports the composite relay as a Codex provider', () => {
+    const params = paramsFromDeeplink(
+      buildCcSwitchImportDeeplink({
+        ...baseInput,
+        platform: 'composite',
+        clientType: 'claude'
+      })
+    )
+
+    expect(params.get('app')).toBe('codex')
+    expect(params.get('endpoint')).toBe(`${baseInput.baseUrl}/v1`)
+    expect(params.get('usageBaseUrl')).toBe(baseInput.baseUrl)
+    expect(params.get('model')).toBe(OPENAI_CC_SWITCH_CODEX_MODEL)
+  })
+
+  it('avoids duplicate version paths for configured gateway URLs', () => {
+    const params = paramsFromDeeplink(
+      buildCcSwitchImportDeeplink({
+        ...baseInput,
+        baseUrl: ' https://api.example.com/v1/ ',
+        platform: 'openai',
+        clientType: 'claude'
+      })
+    )
+
+    expect(params.get('endpoint')).toBe('https://api.example.com/v1')
+    expect(params.get('homepage')).toBe('https://api.example.com')
+    expect(params.get('usageBaseUrl')).toBe('https://api.example.com')
   })
 
   it.each([
@@ -60,6 +91,7 @@ describe('ccswitchImport utils', () => {
 
     expect(params.get('app')).toBe('grokbuild')
     expect(params.get('endpoint')).toBe('https://api.example.com/v1')
+    expect(params.get('usageBaseUrl')).toBe('https://api.example.com')
     expect(params.get('model')).toBe(GROK_CC_SWITCH_MODEL)
   })
 
@@ -77,6 +109,7 @@ describe('ccswitchImport utils', () => {
 
     expect(params.get('app')).toBe(app)
     expect(params.get('endpoint')).toBe(baseInput.baseUrl)
+    expect(params.get('usageBaseUrl')).toBe(baseInput.baseUrl)
     expect(params.has('model')).toBe(false)
   })
 
@@ -91,6 +124,21 @@ describe('ccswitchImport utils', () => {
 
     expect(params.get('app')).toBe('gemini')
     expect(params.get('endpoint')).toBe(`${baseInput.baseUrl}/antigravity`)
+    expect(params.get('usageBaseUrl')).toBe(`${baseInput.baseUrl}/antigravity`)
     expect(params.has('model')).toBe(false)
+  })
+
+  it('normalizes Antigravity endpoints when the gateway URL already has /v1', () => {
+    const params = paramsFromDeeplink(
+      buildCcSwitchImportDeeplink({
+        ...baseInput,
+        baseUrl: 'https://api.example.com/v1/',
+        platform: 'antigravity',
+        clientType: 'claude'
+      })
+    )
+
+    expect(params.get('endpoint')).toBe('https://api.example.com/antigravity')
+    expect(params.get('usageBaseUrl')).toBe('https://api.example.com/antigravity')
   })
 })
