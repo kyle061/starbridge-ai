@@ -2096,7 +2096,7 @@ func setDefaults() {
 	viper.SetDefault("billing.retail_pricing.enabled", true)
 	viper.SetDefault("billing.retail_pricing.standard_multiplier", 2.0)
 	viper.SetDefault("billing.retail_pricing.latest_multiplier", 2.5)
-	viper.SetDefault("billing.retail_pricing.latest_model_prefixes", []string{"gpt-6", "gpt-5.6", "deepseek-v4"})
+	viper.SetDefault("billing.retail_pricing.latest_model_prefixes", []string{"gpt-6", "deepseek-v4"})
 	viper.SetDefault("billing.user_platform_quota_cache_ttl_seconds", 86400)
 	viper.SetDefault("billing.user_platform_quota_sentinel_ttl_seconds", 3600)
 

@@ -14,7 +14,7 @@ import (
 func enableRetailPricing(cfg *config.Config) {
 	cfg.Billing.RetailPricing = config.RetailPricingConfig{
 		Enabled: true, StandardMultiplier: 2, LatestMultiplier: 2.5,
-		LatestModelPrefixes: []string{"gpt-6", "gpt-5.6", "deepseek-v4"},
+		LatestModelPrefixes: []string{"gpt-6", "deepseek-v4"},
 	}
 }
 
@@ -23,7 +23,8 @@ func TestRetailPricing_RecordUsageDebitsSameCostAcrossPlatforms(t *testing.T) {
 		model string
 		rate  float64
 	}{
-		{"gpt-6-astra", 2.5}, {"gpt-5.6-luna", 2.5}, {"gpt-5.4", 2}, {"deepseek-chat", 2}, {"deepseek-v4-flash", 2.5},
+		{"gpt-6-astra", 2.5}, {"gpt-5.6-luna", 2}, {"gpt-5.6-terra", 2}, {"gpt-5.6-sol", 2},
+		{"gpt-5.4", 2}, {"deepseek-chat", 2}, {"deepseek-v4-flash", 2.5},
 	} {
 		t.Run(tc.model, func(t *testing.T) {
 			for _, openAIPath := range []bool{false, true} {
@@ -71,6 +72,7 @@ func TestRetailPricing_ModelMatchingAndIdempotency(t *testing.T) {
 		rate  float64
 	}{
 		{" OpenAI/GPT-6-Astra ", 2.5}, {"gpt-6-astra-2026-09-01", 2.5},
+		{"gpt-5.6", 2}, {" OpenAI/GPT-5.6-Luna ", 2}, {"gpt-5.6-luna-2026-09-01", 2},
 		{"gpt-60", 2}, {"gpt-5.60", 2}, {"deepseek-reasoner", 2},
 	} {
 		cost := &CostBreakdown{TotalCost: 1, ActualCost: 9, InputCost: .6, OutputCost: .4}
