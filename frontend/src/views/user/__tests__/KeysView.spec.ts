@@ -354,22 +354,26 @@ describe('user KeysView column settings', () => {
     wrapper.unmount()
   })
 
-  it('shows a CCS fallback without leaving a blank browser tab', async () => {
+  it('opens CCS in a new tab and shows an error when launch is not observed', async () => {
     vi.useFakeTimers()
+    const close = vi.fn()
+    const openedWindow = { closed: false, close } as unknown as Window
+    const open = vi.spyOn(window, 'open').mockReturnValue(openedWindow)
     try {
       const wrapper = await mountView()
       await getButtonByText(wrapper, 'Import to CC Switch').trigger('click')
 
-      expect(document.querySelectorAll('iframe')).toHaveLength(1)
+      expect(open).toHaveBeenCalledWith(expect.stringContaining('ccswitch://v1/import?'), '_blank')
       vi.advanceTimersByTime(1200)
       await nextTick()
 
       const importLink = wrapper.find('textarea[aria-label="keys.ccsImportFallback.linkLabel"]')
       expect(importLink.exists()).toBe(true)
       expect((importLink.element as HTMLTextAreaElement).value).toContain('ccswitch://v1/import?')
-      expect(document.querySelectorAll('iframe')).toHaveLength(0)
+      expect(close).toHaveBeenCalledOnce()
       wrapper.unmount()
     } finally {
+      open.mockRestore()
       vi.useRealTimers()
     }
   })

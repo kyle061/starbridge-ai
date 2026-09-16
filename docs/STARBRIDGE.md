@@ -104,10 +104,10 @@ docker compose logs --tail=100 caddy
 - OpenAI 和 `composite-default` 会生成 Codex 供应商，端点自动使用当前站点的 `/v1`，默认模型为 `gpt-6-astra`。
 - Anthropic、Gemini、Grok 和 Antigravity 会按对应客户端生成配置；Antigravity 会先让你选择 Claude Code 或 Gemini CLI。
 - 导入链接会同时配置 `GET /v1/usage` 用量查询，每 30 分钟由 CCS 自动刷新。查询结果包含余额、请求数和 Token 统计；不会因为查询本身扣费。
-- 浏览器会发送 `ccswitch://` 导入请求；CC-Switch 已打开时，请在客户端确认导入。浏览器无法可靠判断外部应用是否已经启动，因此页面会显示导入提示，可复制完整链接，在安装了 CCS 的电脑或手机上重试。
+- 点击导入会在新标签页发送 `ccswitch://` 导入请求，已注册协议时会直接唤起 CC-Switch。没有安装或协议未注册时会关闭空白标签页并显示错误提示，可复制完整链接，在安装了 CCS 的电脑或手机上重试。
 - 链接内包含当前 Starbridge API Key，只在自己的设备间传递；不要发到群聊、工单或公开仓库。导入后可在 CCS 的供应商详情中检查端点是否为 `https://你的域名/v1`，用量地址是否为 `https://你的域名/v1/usage`。
 
-如果导入后请求返回 404，先删除 CCS 中的旧供应商再重新导入，并确认没有把 `/v1` 重复填写成 `/v1/v1`。如果没有打开客户端，重新安装 CCS 或按 CCS 的系统协议注册说明恢复 `ccswitch://` 关联；移动端可使用导入提示里的复制链接。
+如果导入后请求返回 404，先删除 CCS 中的旧供应商再重新导入，并确认没有把 `/v1` 重复填写成 `/v1/v1`。如果提示无法打开协议，重新安装 CCS 或按 CCS 的系统协议注册说明恢复 `ccswitch://` 关联；移动端可使用导入提示里的复制链接。
 
 星桥保留上游的 OAuth 刷新能力，普通调用者只使用星桥 API Key。不要把客户端 API Key 发布到前端、日志、代码仓库或公共聊天中。可用模型及用量上限由 OpenAI 账号决定；Pro 不等于全部 API 模型都可用，也不会转换为 OpenAI Platform 的 API 余额。官方说明见 [Codex 身份验证](https://learn.chatgpt.com/docs/auth)。
 

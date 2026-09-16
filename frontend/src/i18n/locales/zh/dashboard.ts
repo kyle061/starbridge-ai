@@ -270,13 +270,13 @@ export default {
     ccSwitchNotInstalled:
       'CC-Switch 未安装或协议处理程序未注册。请先安装 CC-Switch 或手动复制 API 密钥。',
     ccsImportFallback: {
-      title: '已发送 CCS 导入请求',
-      description: '导入请求已经发送。如果 CCS 已打开，请在客户端确认导入；如果没有打开，请确认已安装并注册 ccswitch:// 协议，也可以复制导入链接后在已安装 CCS 的设备上打开。',
+      title: '无法自动打开 CCS',
+      description: '浏览器没有检测到 CCS 应用。请确认已安装并注册 ccswitch:// 协议，然后点击重试；也可以复制导入链接后在已安装 CCS 的设备上打开。',
       linkLabel: 'CCS 导入链接',
       warning: '导入链接包含当前 API 密钥，请勿发送给其他人或发布到公开渠道。',
       copyLink: '复制导入链接',
       linkCopied: 'CCS 导入链接已复制',
-      retry: '重新发送导入请求'
+      retry: '重试打开'
     },
     ccsClientSelect: {
       title: '选择客户端',

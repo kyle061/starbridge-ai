@@ -889,7 +889,7 @@ let prepaidController: AbortController | null = null
 let ccsImportTimer: number | null = null
 let ccsImportBlurHandler: (() => void) | null = null
 let ccsImportVisibilityHandler: (() => void) | null = null
-let ccsImportFrame: HTMLIFrameElement | null = null
+let ccsImportWindow: Window | null = null
 
 const loadPrepaidAccess = async () => {
   prepaidController?.abort()
@@ -1326,8 +1326,10 @@ const clearCcsImportAttempt = () => {
     document.removeEventListener('visibilitychange', ccsImportVisibilityHandler)
     ccsImportVisibilityHandler = null
   }
-  ccsImportFrame?.remove()
-  ccsImportFrame = null
+  if (ccsImportWindow && !ccsImportWindow.closed) {
+    ccsImportWindow.close()
+  }
+  ccsImportWindow = null
 }
 
 const closeCcsImportFallback = () => {
@@ -1347,19 +1349,9 @@ const copyCcsImportLink = async () => {
 }
 
 const openCcsImportLink = (deeplink: string) => {
-  // Loading the custom scheme in a hidden frame keeps the current page visible
-  // when no desktop protocol handler is registered, instead of opening a blank tab.
-  const frame = document.createElement('iframe')
-  frame.setAttribute('aria-hidden', 'true')
-  frame.tabIndex = -1
-  frame.style.position = 'absolute'
-  frame.style.width = '1px'
-  frame.style.height = '1px'
-  frame.style.border = '0'
-  frame.style.opacity = '0'
-  frame.src = deeplink
-  ccsImportFrame = frame
-  document.body.appendChild(frame)
+  // Open the custom scheme from the user click so registered desktop handlers
+  // can take over. Keep the window reference to close an unhandled blank tab.
+  ccsImportWindow = window.open(deeplink, '_blank')
 }
 
 const launchCcsImport = (deeplink: string) => {
