@@ -887,6 +887,7 @@ const prepaidStatusMessage = computed(() => !prepaidAccess.value?.has_purchased
 let prepaidTimer: ReturnType<typeof setInterval> | null = null
 let prepaidController: AbortController | null = null
 let ccsImportTimer: number | null = null
+let ccsImportPollTimer: number | null = null
 let ccsImportBlurHandler: (() => void) | null = null
 let ccsImportVisibilityHandler: (() => void) | null = null
 let ccsImportWindow: Window | null = null
@@ -1318,6 +1319,10 @@ const clearCcsImportAttempt = () => {
     window.clearTimeout(ccsImportTimer)
     ccsImportTimer = null
   }
+  if (ccsImportPollTimer !== null) {
+    window.clearInterval(ccsImportPollTimer)
+    ccsImportPollTimer = null
+  }
   if (ccsImportBlurHandler) {
     window.removeEventListener('blur', ccsImportBlurHandler)
     ccsImportBlurHandler = null
@@ -1373,6 +1378,10 @@ const launchCcsImport = (deeplink: string) => {
     window.addEventListener('blur', ccsImportBlurHandler)
     document.addEventListener('visibilitychange', ccsImportVisibilityHandler)
     openCcsImportLink(deeplink)
+
+    ccsImportPollTimer = window.setInterval(() => {
+      if (ccsImportWindow?.closed) markLaunchObserved()
+    }, 100)
 
     ccsImportTimer = window.setTimeout(() => {
       ccsImportTimer = null

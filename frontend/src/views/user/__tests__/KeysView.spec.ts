@@ -378,6 +378,28 @@ describe('user KeysView column settings', () => {
     }
   })
 
+  it('treats a closed import tab as a successful CCS handoff', async () => {
+    vi.useFakeTimers()
+    const close = vi.fn()
+    const openedWindow = { closed: false, close } as unknown as Window
+    const open = vi.spyOn(window, 'open').mockReturnValue(openedWindow)
+    try {
+      const wrapper = await mountView()
+      await getButtonByText(wrapper, 'Import to CC Switch').trigger('click')
+
+      openedWindow.closed = true
+      vi.advanceTimersByTime(100)
+      await nextTick()
+
+      expect(wrapper.find('textarea[aria-label="keys.ccsImportFallback.linkLabel"]').exists()).toBe(false)
+      expect(close).not.toHaveBeenCalled()
+      wrapper.unmount()
+    } finally {
+      open.mockRestore()
+      vi.useRealTimers()
+    }
+  })
+
   it('shows measured tokens and requests even when dollar amounts are tiny', async () => {
     getDashboardApiKeysUsage.mockResolvedValue({ stats: { 1: {
       api_key_id: 1, today_actual_cost: 0.0000000001, total_actual_cost: 0.00001234,
