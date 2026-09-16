@@ -88,6 +88,23 @@ func TestPrepaidBalancePauseAndRenewalUsesDatabase(t *testing.T) {
 	require.ErrorIs(t, svc.CheckPrepaidAccess(ctx, users.owner, nil), ErrPrepaidAccessUnavailable)
 }
 
+func TestPrepaidBalanceAppliesToAdministratorAccounts(t *testing.T) {
+	svc, users, _ := prepaidTestService()
+	users.owner.Role = RoleAdmin
+
+	require.True(t, svc.RequiresBalancePurchase(users.owner))
+	users.balance.Balance = 0
+	require.ErrorIs(t, svc.CheckPrepaidAccess(context.Background(), users.owner, &Group{}), ErrPrepaidBalanceExhausted)
+
+	users.balance.Balance = 3.4
+	access, err := svc.GetPrepaidAccess(context.Background(), users.owner.ID)
+	require.NoError(t, err)
+	require.True(t, access.Enabled)
+	require.True(t, access.RequestsAllowed)
+	require.True(t, access.CanCreateKey)
+	require.InDelta(t, 3.4, access.Balance, 0.00000001)
+}
+
 func TestPrepaidGroupGateAndEditsPreserveAdminExpiration(t *testing.T) {
 	svc, users, keys := prepaidTestService()
 	require.ErrorIs(t, svc.CheckPrepaidAccess(context.Background(), users.owner, &Group{SubscriptionType: SubscriptionTypeSubscription}), ErrPrepaidGroupRequired)
@@ -107,6 +124,17 @@ func TestPrepaidRechecksBalanceForQueuedAndWebSocketRequests(t *testing.T) {
 	billing := &BillingCacheService{cfg: svc.cfg, userRepo: users}
 	users.balance.Balance = 0
 	require.ErrorIs(t, billing.CheckBillingEligibility(context.Background(), users.owner, nil, nil, nil, ""), ErrPrepaidBalanceExhausted)
+}
+
+func TestPrepaidBillingEligibilityAppliesToAdministratorAccounts(t *testing.T) {
+	svc, users, _ := prepaidTestService()
+	users.owner.Role = RoleAdmin
+	users.balance.Balance = 0
+	billing := &BillingCacheService{cfg: svc.cfg, userRepo: users}
+
+	require.ErrorIs(t, billing.CheckBillingEligibility(
+		context.Background(), users.owner, nil, &Group{}, nil, "openai",
+	), ErrPrepaidBalanceExhausted)
 }
 
 func TestStarbridgePrepaidPrice(t *testing.T) {

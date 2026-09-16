@@ -743,7 +743,9 @@ func (s *BillingCacheService) ListUserPlatformQuotas(ctx context.Context, userID
 // platform 为请求的目标平台（如 "anthropic"），传空串 "" 时跳过 user × platform quota 检查。
 func (s *BillingCacheService) CheckBillingEligibility(ctx context.Context, user *User, apiKey *APIKey, group *Group, subscription *UserSubscription, platform string) error {
 	// Recheck after queue/concurrency waits and on each WebSocket turn.
-	prepaid := s.cfg != nil && s.cfg.Billing.RequireBalancePurchase && user != nil && !user.IsAdmin()
+	// The user's balance is the global USD token budget. Apply the same gate to
+	// administrator-owned keys so every key shares one account-wide allowance.
+	prepaid := s.cfg != nil && s.cfg.Billing.RequireBalancePurchase && user != nil
 	if prepaid {
 		if err := checkPrepaidBalance(ctx, s.userRepo, user, group); err != nil {
 			return err

@@ -66,11 +66,11 @@ export default {
 
   // API Keys
   keys: {
-    prepaidBalance: 'Available API credit: ${balance} USD',
+    prepaidBalance: 'Account token credit: ${balance} USD',
     prepaidPurchaseRequired: 'Top up through an administrator or redeem code. Once credited, you can create a key.',
-    prepaidReady: 'Your balance is available. You can send requests with your key.',
-    prepaidPaused: 'Your balance is exhausted. New requests for all keys are paused until a top-up restores a positive balance.',
-    prepaidLifetimeHint: 'Keys never expire. All keys share your USD balance and are billed for actual token usage.',
+    prepaidReady: 'All API keys share this account balance and are charged for actual token usage.',
+    prepaidPaused: 'The account balance is exhausted. New requests for all API keys are paused until a top-up restores a positive balance.',
+    prepaidLifetimeHint: 'Creating a key does not assign a separate quota. Balance changes sync to every key, and new requests pause at zero.',
     prepaidAccessUnavailable: 'Balance status is unavailable. Refresh to retry.',
     purchaseBalance: 'Redeem credit',
     renewBalance: 'Redeem credit',

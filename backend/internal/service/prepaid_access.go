@@ -34,7 +34,10 @@ type PrepaidAccess struct {
 }
 
 func (s *APIKeyService) RequiresBalancePurchase(user *User) bool {
-	return s != nil && s.cfg != nil && s.cfg.Billing.RequireBalancePurchase && user != nil && !user.IsAdmin()
+	// The account balance is the global USD token budget for every API key,
+	// including keys owned by administrators. Admin management permissions do
+	// not grant an unmetered API path.
+	return s != nil && s.cfg != nil && s.cfg.Billing.RequireBalancePurchase && user != nil
 }
 
 func (s *APIKeyService) prepaidAccess(ctx context.Context, user *User) (*PrepaidAccess, error) {
