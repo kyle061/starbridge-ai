@@ -724,6 +724,15 @@ func (s *BillingCacheService) IncrementUserPlatformQuotaUsage(userID int64, plat
 	}
 }
 
+// ListUserPlatformQuotas returns the current user's configured platform quota
+// records for usage displays and gateway integrations.
+func (s *BillingCacheService) ListUserPlatformQuotas(ctx context.Context, userID int64) ([]UserPlatformQuotaRecord, error) {
+	if s == nil || s.userPlatformQuotaRepo == nil || userID <= 0 {
+		return []UserPlatformQuotaRecord{}, nil
+	}
+	return s.userPlatformQuotaRepo.ListByUser(ctx, userID)
+}
+
 // ============================================
 // 统一检查方法
 // ============================================
@@ -765,11 +774,10 @@ func (s *BillingCacheService) CheckBillingEligibility(ctx context.Context, user 
 		}
 	}
 
-	// user × platform quota 仅在 standard（余额）模式生效；订阅模式豁免
-	if !isSubscriptionMode {
-		if err := s.checkUserPlatformQuotaEligibility(ctx, user.ID, platform); err != nil {
-			return err
-		}
+	// user × platform quota is a global user limit. It applies alongside
+	// subscription/group limits so every API key and billing mode shares it.
+	if err := s.checkUserPlatformQuotaEligibility(ctx, user.ID, platform); err != nil {
+		return err
 	}
 
 	// Check API Key rate limits (applies to both billing modes)
@@ -1079,7 +1087,7 @@ func circuitStateString(state billingCircuitBreakerState) string {
 	}
 }
 
-// checkUserPlatformQuotaEligibility 在 standard 模式下检查 user × platform 日/周/月 quota。
+// checkUserPlatformQuotaEligibility 检查所有计费模式下 user × platform 日/周/月 quota。
 // 返回 nil = 允许；返回 ErrUserPlatform{Daily/Weekly/Monthly}QuotaExhausted = 拒绝（带 window_resets_at metadata）。
 // checkUserPlatformQuotaEligibility 检查用户在指定平台的 USD 配额。
 //

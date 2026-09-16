@@ -167,6 +167,12 @@
             </div>
           </div>
 
+          <PlatformQuotaSummary
+            v-if="resultData.account_balance != null || resultData.platform_quotas"
+            :quotas="resultData.platform_quotas || []"
+            :account-balance="resultData.account_balance ?? resultData.balance ?? null"
+          />
+
           <!-- Ring Cards Grid -->
           <div v-if="ringItems.length > 0" :class="ringGridClass">
             <div
@@ -426,6 +432,7 @@ import Icon from '@/components/icons/Icon.vue'
 import { buildGatewayUrl } from '@/api/client'
 import { formatDateLocalInput } from '@/utils/format'
 import { sanitizeUrl } from '@/utils/url'
+import PlatformQuotaSummary from '@/components/user/PlatformQuotaSummary.vue'
 
 const { t, locale } = useI18n()
 const appStore = useAppStore()
@@ -834,8 +841,10 @@ const showDailyUsage = computed(() => Boolean(resultData.value && Array.isArray(
 // ==================== Utility Functions ====================
 
 function usd(value: number | null | undefined): string {
-  if (value == null || value < 0) return '-'
-  return '$' + Number(value).toFixed(2)
+  if (value == null || !Number.isFinite(value) || value < 0) return '-'
+  const amount = Number(value)
+  const digits = amount > 0 && amount < 0.01 ? 8 : 4
+  return '$' + amount.toFixed(digits)
 }
 
 function fmtNum(val: number | null | undefined): string {

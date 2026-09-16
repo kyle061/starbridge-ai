@@ -15,6 +15,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/domain"
+	"github.com/Wei-Shaw/sub2api/internal/handler/quotaview"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/antigravity"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
@@ -1576,16 +1577,17 @@ func (h *GatewayHandler) Usage(c *gin.Context) {
 			modelStats = stats
 		}
 	}
+	platformQuotas := h.buildUserPlatformQuotaUsage(ctx, subject.UserID)
 
 	// 判断模式: key 有总额度或速率限制 → quota_limited，否则 → unrestricted
 	isQuotaLimited := apiKey.Quota > 0 || apiKey.HasRateLimits()
 
 	if isQuotaLimited {
-		h.usageQuotaLimited(c, ctx, apiKey, usageData, dailyUsage, modelStats)
+		h.usageQuotaLimited(c, ctx, apiKey, usageData, dailyUsage, modelStats, platformQuotas)
 		return
 	}
 
-	h.usageUnrestricted(c, ctx, apiKey, subject, usageData, dailyUsage, modelStats)
+	h.usageUnrestricted(c, ctx, apiKey, subject, usageData, dailyUsage, modelStats, platformQuotas)
 }
 
 // parseUsageDateRange 解析 start_date / end_date query params，默认返回近 30 天范围
@@ -1655,8 +1657,26 @@ func (h *GatewayHandler) buildAPIKeyDailyUsage(c *gin.Context, userID, apiKeyID 
 	return stats
 }
 
+// buildUserPlatformQuotaUsage returns the current user's global platform quota
+// state in the same shape as /api/v1/user/platform-quotas.
+func (h *GatewayHandler) buildUserPlatformQuotaUsage(ctx context.Context, userID int64) any {
+	if h.billingCacheService == nil {
+		return nil
+	}
+	records, err := h.billingCacheService.ListUserPlatformQuotas(ctx, userID)
+	if err != nil {
+		return nil
+	}
+	now := time.Now().UTC()
+	quotas := make([]map[string]any, 0, len(records))
+	for _, record := range records {
+		quotas = append(quotas, quotaview.LazyZeroQuotaForResponse(record, now, false))
+	}
+	return quotas
+}
+
 // usageQuotaLimited 处理 quota_limited 模式的响应
-func (h *GatewayHandler) usageQuotaLimited(c *gin.Context, ctx context.Context, apiKey *service.APIKey, usageData gin.H, dailyUsage any, modelStats any) {
+func (h *GatewayHandler) usageQuotaLimited(c *gin.Context, ctx context.Context, apiKey *service.APIKey, usageData gin.H, dailyUsage any, modelStats any, platformQuotaData ...any) {
 	resp := gin.H{
 		"mode":    "quota_limited",
 		"isValid": apiKey.Status == service.StatusAPIKeyActive || apiKey.Status == service.StatusAPIKeyQuotaExhausted || apiKey.Status == service.StatusAPIKeyExpired,
@@ -1729,6 +1749,12 @@ func (h *GatewayHandler) usageQuotaLimited(c *gin.Context, ctx context.Context, 
 		}
 	}
 
+	if h.userService != nil {
+		if latestUser, err := h.userService.GetByID(ctx, apiKey.UserID); err == nil && latestUser != nil {
+			resp["account_balance"] = latestUser.Balance
+		}
+	}
+
 	// 过期时间
 	if apiKey.ExpiresAt != nil {
 		resp["expires_at"] = apiKey.ExpiresAt
@@ -1744,12 +1770,15 @@ func (h *GatewayHandler) usageQuotaLimited(c *gin.Context, ctx context.Context, 
 	if modelStats != nil {
 		resp["model_stats"] = modelStats
 	}
+	if len(platformQuotaData) > 0 && platformQuotaData[0] != nil {
+		resp["platform_quotas"] = platformQuotaData[0]
+	}
 
 	c.JSON(http.StatusOK, resp)
 }
 
 // usageUnrestricted 处理 unrestricted 模式的响应（向后兼容）
-func (h *GatewayHandler) usageUnrestricted(c *gin.Context, ctx context.Context, apiKey *service.APIKey, subject middleware2.AuthSubject, usageData gin.H, dailyUsage any, modelStats any) {
+func (h *GatewayHandler) usageUnrestricted(c *gin.Context, ctx context.Context, apiKey *service.APIKey, subject middleware2.AuthSubject, usageData gin.H, dailyUsage any, modelStats any, platformQuotaData ...any) {
 	// 订阅模式
 	if apiKey.Group != nil && apiKey.Group.IsSubscriptionType() {
 		resp := gin.H{
@@ -1785,6 +1814,14 @@ func (h *GatewayHandler) usageUnrestricted(c *gin.Context, ctx context.Context, 
 		if modelStats != nil {
 			resp["model_stats"] = modelStats
 		}
+		if h.userService != nil {
+			if latestUser, err := h.userService.GetByID(ctx, subject.UserID); err == nil && latestUser != nil {
+				resp["account_balance"] = latestUser.Balance
+			}
+		}
+		if len(platformQuotaData) > 0 && platformQuotaData[0] != nil {
+			resp["platform_quotas"] = platformQuotaData[0]
+		}
 		c.JSON(http.StatusOK, resp)
 		return
 	}
@@ -1797,12 +1834,13 @@ func (h *GatewayHandler) usageUnrestricted(c *gin.Context, ctx context.Context, 
 	}
 
 	resp := gin.H{
-		"mode":      "unrestricted",
-		"isValid":   true,
-		"planName":  "钱包余额",
-		"remaining": latestUser.Balance,
-		"unit":      "USD",
-		"balance":   latestUser.Balance,
+		"mode":            "unrestricted",
+		"isValid":         true,
+		"planName":        "钱包余额",
+		"remaining":       latestUser.Balance,
+		"unit":            "USD",
+		"balance":         latestUser.Balance,
+		"account_balance": latestUser.Balance,
 	}
 	if usageData != nil {
 		resp["usage"] = usageData
@@ -1812,6 +1850,9 @@ func (h *GatewayHandler) usageUnrestricted(c *gin.Context, ctx context.Context, 
 	}
 	if modelStats != nil {
 		resp["model_stats"] = modelStats
+	}
+	if len(platformQuotaData) > 0 && platformQuotaData[0] != nil {
+		resp["platform_quotas"] = platformQuotaData[0]
 	}
 	c.JSON(http.StatusOK, resp)
 }

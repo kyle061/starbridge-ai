@@ -14,6 +14,8 @@ const {
   listMyErrorRequests,
   list,
   getAvailable,
+  getMyPlatformQuotas,
+  refreshUser,
   showError,
   showWarning,
   showSuccess,
@@ -26,6 +28,8 @@ const {
   listMyErrorRequests: vi.fn(),
   list: vi.fn(),
   getAvailable: vi.fn(),
+  getMyPlatformQuotas: vi.fn(),
+  refreshUser: vi.fn(),
   showError: vi.fn(),
   showWarning: vi.fn(),
   showSuccess: vi.fn(),
@@ -89,6 +93,17 @@ vi.mock('@/api', () => ({
   userGroupsAPI: {
     getAvailable,
   },
+}))
+
+vi.mock('@/api/user', () => ({
+  getMyPlatformQuotas,
+}))
+
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => ({
+    user: { balance: 10 },
+    refreshUser,
+  }),
 }))
 
 const appStoreState = vi.hoisted(() => ({
@@ -165,6 +180,7 @@ function mountUsageView() {
         GroupDistributionChart: chartStub,
         EndpointDistributionChart: chartStub,
         TokenUsageTrend: chartStub,
+        PlatformQuotaSummary: chartStub,
       },
     },
   })
@@ -179,6 +195,8 @@ describe('user UsageView', () => {
     listMyErrorRequests.mockReset()
     list.mockReset()
     getAvailable.mockReset()
+    getMyPlatformQuotas.mockReset()
+    refreshUser.mockReset()
     showError.mockReset()
     showWarning.mockReset()
     showSuccess.mockReset()
@@ -214,6 +232,8 @@ describe('user UsageView', () => {
     listMyErrorRequests.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 20, pages: 0 })
     list.mockResolvedValue({ items: [{ id: 1, name: 'demo-key' }], total: 1, page: 1, page_size: 100, pages: 1 })
     getAvailable.mockResolvedValue([{ id: 1, name: 'default' }])
+    getMyPlatformQuotas.mockResolvedValue({ platform_quotas: [] })
+    refreshUser.mockResolvedValue({ balance: 10 })
   })
 
   it('loads logs, stats, model stats, and snapshot on first render', async () => {

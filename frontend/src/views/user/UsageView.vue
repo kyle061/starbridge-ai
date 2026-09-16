@@ -2,6 +2,7 @@
   <AppLayout>
     <div class="space-y-6">
       <UsageStatsCards :stats="usageStats" :show-account-cost="false" :strike-standard-cost="true" />
+      <PlatformQuotaSummary :quotas="platformQuotas" :account-balance="authStore.user?.balance ?? null" />
 
       <div class="space-y-4">
         <div class="card p-4">
@@ -251,12 +252,17 @@ import type {
   UsageQueryParams,
   UsageStatsResponse,
   UserErrorRequest,
+  PlatformQuotaItem,
 } from '@/types'
 import type { Column } from '@/components/common/types'
 import { COMMON_ERROR_STATUS_CODES } from '@/utils/errorBadges'
+import { useAuthStore } from '@/stores/auth'
+import { getMyPlatformQuotas } from '@/api/user'
+import PlatformQuotaSummary from '@/components/user/PlatformQuotaSummary.vue'
 
 const { t } = useI18n()
 const appStore = useAppStore()
+const authStore = useAuthStore()
 
 type DistributionMetric = 'tokens' | 'actual_cost'
 type EndpointSource = 'inbound' | 'upstream' | 'path'
@@ -269,6 +275,7 @@ const groupStats = ref<GroupStat[]>([])
 const inboundEndpointStats = ref<EndpointStat[]>([])
 const upstreamEndpointStats = ref<EndpointStat[]>([])
 const endpointPathStats = ref<EndpointStat[]>([])
+const platformQuotas = ref<PlatformQuotaItem[]>([])
 
 const loading = ref(false)
 const chartsLoading = ref(false)
@@ -550,11 +557,27 @@ const applyFilters = () => {
 }
 
 const refreshData = () => {
+  void loadQuotaSummary()
   void loadLogs()
   void loadStats()
   void loadModelStats()
   void loadChartData()
   if (activeTab.value === 'errors') void loadErrors()
+}
+
+const loadQuotaSummary = async () => {
+  const [userResult, quotaResult] = await Promise.allSettled([
+    authStore.refreshUser(),
+    getMyPlatformQuotas(),
+  ])
+  if (quotaResult.status === 'fulfilled') {
+    platformQuotas.value = quotaResult.value.platform_quotas ?? []
+  } else {
+    platformQuotas.value = []
+  }
+  if (userResult.status === 'rejected') {
+    console.warn('Failed to refresh account balance:', userResult.reason)
+  }
 }
 
 const resetFilters = () => {

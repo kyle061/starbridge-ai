@@ -489,12 +489,10 @@ func TestIncrementUserPlatformQuotaUsage_GuardsAgainstEmpty(t *testing.T) {
 	}
 }
 
-// ── C-NEW-2: 订阅模式豁免 user×platform quota 检查 ──────────────────────────
-// 通过直接调用 checkUserPlatformQuotaEligibility 验证：
+// ── C-NEW-2: user×platform quota applies globally ───────────────────────────
+// 通过直接调用 checkUserPlatformQuotaEligibility 与 CheckBillingEligibility 验证：
 // 1. standard 模式下 limit=0 → 拦截
-// 2. 订阅模式豁免通过 isSubscriptionMode 守卫体现 — 逻辑已在 CheckBillingEligibility 里加 !isSubscriptionMode 条件
-// 此处用单元测试直接验证底层 checkUserPlatformQuotaEligibility 的行为（quota 超限确实拦截），
-// 而 subscription bypass 逻辑则在 CheckBillingEligibility 中通过条件判断保证，不绕过 sub eligibility 内部复杂依赖。
+// 2. 订阅模式同样受 user×platform 全局额度拦截
 
 // fakeZeroQuotaCache 模拟 cache 命中且 daily limit=0（quota 耗尽）。
 type fakeZeroQuotaCache struct {
@@ -560,9 +558,9 @@ func TestCheckUserPlatformQuotaEligibility_StandardMode_BlocksWhenLimitZero(t *t
 	}
 }
 
-// TestCheckBillingEligibility_SubscriptionMode_BypassesPlatformQuota 验证（C-NEW-2）：
-// 订阅模式用户不受 user×platform quota 拦截，GetUserPlatformQuotaCache 不应被调用。
-func TestCheckBillingEligibility_SubscriptionMode_BypassesPlatformQuota(t *testing.T) {
+// TestCheckBillingEligibility_SubscriptionMode_AppliesPlatformQuota 验证（C-NEW-2）：
+// 订阅模式用户同样受 user×platform quota 拦截，确保额度跨计费模式全局生效。
+func TestCheckBillingEligibility_SubscriptionMode_AppliesPlatformQuota(t *testing.T) {
 	fake := &fakeZeroQuotaCache{} // GetUserPlatformQuotaCache 返回 limit=0，若被调用则拦截
 	cfg := &config.Config{}
 	cfg.Billing.UserPlatformQuotaCacheTTLSeconds = 60
@@ -582,15 +580,11 @@ func TestCheckBillingEligibility_SubscriptionMode_BypassesPlatformQuota(t *testi
 	user := &User{ID: 42}
 
 	err := s.CheckBillingEligibility(context.Background(), user, nil, subGroup, sub, "anthropic")
-	// 订阅模式下不应收到任何 user×platform quota 错误
-	if errors.Is(err, ErrUserPlatformDailyQuotaExhausted) ||
-		errors.Is(err, ErrUserPlatformWeeklyQuotaExhausted) ||
-		errors.Is(err, ErrUserPlatformMonthlyQuotaExhausted) {
-		t.Errorf("subscription mode should bypass user×platform quota, got: %v", err)
+	if !errors.Is(err, ErrUserPlatformDailyQuotaExhausted) {
+		t.Errorf("subscription mode should apply user×platform quota, got: %v", err)
 	}
-	// GetUserPlatformQuotaCache 不应被调用
-	if fake.called {
-		t.Error("GetUserPlatformQuotaCache must NOT be called in subscription mode (C-NEW-2)")
+	if !fake.called {
+		t.Error("GetUserPlatformQuotaCache must be called in subscription mode (C-NEW-2)")
 	}
 }
 
