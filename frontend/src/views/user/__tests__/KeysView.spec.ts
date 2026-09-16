@@ -49,6 +49,7 @@ const messages: Record<string, string> = {
   'keys.expiresAt': 'Expires',
   'keys.group': 'Group',
   'keys.id': 'ID',
+  'keys.importToCcSwitch': 'Import to CC Switch',
   'keys.currentConcurrency': 'Current Concurrency',
   'keys.lastUsedAt': 'Last Used',
   'keys.lastUsedIP': 'Last Used IP',
@@ -351,6 +352,26 @@ describe('user KeysView column settings', () => {
     expect(wrapper.findComponent({ name: 'EndpointPopover' }).props('apiBaseUrl')).toBe('https://gateway.example')
     expect(wrapper.findComponent({ name: 'UseKeyModal' }).props('baseUrl')).toBe('https://gateway.example')
     wrapper.unmount()
+  })
+
+  it('shows a CCS fallback without leaving a blank browser tab', async () => {
+    vi.useFakeTimers()
+    try {
+      const wrapper = await mountView()
+      await getButtonByText(wrapper, 'Import to CC Switch').trigger('click')
+
+      expect(document.querySelectorAll('iframe')).toHaveLength(1)
+      vi.advanceTimersByTime(1200)
+      await nextTick()
+
+      const importLink = wrapper.find('textarea[aria-label="keys.ccsImportFallback.linkLabel"]')
+      expect(importLink.exists()).toBe(true)
+      expect((importLink.element as HTMLTextAreaElement).value).toContain('ccswitch://v1/import?')
+      expect(document.querySelectorAll('iframe')).toHaveLength(0)
+      wrapper.unmount()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('shows measured tokens and requests even when dollar amounts are tiny', async () => {

@@ -604,15 +604,13 @@
           >
             {{ t('keys.ccsImportFallback.copyLink') }}
           </button>
-          <a
-            :href="ccsImportUrl"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
             class="btn btn-primary w-full text-center"
-            @click="showCcsImportFallback = false"
+            @click="retryCcsImport"
           >
             {{ t('keys.ccsImportFallback.retry') }}
-          </a>
+          </button>
         </div>
       </template>
     </BaseDialog>
@@ -891,6 +889,7 @@ let prepaidController: AbortController | null = null
 let ccsImportTimer: number | null = null
 let ccsImportBlurHandler: (() => void) | null = null
 let ccsImportVisibilityHandler: (() => void) | null = null
+let ccsImportFrame: HTMLIFrameElement | null = null
 
 const loadPrepaidAccess = async () => {
   prepaidController?.abort()
@@ -1327,6 +1326,8 @@ const clearCcsImportAttempt = () => {
     document.removeEventListener('visibilitychange', ccsImportVisibilityHandler)
     ccsImportVisibilityHandler = null
   }
+  ccsImportFrame?.remove()
+  ccsImportFrame = null
 }
 
 const closeCcsImportFallback = () => {
@@ -1346,14 +1347,54 @@ const copyCcsImportLink = async () => {
 }
 
 const openCcsImportLink = (deeplink: string) => {
-  const anchor = document.createElement('a')
-  anchor.href = deeplink
-  anchor.target = '_blank'
-  anchor.rel = 'noopener noreferrer'
-  anchor.hidden = true
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
+  // Loading the custom scheme in a hidden frame keeps the current page visible
+  // when no desktop protocol handler is registered, instead of opening a blank tab.
+  const frame = document.createElement('iframe')
+  frame.setAttribute('aria-hidden', 'true')
+  frame.tabIndex = -1
+  frame.style.position = 'absolute'
+  frame.style.width = '1px'
+  frame.style.height = '1px'
+  frame.style.border = '0'
+  frame.style.opacity = '0'
+  frame.src = deeplink
+  ccsImportFrame = frame
+  document.body.appendChild(frame)
+}
+
+const launchCcsImport = (deeplink: string) => {
+  clearCcsImportAttempt()
+  ccsImportUrl.value = deeplink
+  showCcsImportFallback.value = false
+
+  let launchObserved = false
+  const markLaunchObserved = () => {
+    launchObserved = true
+    clearCcsImportAttempt()
+  }
+
+  try {
+    ccsImportBlurHandler = markLaunchObserved
+    ccsImportVisibilityHandler = () => {
+      if (document.hidden) markLaunchObserved()
+    }
+    window.addEventListener('blur', ccsImportBlurHandler)
+    document.addEventListener('visibilitychange', ccsImportVisibilityHandler)
+    openCcsImportLink(deeplink)
+
+    ccsImportTimer = window.setTimeout(() => {
+      ccsImportTimer = null
+      clearCcsImportAttempt()
+      if (!launchObserved) showCcsImportFallback.value = true
+    }, 1200)
+  } catch (error) {
+    clearCcsImportAttempt()
+    showCcsImportFallback.value = true
+  }
+}
+
+const retryCcsImport = () => {
+  if (ccsImportUrl.value) launchCcsImport(ccsImportUrl.value)
 }
 
 const executeCcsImport = (row: ApiKey, clientType: CcSwitchClientType) => {
@@ -1386,41 +1427,7 @@ const executeCcsImport = (row: ApiKey, clientType: CcSwitchClientType) => {
     usageScript
   })
 
-  clearCcsImportAttempt()
-  ccsImportUrl.value = deeplink
-  showCcsImportFallback.value = false
-
-  let launchObserved = false
-  const markLaunchObserved = () => {
-    launchObserved = true
-    clearCcsImportAttempt()
-  }
-
-  try {
-    ccsImportBlurHandler = markLaunchObserved
-    ccsImportVisibilityHandler = () => {
-      if (document.hidden) markLaunchObserved()
-    }
-    window.addEventListener('blur', ccsImportBlurHandler)
-    document.addEventListener('visibilitychange', ccsImportVisibilityHandler)
-    openCcsImportLink(deeplink)
-
-    ccsImportTimer = window.setTimeout(() => {
-      ccsImportTimer = null
-      if (ccsImportBlurHandler) {
-        window.removeEventListener('blur', ccsImportBlurHandler)
-        ccsImportBlurHandler = null
-      }
-      if (ccsImportVisibilityHandler) {
-        document.removeEventListener('visibilitychange', ccsImportVisibilityHandler)
-        ccsImportVisibilityHandler = null
-      }
-      if (!launchObserved) showCcsImportFallback.value = true
-    }, 1200)
-  } catch (error) {
-    clearCcsImportAttempt()
-    showCcsImportFallback.value = true
-  }
+  launchCcsImport(deeplink)
 }
 
 const handleCcsClientSelect = (clientType: CcSwitchClientType) => {
