@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { parseOAuthCallbackInput } from '@/utils/oauthCallback'
+import { getPublicOAuthCallbackUrl, parseOAuthCallbackInput } from '@/utils/oauthCallback'
+
+describe('getPublicOAuthCallbackUrl', () => {
+  it('uses the current site origin for OAuth callbacks', () => {
+    expect(getPublicOAuthCallbackUrl()).toBe(`${window.location.origin}/auth/callback`)
+  })
+})
 
 describe('parseOAuthCallbackInput', () => {
-  it('extracts code and state from the localhost callback URL used by ChatGPT OAuth', () => {
+  it('extracts code and state from the site callback URL used by ChatGPT OAuth', () => {
     expect(
       parseOAuthCallbackInput(
-        'http://localhost:1455/auth/callback?code=codex-code&state=session-state'
+        'https://starbridaeai.top/auth/callback?code=codex-code&state=session-state'
       )
     ).toEqual({ code: 'codex-code', state: 'session-state', isCallback: true })
   })

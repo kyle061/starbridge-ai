@@ -32,6 +32,23 @@ vi.mock('@/api/admin', () => ({
 import { useOpenAIOAuth } from '@/composables/useOpenAIOAuth'
 import { adminAPI } from '@/api/admin'
 
+describe('useOpenAIOAuth.generateAuthUrl', () => {
+  it('sends the current site callback URL by default', async () => {
+    vi.mocked(adminAPI.accounts.generateAuthUrl).mockResolvedValueOnce({
+      auth_url: 'https://auth.openai.com/oauth/authorize?state=test-state',
+      session_id: 'session-id'
+    })
+
+    const oauth = useOpenAIOAuth()
+    await expect(oauth.generateAuthUrl()).resolves.toBe(true)
+
+    expect(adminAPI.accounts.generateAuthUrl).toHaveBeenCalledWith(
+      '/admin/openai/generate-auth-url',
+      { redirect_uri: `${window.location.origin}/auth/callback` }
+    )
+  })
+})
+
 describe('useOpenAIOAuth.buildCredentials', () => {
   it('should keep client_id when token response contains it', () => {
     const oauth = useOpenAIOAuth()

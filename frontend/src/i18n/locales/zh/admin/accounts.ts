@@ -1213,13 +1213,13 @@ export default {
           step2OpenUrl: '在浏览器中打开链接并完成授权',
           openUrlDesc: '点击上方按钮，在新标签页登录需要绑定的 ChatGPT Plus / Pro 账号并同意授权。每次可绑定一个账号，完成后可继续添加其他账号。',
           importantNotice:
-            '授权后浏览器会跳到 http://localhost:1455。页面显示“无法访问”属于正常现象：不要刷新，直接复制地址栏里的完整链接，再回到星桥粘贴到第 3 步。手机端请长按地址栏并选择复制。',
-          step3EnterCode: '粘贴 localhost 回调链接',
+            '授权后浏览器会跳到 {callbackUrl}。请复制地址栏里的完整链接，再回到星桥粘贴到第 3 步。手机端请长按地址栏并选择复制。',
+          step3EnterCode: '粘贴站点回调链接',
           authCodeDesc:
-            '复制浏览器地址栏中以 http://localhost:1455/auth/callback?code=... 开头的完整链接并粘贴：',
+            '复制浏览器地址栏中以 {callbackUrl}?code=... 开头的完整链接并粘贴：',
           authCode: '完整回调链接或 Code',
           authCodePlaceholder:
-            '推荐：粘贴完整链接\nhttp://localhost:1455/auth/callback?code=...&state=...\n也支持只粘贴 code 参数值',
+            '推荐：粘贴完整链接\n{callbackUrl}?code=...&state=...\n也支持只粘贴 code 参数值',
           authCodeHint: '系统会自动解析完整链接中的 code 和 state；粘贴完整链接最不容易出错。',
           callbackRecognized: '已识别 ChatGPT 回调链接，可以点击“完成授权”。',
           failedToGenerateUrl: '生成 OpenAI 授权链接失败',

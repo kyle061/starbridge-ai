@@ -4,6 +4,21 @@ export interface ParsedOAuthCallbackInput {
   isCallback: boolean
 }
 
+export const DEFAULT_PUBLIC_OAUTH_CALLBACK_URL = 'https://starbridaeai.top/auth/callback'
+
+/**
+ * Build the callback address that the browser is currently using for Starbridge.
+ * This keeps OAuth links valid when the deployment is served from a custom domain
+ * while retaining a deterministic value for non-browser rendering and tests.
+ */
+export function getPublicOAuthCallbackUrl(): string {
+  if (typeof window !== 'undefined') {
+    const origin = window.location.origin?.trim()
+    if (origin && origin !== 'null') return `${origin.replace(/\/+$/, '')}/auth/callback`
+  }
+  return DEFAULT_PUBLIC_OAUTH_CALLBACK_URL
+}
+
 /**
  * Accept a complete OAuth callback URL, a query string, or a bare code.
  * Keeping this parser outside the component makes the mobile copy/paste flow

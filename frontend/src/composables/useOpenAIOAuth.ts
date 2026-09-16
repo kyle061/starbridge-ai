@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 import { adminAPI } from '@/api/admin'
 import { extractApiErrorMessage, extractI18nErrorMessage } from '@/utils/apiError'
+import { getPublicOAuthCallbackUrl } from '@/utils/oauthCallback'
 
 export interface OpenAITokenInfo {
   access_token?: string
@@ -60,13 +61,11 @@ export function useOpenAIOAuth() {
     error.value = ''
 
     try {
-      const payload: Record<string, unknown> = {}
+      const payload: { proxy_id?: number; redirect_uri?: string } = {}
       if (proxyId) {
         payload.proxy_id = proxyId
       }
-      if (redirectUri) {
-        payload.redirect_uri = redirectUri
-      }
+      payload.redirect_uri = redirectUri?.trim() || getPublicOAuthCallbackUrl()
 
       const response = await adminAPI.accounts.generateAuthUrl(
         `${endpointPrefix}/generate-auth-url`,

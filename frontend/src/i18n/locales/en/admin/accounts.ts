@@ -1147,13 +1147,13 @@ export default {
           step2OpenUrl: 'Open the URL in your browser and complete authorization',
           openUrlDesc: 'Click the button above, sign in to the ChatGPT Plus / Pro account you want to bind, and approve access. Bind one account at a time, then repeat to add more.',
           importantNotice:
-            'After approval, the browser redirects to http://localhost:1455. A “page cannot be reached” message is expected. Do not refresh. Copy the complete address-bar URL, return to Starbridge, and paste it into step 3. On mobile, press and hold the address bar to copy it.',
-          step3EnterCode: 'Paste the localhost callback URL',
+            'After approval, the browser redirects to {callbackUrl}. Copy the complete address-bar URL, return to Starbridge, and paste it into step 3. On mobile, press and hold the address bar to copy it.',
+          step3EnterCode: 'Paste the site callback URL',
           authCodeDesc:
-            'Copy and paste the complete address-bar URL beginning with http://localhost:1455/auth/callback?code=...:',
+            'Copy and paste the complete address-bar URL beginning with {callbackUrl}?code=...:',
           authCode: 'Complete callback URL or code',
           authCodePlaceholder:
-            'Recommended: paste the complete URL\nhttp://localhost:1455/auth/callback?code=...&state=...\nA bare code value is also accepted',
+            'Recommended: paste the complete URL\n{callbackUrl}?code=...&state=...\nA bare code value is also accepted',
           authCodeHint: 'The complete URL is safest. Starbridge extracts code and state automatically.',
           callbackRecognized: 'ChatGPT callback URL recognized. Click Complete Authorization.',
           failedToGenerateUrl: 'Failed to generate OpenAI auth URL',

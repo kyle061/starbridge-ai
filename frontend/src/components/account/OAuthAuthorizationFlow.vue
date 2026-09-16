@@ -820,9 +820,9 @@
                 <p class="text-sm text-blue-700 dark:text-blue-300">
                   {{ oauthOpenUrlDesc }}
                 </p>
-                <!-- Local callback notice -->
+                <!-- Site callback notice -->
                 <div
-                  v-if="showLocalCallbackNotice"
+                  v-if="showCallbackNotice"
                   class="mt-2 rounded border border-amber-300 bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-900/30"
                 >
                   <p
@@ -934,7 +934,7 @@ import type { AccountPlatform } from '@/types'
 import { adminAPI } from '@/api/admin'
 import OpenAIDeviceAuthorization from './OpenAIDeviceAuthorization.vue'
 import type { OpenAITokenInfo } from '@/composables/useOpenAIOAuth'
-import { parseOAuthCallbackInput } from '@/utils/oauthCallback'
+import { getPublicOAuthCallbackUrl, parseOAuthCallbackInput } from '@/utils/oauthCallback'
 
 interface Props {
   proxyId?: number | null
@@ -1017,7 +1017,8 @@ const emailPasswordOptionEnabled = computed(
   () => props.showEmailPasswordOption && props.platform === 'grok' && passwordAuthEnabled.value
 )
 
-const showLocalCallbackNotice = computed(() => props.platform === 'openai' || props.platform === 'grok')
+const showCallbackNotice = computed(() => props.platform === 'openai' || props.platform === 'grok')
+const publicCallbackUrl = computed(() => getPublicOAuthCallbackUrl())
 
 // Get translation key based on platform
 const getOAuthKey = (key: string) => {
@@ -1036,12 +1037,16 @@ const oauthGenerateAuthUrl = computed(() => t(getOAuthKey('generateAuthUrl')))
 const oauthStep2OpenUrl = computed(() => t(getOAuthKey('step2OpenUrl')))
 const oauthOpenUrlDesc = computed(() => t(getOAuthKey('openUrlDesc')))
 const oauthStep3EnterCode = computed(() => t(getOAuthKey('step3EnterCode')))
-const oauthAuthCodeDesc = computed(() => t(getOAuthKey('authCodeDesc')))
+const oauthAuthCodeDesc = computed(() => t(getOAuthKey('authCodeDesc'), { callbackUrl: publicCallbackUrl.value }))
 const oauthAuthCode = computed(() => t(getOAuthKey('authCode')))
-const oauthAuthCodePlaceholder = computed(() => t(getOAuthKey('authCodePlaceholder')))
+const oauthAuthCodePlaceholder = computed(() =>
+  t(getOAuthKey('authCodePlaceholder'), { callbackUrl: publicCallbackUrl.value })
+)
 const oauthAuthCodeHint = computed(() => t(getOAuthKey('authCodeHint')))
 const oauthImportantNotice = computed(() => {
-  if (props.platform === 'openai') return t('admin.accounts.oauth.openai.importantNotice')
+  if (props.platform === 'openai') {
+    return t('admin.accounts.oauth.openai.importantNotice', { callbackUrl: publicCallbackUrl.value })
+  }
   if (props.platform === 'antigravity') return t('admin.accounts.oauth.antigravity.importantNotice')
   if (props.platform === 'grok') return t('admin.accounts.oauth.grok.importantNotice')
   return ''
@@ -1182,8 +1187,8 @@ watch(inputMethod, (newVal) => {
   emit('update:inputMethod', newVal)
 })
 
-// Auto-extract code from callback URL (OpenAI/Gemini/Antigravity/Grok)
-// e.g., http://localhost:8085/callback?code=xxx...&state=...
+// Auto-extract code from callback URL (OpenAI/Gemini/Antigravity/Grok).
+// The parser accepts the current site's callback URL as well as provider-specific URLs.
 watch(authCodeInput, (newVal) => {
   if (props.platform !== 'openai' && props.platform !== 'gemini' && props.platform !== 'antigravity' && props.platform !== 'grok') return
 
