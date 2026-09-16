@@ -34,3 +34,20 @@ describe('doc_url sanitization', () => {
     expect(keyUsageViewSource).toContain('sanitizeUrl(appStore.cachedPublicSettings?.doc_url || appStore.docUrl')
   })
 })
+
+describe('contact_info links', () => {
+  it('uses the configured contact value and removes hardcoded GitHub links', () => {
+    for (const src of [headerSource, homeViewSource, keyUsageViewSource]) {
+      expect(src).toContain('contact_info')
+      expect(src).toContain("t('common.contactSupport')")
+      expect(src).not.toMatch(/githubUrl|GitHub|github\.com\/(?:kyle061|Wei-Shaw)/)
+    }
+  })
+
+  it('supports configured email contacts and sanitizes URL contacts', () => {
+    for (const src of [headerSource, homeViewSource, keyUsageViewSource]) {
+      expect(src).toContain('mailto:${value}')
+      expect(src).toContain('sanitizeUrl(value)')
+    }
+  })
+})

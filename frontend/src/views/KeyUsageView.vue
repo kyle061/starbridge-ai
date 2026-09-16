@@ -411,11 +411,15 @@
             class="text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-dark-400 dark:hover:text-white"
           >{{ t('home.docs') }}</a>
           <a
-            :href="githubUrl"
+            v-if="contactHref"
+            :href="contactHref"
             target="_blank"
             rel="noopener noreferrer"
             class="text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-dark-400 dark:hover:text-white"
-          >GitHub</a>
+          >{{ t('common.contactSupport') }}</a>
+          <span v-else-if="contactInfo" class="max-w-full text-sm text-gray-500 [overflow-wrap:anywhere] dark:text-dark-400">
+            {{ t('common.contactSupport') }}: {{ contactInfo }}
+          </span>
         </div>
       </div>
     </footer>
@@ -443,7 +447,13 @@ const subscriptionFeatureEnabled = computed(() => resolveFeatureFlag(appStore.ca
 const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appStore.siteName || 'Starbridge AI')
 const siteLogo = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.site_logo || appStore.siteLogo || '', { allowRelative: true, allowDataUrl: true }))
 const docUrl = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.doc_url || appStore.docUrl || ''))
-const githubUrl = 'https://github.com/Wei-Shaw/sub2api'
+const contactInfo = computed(() => (appStore.cachedPublicSettings?.contact_info || appStore.contactInfo || '').trim())
+const contactHref = computed(() => {
+  const value = contactInfo.value
+  if (!value) return ''
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return `mailto:${value}`
+  return sanitizeUrl(value)
+})
 
 // ==================== Theme (same as HomeView) ====================
 

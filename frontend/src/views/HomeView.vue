@@ -526,13 +526,20 @@
             {{ t('home.docs') }}
           </a>
           <a
-            :href="githubUrl"
+            v-if="contactHref"
+            :href="contactHref"
             target="_blank"
             rel="noopener noreferrer"
             class="text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-dark-400 dark:hover:text-white"
           >
-            GitHub
+            {{ t('common.contactSupport') }}
           </a>
+          <span
+            v-else-if="contactInfo"
+            class="max-w-full text-sm text-gray-500 [overflow-wrap:anywhere] dark:text-dark-400"
+          >
+            {{ t('common.contactSupport') }}: {{ contactInfo }}
+          </span>
         </div>
       </div>
     </footer>
@@ -573,8 +580,13 @@ const isHomeContentUrl = computed(() => {
 // Theme
 const isDark = ref(document.documentElement.classList.contains('dark'))
 
-// GitHub URL
-const githubUrl = 'https://github.com/kyle061/starbridge-ai'
+const contactInfo = computed(() => (appStore.cachedPublicSettings?.contact_info || appStore.contactInfo || '').trim())
+const contactHref = computed(() => {
+  const value = contactInfo.value
+  if (!value) return ''
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return `mailto:${value}`
+  return sanitizeUrl(value)
+})
 
 // Auth state
 const isAuthenticated = computed(() => authStore.isAuthenticated)
