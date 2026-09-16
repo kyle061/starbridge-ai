@@ -898,6 +898,7 @@ func normalizeProxyProbeURLs(targets []ProbeURLConfig) ([]ProbeURLConfig, error)
 }
 
 type BillingConfig struct {
+	RetailPricing RetailPricingConfig `mapstructure:"retail_pricing"`
 	// RequireBalancePurchase enables Starbridge's prepaid user API access.
 	RequireBalancePurchase bool                 `mapstructure:"require_balance_purchase"`
 	CircuitBreaker         CircuitBreakerConfig `mapstructure:"circuit_breaker"`
@@ -914,6 +915,15 @@ type BillingConfig struct {
 	// UserPlatformQuotaSentinelTTLSeconds sentinel(无 limit 占位)entry 的 TTL,
 	// 显著短于 quota cache 默认 86400s 以控 Redis 内存;默认 3600=1h。
 	UserPlatformQuotaSentinelTTLSeconds int `mapstructure:"user_platform_quota_sentinel_ttl_seconds"`
+}
+
+// RetailPricingConfig is the single customer pricing policy for all platforms.
+// Prefixes match a model name or its '-' suffixed variants, after provider removal.
+type RetailPricingConfig struct {
+	Enabled             bool     `mapstructure:"enabled"`
+	StandardMultiplier  float64  `mapstructure:"standard_multiplier"`
+	LatestMultiplier    float64  `mapstructure:"latest_multiplier"`
+	LatestModelPrefixes []string `mapstructure:"latest_model_prefixes"`
 }
 
 type CircuitBreakerConfig struct {
@@ -2083,6 +2093,10 @@ func setDefaults() {
 	viper.SetDefault("billing.circuit_breaker.half_open_requests", 3)
 	viper.SetDefault("billing.minimum_balance_reserve", 0.000001)
 	viper.SetDefault("billing.require_balance_purchase", true)
+	viper.SetDefault("billing.retail_pricing.enabled", true)
+	viper.SetDefault("billing.retail_pricing.standard_multiplier", 2.0)
+	viper.SetDefault("billing.retail_pricing.latest_multiplier", 2.5)
+	viper.SetDefault("billing.retail_pricing.latest_model_prefixes", []string{"gpt-6", "gpt-5.6", "deepseek-v4"})
 	viper.SetDefault("billing.user_platform_quota_cache_ttl_seconds", 86400)
 	viper.SetDefault("billing.user_platform_quota_sentinel_ttl_seconds", 3600)
 
@@ -2589,6 +2603,7 @@ func setDefaults() {
 // zero keeps behavior identical while making the key addressable from the
 // environment. Any subsystem that wants a richer default still applies it after
 // unmarshal, exactly as before.
+
 func setEnvReachableDefaults() {
 	viper.SetDefault("gateway.forced_codex_instructions_template_file", "")
 	viper.SetDefault("gateway.session_idle_timeout_minutes", 0)
@@ -3056,6 +3071,16 @@ func (c *Config) Validate() error {
 	}
 	if c.Billing.RequireBalancePurchase && c.RunMode == RunModeSimple {
 		return fmt.Errorf("billing.require_balance_purchase requires standard run mode")
+	}
+	if c.Billing.RetailPricing.Enabled {
+		for name, rate := range map[string]float64{
+			"standard_multiplier": c.Billing.RetailPricing.StandardMultiplier,
+			"latest_multiplier":   c.Billing.RetailPricing.LatestMultiplier,
+		} {
+			if rate <= 0 || math.IsNaN(rate) || math.IsInf(rate, 0) {
+				return fmt.Errorf("billing.retail_pricing.%s must be finite and positive", name)
+			}
+		}
 	}
 	if c.Database.MaxOpenConns <= 0 {
 		return fmt.Errorf("database.max_open_conns must be positive")

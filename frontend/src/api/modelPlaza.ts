@@ -44,6 +44,8 @@ export interface PlazaTimePricing {
 }
 
 export interface PlazaModel {
+  /** 全站统一计费倍率；存在时覆盖分组、专属和图片倍率。 */
+  billing_rate_multiplier?: number
   name: string
   platform: string
   /** 实收口径的展示定价：档位可提供绝对单价或相对基础价倍率；均为标准时段价。 */

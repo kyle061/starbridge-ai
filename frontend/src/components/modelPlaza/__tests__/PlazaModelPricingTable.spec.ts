@@ -56,6 +56,14 @@ function mountTable(
 }
 
 describe('PlazaModelPricingTable', () => {
+  it('uses the server model rate for price and badge despite a user group override', () => {
+    const wrapper = mountTable([tokenModel({ name: 'gpt-6-astra', billing_rate_multiplier: 2.5 })], 2, 0.5)
+    expect(wrapper.text()).toContain('$7.50')
+    expect(wrapper.text()).toContain('$37.50')
+    expect(wrapper.text()).toContain('2.5x')
+    expect(wrapper.text()).not.toContain('0.5x')
+    expect(wrapper.find('.line-through').exists()).toBe(false)
+  })
   it('倍率为 1 时展示渠道单价原值($/1M),价格保底 2 位小数', () => {
     const wrapper = mountTable([tokenModel()], 1)
     const text = wrapper.text()

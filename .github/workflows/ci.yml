@@ -31,6 +31,8 @@ jobs:
           src/components/layout/__tests__/AppSidebar.spec.ts
           src/components/layout/__tests__/TablePageLayout.spec.ts
           src/components/keys/__tests__/EndpointPopover.spec.ts
+          src/components/modelPlaza/__tests__/PlazaModelPricingTable.spec.ts
+          src/components/admin/usage/__tests__/UsageStatsCards.spec.ts
           src/views/user/__tests__/KeysView.spec.ts
           src/views/user/__tests__/PaymentView.spec.ts
           src/views/user/__tests__/RedeemView.spec.ts
@@ -59,6 +61,8 @@ jobs:
           -run 'TestAdminService_PreviewCompositeRoute|TestGatewayService_SelectAccountForModelWithExclusions_FallsBackAcrossCompositePlatforms'
         working-directory: backend
       - run: go test ./internal/service -run '^TestOpenAIGatewayServiceRecordUsage_'
+        working-directory: backend
+      - run: go test -tags unit ./internal/service -run '^TestRetailPricing_'
         working-directory: backend
       - run: go test -tags integration ./internal/repository -run '^TestUsageLogRepoSuite$/^TestGetBatchApiKeyUsageStats' -count=1
         working-directory: backend

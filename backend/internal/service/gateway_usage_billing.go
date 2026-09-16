@@ -817,6 +817,9 @@ func (s *GatewayService) recordUsageCore(ctx context.Context, input *recordUsage
 		}
 	}
 
+	multiplier = retailUsageRate(s.cfg, cost, multiplier)
+	imageMultiplier = retailUsageRate(s.cfg, cost, imageMultiplier)
+
 	// 判断计费方式：订阅模式 vs 余额模式
 	isSubscriptionBilling := subscription != nil && apiKey.Group != nil && apiKey.Group.IsSubscriptionType()
 	billingType := BillingTypeBalance
@@ -904,7 +907,8 @@ func (s *GatewayService) calculateRecordUsageCost(
 	multiplier float64,
 	imageMultiplier float64,
 	pricingAt time.Time,
-) *CostBreakdown {
+) (cost *CostBreakdown) {
+	defer func() { applyRetailCost(s.cfg, billingModel, cost) }()
 	// 图片生成：渠道定价为 token 计费时走 token 路径，否则走图片计费
 	if result.ImageCount > 0 {
 		if resolved := s.resolveChannelPricing(ctx, billingModel, apiKey); resolved != nil && resolved.Mode == BillingModeToken {

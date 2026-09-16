@@ -74,7 +74,7 @@
           </template>
           <span>
             {{ t('usage.standardCost') }}
-            <span :class="{ 'line-through': strikeStandardCost }">${{ (stats?.total_cost || 0).toFixed(4) }}</span>
+            <span>${{ (stats?.total_actual_cost || 0).toFixed(4) }}</span>
           </span>
         </p>
       </div>
@@ -111,7 +111,6 @@ const totalAccountCost = computed(() => {
   return stats?.total_account_cost ?? null
 })
 const showAccountCost = computed(() => props.showAccountCost)
-const strikeStandardCost = computed(() => props.strikeStandardCost)
 
 const formatDuration = (ms: number) =>
   ms < 1000 ? `${ms.toFixed(0)}ms` : `${(ms / 1000).toFixed(2)}s`
