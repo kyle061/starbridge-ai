@@ -350,13 +350,15 @@ describe('UseKeyModal', () => {
     })
 
     const codeBlocks = wrapper.findAll('pre code').map((code) => code.text())
-    const configToml = codeBlocks.find((content) => content.includes('model_provider = "zero-inference"'))
+    const configToml = codeBlocks.find((content) => content.includes('model_provider = "starbridaeai"'))
 
     expect(configToml).toBeDefined()
     expect(configToml).toContain('model = "gpt-6-astra"')
-    expect(configToml).toContain('model_provider = "zero-inference"')
-    expect(configToml).toContain('[model_providers.zero-inference]')
-    expect(configToml).toContain('name = "Zero Inference"')
+    expect(configToml).toContain('model_provider = "starbridaeai"')
+    expect(configToml).toContain('[model_providers.starbridaeai]')
+    expect(configToml).toContain('name = "starbridaeai"')
+    expect(configToml).not.toContain('zero-inference')
+    expect(configToml).not.toContain('Zero Inference')
     expect(configToml).not.toContain('review_model')
     expect(configToml).not.toContain('model = "gpt-5.4"')
     expect(configToml).not.toContain('model_context_window')
@@ -407,7 +409,7 @@ describe('UseKeyModal', () => {
     await nextTick()
 
     const codeBlocks = wrapper.findAll('pre code').map((code) => code.text())
-    const configToml = codeBlocks.find((content) => content.includes('model_provider = "zero-inference"'))
+    const configToml = codeBlocks.find((content) => content.includes('model_provider = "starbridaeai"'))
 
     expect(envKeyMode.attributes('aria-checked')).toBe('false')
     expect(configToml).toBeDefined()
@@ -423,7 +425,7 @@ describe('UseKeyModal', () => {
     await nextTick()
 
     expect(wrapper.find('[data-testid="codex-api-key-restart-notice"]').exists()).toBe(false)
-    const apiKeyConfig = wrapper.findAll('pre code').map((code) => code.text()).find((content) => content.includes('model_provider = "zero-inference"'))!
+    const apiKeyConfig = wrapper.findAll('pre code').map((code) => code.text()).find((content) => content.includes('model_provider = "starbridaeai"'))!
     expect(apiKeyConfig).toContain('requires_openai_auth = true')
     expect(apiKeyConfig).toContain('env_key = "SUB2API_API_KEY"')
     expect(apiKeyConfig).not.toContain('experimental_bearer_token')
@@ -744,7 +746,7 @@ describe('UseKeyModal', () => {
 
     const initialCodeBlocks = wrapper.findAll('pre code').map((code) => code.text())
     const providerNeedle = platform === 'openai' || platform === 'composite'
-      ? 'model_provider = "zero-inference"'
+      ? 'model_provider = "starbridaeai"'
       : 'model_provider = "sub2api"'
     const config = initialCodeBlocks.find((content) => content.includes(providerNeedle))!
     expect(config).toBeDefined()

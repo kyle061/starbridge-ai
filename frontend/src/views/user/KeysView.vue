@@ -1418,7 +1418,8 @@ const executeCcsImport = (row: ApiKey, clientType: CcSwitchClientType) => {
       };
     }
   })`
-  const providerName = (publicSettings.value?.site_name || 'sub2api').trim() || 'sub2api'
+  // Keep the imported provider name stable and recognizable in CC-Switch.
+  const providerName = 'starbridaeai'
   const deeplink = buildCcSwitchImportDeeplink({
     baseUrl,
     platform,
