@@ -753,9 +753,13 @@ func (s *BillingCacheService) CheckBillingEligibility(ctx context.Context, user 
 		}
 	}
 
-	// 简易模式：跳过所有计费检查
-	if s.cfg.RunMode == config.RunModeSimple {
-		return nil
+	// 简易模式仍执行用户×平台全局额度检查，但跳过余额、订阅和其它
+	// 计费准入检查。这样简易模式也不会绕过管理员配置的 API 总额度。
+	if s.cfg != nil && s.cfg.RunMode == config.RunModeSimple {
+		if user == nil {
+			return nil
+		}
+		return s.checkUserPlatformQuotaEligibility(ctx, user.ID, platform)
 	}
 	if s.circuitBreaker != nil && !s.circuitBreaker.Allow() {
 		return ErrBillingServiceUnavailable
@@ -1374,11 +1378,8 @@ func monthlyQuotaWindowExpired(start *time.Time, now time.Time) bool {
 
 // HasUserPlatformQuotaLimit 判断该 user×platform 是否设了任一非 nil limit。
 // 写入点守卫:无 limit 直接跳过 Redis 写 + 脏集标记,消除无谓写入。
-// fail-safe:任何不确定(simple 模式除外)都返回 true 维持写入。
+// fail-safe:任何不确定都返回 true 维持写入。
 func (s *BillingCacheService) HasUserPlatformQuotaLimit(ctx context.Context, userID int64, platform string) bool {
-	if s.cfg.RunMode == config.RunModeSimple {
-		return false
-	}
 	if s.cache == nil {
 		return true
 	}

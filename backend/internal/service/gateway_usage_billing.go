@@ -384,39 +384,8 @@ func finalizePostUsageBilling(ctx context.Context, p *postUsageBillingParams, de
 
 	deps.deferredService.ScheduleLastUsedUpdate(p.Account.ID)
 
-	// Platform quota 累加：所有计费模式共用同一份用户全局额度；仅对有 limit 的用户写
-	// Redis 同步写 + DB 异步持久化（flag=false 降级）或 flusher 异步刷（flag=true）:
-	//   - HasUserPlatformQuotaLimit 守卫:无 limit 的公司跳过,避免无效写入 + 浪费 Redis 容量
-	//   - Redis 同步:确保下次 preflight 立即看到最新 usage,把 TOCTOU 超支窗口
-	//     限制在并发 in-flight 请求数量内（旧实现的异步入队会让超支无限累积直到 worker 处理）
-	//   - DB 异步(flusher_enabled=false):在独立 goroutine 中走 detached context,失败用 ALERT log 触发 oncall 对账
-	//   - flusher_enabled=true:不直写 DB,由 flusher 异步批量刷（markDirty 已在 IncrementUserPlatformQuotaUsage 内部完成）
-	if p.Platform != "" && p.Cost.ActualCost > 0 && p.User != nil && deps.userPlatformQuotaRepo != nil {
-		if deps.billingCacheService.HasUserPlatformQuotaLimit(ctx, p.User.ID, p.Platform) {
-			deps.billingCacheService.IncrementUserPlatformQuotaUsage(p.User.ID, p.Platform, p.Cost.ActualCost)
-			if deps.cfg == nil || !deps.cfg.Database.UserPlatformQuotaFlusherEnabled {
-				// 降级路径:flusher 未启用时保留原有异步直写 DB
-				dbCtx, dbCancel := detachUpstreamContext(ctx)
-				userID, platform, cost := p.User.ID, p.Platform, p.Cost.ActualCost
-				go func() {
-					defer func() {
-						if r := recover(); r != nil {
-							logger.LegacyPrintf("service.gateway", "ALERT: panic in user platform quota incr goroutine user=%d platform=%s: %v", userID, platform, r)
-						}
-					}()
-					defer dbCancel()
-					if err := deps.userPlatformQuotaRepo.IncrementUsageWithReset(dbCtx, userID, platform, cost, time.Now().UTC()); err != nil {
-						// 失败计数器:暴露给 GatewayUserPlatformQuotaIncrStats(),由 ops 面板做斜率告警。
-						userPlatformQuotaDBIncrErrorTotal.Add(1)
-						// ALERT 级别:DB 持久化失败意味着 Redis cache 失效后该笔 cost 永久丢失,
-						// 用户配额视图与实际消费会偏差,oncall 需要据此对账或人工补录。
-						logger.LegacyPrintf("service.gateway", "ALERT: incr user platform quota DB failed user=%d platform=%s cost=%f: %v", userID, platform, cost, err)
-					}
-				}()
-			}
-			// flusher_enabled=true:不直写 DB,flusher 异步批量刷
-		}
-	}
+	// Platform quota 累加：所有计费模式共用同一份用户全局额度；仅对有 limit 的用户写。
+	recordUserPlatformQuotaUsage(ctx, deps.billingCacheService, deps.userPlatformQuotaRepo, deps.cfg, p.User, p.Platform, p.Cost.ActualCost)
 
 	// Notification checks run async — all parameters are already captured,
 	// no dependency on the request context or upstream connection.
@@ -594,6 +563,48 @@ func writeUsageLogBestEffort(ctx context.Context, repo UsageLogRepository, usage
 	if _, err := repo.Create(usageCtx, usageLog); err != nil {
 		logger.LegacyPrintf(logKey, "Create usage log failed: %v", err)
 	}
+}
+
+// recordUserPlatformQuotaUsage records a successful request against the
+// user's global platform quota. It is shared by normal billing and simple mode
+// so simple mode can skip balance deduction without bypassing quota enforcement.
+func recordUserPlatformQuotaUsage(
+	ctx context.Context,
+	billingCacheService *BillingCacheService,
+	userPlatformQuotaRepo UserPlatformQuotaRepository,
+	cfg *config.Config,
+	user *User,
+	platform string,
+	cost float64,
+) {
+	if billingCacheService == nil || userPlatformQuotaRepo == nil || user == nil || platform == "" || cost <= 0 {
+		return
+	}
+	if !billingCacheService.HasUserPlatformQuotaLimit(ctx, user.ID, platform) {
+		return
+	}
+
+	// Redis is updated before returning so the next preflight sees this cost
+	// immediately. The database write remains asynchronous on the normal path.
+	billingCacheService.IncrementUserPlatformQuotaUsage(user.ID, platform, cost)
+	if cfg != nil && cfg.Database.UserPlatformQuotaFlusherEnabled {
+		return
+	}
+
+	dbCtx, dbCancel := detachUpstreamContext(ctx)
+	userID := user.ID
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.LegacyPrintf("service.gateway", "ALERT: panic in user platform quota incr goroutine user=%d platform=%s: %v", userID, platform, r)
+			}
+		}()
+		defer dbCancel()
+		if err := userPlatformQuotaRepo.IncrementUsageWithReset(dbCtx, userID, platform, cost, time.Now().UTC()); err != nil {
+			userPlatformQuotaDBIncrErrorTotal.Add(1)
+			logger.LegacyPrintf("service.gateway", "ALERT: incr user platform quota DB failed user=%d platform=%s cost=%f: %v", userID, platform, cost, err)
+		}
+	}()
 }
 
 // RecordUsage 记录使用量并扣费（或更新订阅用量）
@@ -836,6 +847,14 @@ func (s *GatewayService) recordUsageCore(ctx context.Context, input *recordUsage
 	}
 
 	if s.cfg != nil && s.cfg.RunMode == config.RunModeSimple {
+		quotaPlatform := input.QuotaPlatform
+		if quotaPlatform == "" {
+			quotaPlatform = PlatformFromAPIKey(apiKey)
+			if quotaPlatform == PlatformComposite && account != nil {
+				quotaPlatform = account.Platform
+			}
+		}
+		recordUserPlatformQuotaUsage(ctx, s.billingCacheService, s.userPlatformQuotaRepo, s.cfg, user, quotaPlatform, cost.ActualCost)
 		writeUsageLogBestEffort(ctx, s.usageLogRepo, usageLog, "service.gateway")
 		logger.LegacyPrintf("service.gateway", "[SIMPLE MODE] Usage recorded (not billed): user=%d, tokens=%d", usageLog.UserID, usageLog.TotalTokens())
 		s.deferredService.ScheduleLastUsedUpdate(account.ID)

@@ -608,6 +608,27 @@ func TestCheckBillingEligibility_NonSubscriptionGroup_AppliesQuota(t *testing.T)
 	}
 }
 
+// TestCheckBillingEligibility_SimpleMode_AppliesPlatformQuota verifies that
+// simple mode skips balance billing but still enforces the global platform cap.
+func TestCheckBillingEligibility_SimpleMode_AppliesPlatformQuota(t *testing.T) {
+	fake := &fakeZeroQuotaCache{}
+	cfg := &config.Config{RunMode: config.RunModeSimple}
+	cfg.Billing.UserPlatformQuotaCacheTTLSeconds = 60
+	s := &BillingCacheService{
+		cache:                 fake,
+		cfg:                   cfg,
+		userPlatformQuotaRepo: &fakeQuotaRepo{},
+	}
+
+	err := s.CheckBillingEligibility(context.Background(), &User{ID: 77}, nil, nil, nil, "openai")
+	if !errors.Is(err, ErrUserPlatformDailyQuotaExhausted) {
+		t.Errorf("simple mode should apply user×platform quota, got: %v", err)
+	}
+	if !fake.called {
+		t.Error("GetUserPlatformQuotaCache must be called in simple mode")
+	}
+}
+
 // ── B-3: monthlyQuotaWindowExpired 30 天边界表驱动测试 ────────────────────────
 // 覆盖 4 个必须场景:
 //  1. 恰好 30 天 → expired
@@ -810,7 +831,7 @@ func TestHasUserPlatformQuotaLimit(t *testing.T) {
 				svc.cfg.RunMode = config.RunModeSimple
 				return svc
 			},
-			want: false, // simple 模式始终跳过
+			want: true, // simple 模式也必须写入全局额度
 		},
 	}
 
