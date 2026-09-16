@@ -636,7 +636,7 @@
 </template>
 
 <script setup lang="ts">
-	import { ref, reactive, computed, onMounted, onUnmounted, type ComponentPublicInstance } from 'vue'
+	import { ref, reactive, computed, watch, onMounted, onUnmounted, type ComponentPublicInstance } from 'vue'
 	import { useI18n } from 'vue-i18n'
 	import { useAppStore } from '@/stores/app'
 	import { useOnboardingStore } from '@/stores/onboarding'
@@ -933,6 +933,26 @@ const groupOptions = computed(() =>
     platform: group.platform
   }))
 )
+
+// The default relay group already contains the OpenAI + DeepSeek account pool.
+// Prefer it for new keys so users do not need to switch groups manually.
+const preferredGroupId = computed<number | null>(() => {
+  const compositeDefault = groupOptions.value.find((group) =>
+    group.platform === 'composite' && group.label.toLowerCase() === 'composite-default'
+  )
+  if (compositeDefault) return compositeDefault.value
+
+  const openAIDefault = groupOptions.value.find((group) =>
+    group.platform === 'openai' && group.label.toLowerCase() === 'openai-default'
+  )
+  return openAIDefault?.value ?? groupOptions.value[0]?.value ?? null
+})
+
+watch([showCreateModal, groups], () => {
+  if (showCreateModal.value && !showEditModal.value && formData.value.group_id === null) {
+    formData.value.group_id = preferredGroupId.value
+  }
+})
 
 // Group dropdown search
 const groupSearchQuery = ref('')

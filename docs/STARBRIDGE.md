@@ -92,9 +92,10 @@ docker compose logs --tail=100 caddy
 1. 登录后台，点击 **账号管理 → 添加账号**。
 2. 选择 **OpenAI → OAuth**，点击下一步。
 3. 默认选择 **设备码登录**，点击「获取登录设备码」，复制一次性设备码，再点击「打开 OpenAI 登录页面」。在官方页面登录自己的 Plus / Pro 账号并输入设备码，完成后切回原来的星桥标签页，账号会自动保存。设备码 15 分钟内有效；首次使用请先在 **ChatGPT → 设置 → 安全** 中开启设备码登录。服务器无法直连 OpenAI 时，先给该账号选择可用代理。
-4. 保存账号，点击测试；成功后在 **分组管理** 中创建 OpenAI 分组，例如“我的 Pro”。需要固定使用这个账号时，分组只绑定这一个 OAuth 账号。
-5. 在 **API 密钥 → 创建密钥** 中选择“我的 Pro”分组，生成面向客户端的 Starbridge API Key。这个 Key 是给客户端调用的 Token，网关会使用已登录账号的 Codex 订阅用量。账号管理中可查看上游返回的用量窗口与重置时间。
-6. 标准模式下，星桥用户还需要有站内余额或分组订阅。管理员可以在用户管理中分配站内余额；这个余额是站内记账，与 OpenAI Pro 的上游额度分别管理。
+4. 保存账号并点击测试。标准模式启动时会自动创建 `openai-default`、`deepseek-default` 和 `composite-default`，新建 OpenAI/DeepSeek 账号不指定分组时会自动加入对应默认分组和 Composite 分组，无需手动切换。
+5. 在 **API 密钥 → 创建密钥** 中选择 `composite-default`（页面会优先预选），生成面向客户端的 Starbridge API Key。默认路由优先使用 OpenAI `gpt-6-astra`，OpenAI 账号不可用时自动切换到 DeepSeek `deepseek-v4-pro`；DeepSeek 请求也有 OpenAI 兜底。`composite-default` 的倍率为 1.5，用量窗口缓存约 5 秒刷新。
+6. 在密钥列表点击 **使用密钥 → Codex CLI**，复制生成的单文件 `~/.codex/config.toml`。默认配置包含 `model = "gpt-6-astra"`、`model_provider = "zero-inference"`、`model_reasoning_effort = "xhigh"`、`wire_api = "responses"`、`supports_websockets = true`、`requires_openai_auth = true` 和当前站点 `/v1` 地址。保存后重启 Codex 即可；也可以切换到环境变量模式。
+7. 标准模式下，星桥用户还需要有站内余额或分组订阅。管理员可以在用户管理中分配站内余额；这个余额是站内记账，与 OpenAI Pro 的上游额度分别管理。
 
 星桥保留上游的 OAuth 刷新能力，普通调用者只使用星桥 API Key。不要把客户端 API Key 发布到前端、日志、代码仓库或公共聊天中。可用模型及用量上限由 OpenAI 账号决定；Pro 不等于全部 API 模型都可用，也不会转换为 OpenAI Platform 的 API 余额。官方说明见 [Codex 身份验证](https://learn.chatgpt.com/docs/auth)。
 
@@ -108,7 +109,7 @@ docker compose logs --tail=100 caddy
 2. 选择 **OpenAI → API Key**。
 3. 在 **上游快捷配置** 里选择服务商，确认 Base URL 和文本协议。
 4. 填写上游 API Key。Ollama 这类不需要密钥的服务，可以填写 `ollama-local` 作为占位值。
-5. 保存账号，点击测试；成功后在 **分组管理** 中创建服务分组并绑定账号。
+5. 保存账号并点击测试。标准模式下不指定分组会自动加入该平台默认分组；需要跨 OpenAI/DeepSeek 无缝切换时，使用 `composite-default`。
 6. 在 **密钥管理** 创建面向客户端的 API Key，只把客户端 Key 发给使用者，不要暴露上游 Key。
 
 自定义兼容服务直接填服务商提供的 Base URL。若服务商只实现 `/v1/chat/completions`，选择 Chat Completions；只有确实支持 `/v1/responses` 的服务才选择 Responses。

@@ -23,6 +23,7 @@ func ensureSimpleModeDefaultGroups(ctx context.Context, client *dbent.Client) er
 	requiredByPlatform := map[string]int{
 		service.PlatformAnthropic:   1,
 		service.PlatformOpenAI:      1,
+		service.PlatformDeepseek:    1,
 		service.PlatformGemini:      1,
 		service.PlatformAntigravity: 2,
 		service.PlatformGrok:        1,
@@ -59,6 +60,10 @@ func ensureSimpleModeDefaultGroups(ctx context.Context, client *dbent.Client) er
 }
 
 func createGroupIfNotExists(ctx context.Context, client *dbent.Client, name, platform string) error {
+	return createGroupIfNotExistsWithRate(ctx, client, name, platform, 1.0)
+}
+
+func createGroupIfNotExistsWithRate(ctx context.Context, client *dbent.Client, name, platform string, rateMultiplier float64) error {
 	exists, err := client.Group.Query().
 		Where(group.NameEQ(name), group.DeletedAtIsNil()).
 		Exist(ctx)
@@ -75,7 +80,7 @@ func createGroupIfNotExists(ctx context.Context, client *dbent.Client, name, pla
 		SetPlatform(platform).
 		SetStatus(service.StatusActive).
 		SetSubscriptionType(service.SubscriptionTypeStandard).
-		SetRateMultiplier(1.0).
+		SetRateMultiplier(rateMultiplier).
 		SetIsExclusive(false).
 		SetAllowImageGeneration(platform == service.PlatformGrok).
 		Save(ctx)

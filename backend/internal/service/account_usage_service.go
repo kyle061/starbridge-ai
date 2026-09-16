@@ -109,7 +109,10 @@ const (
 	apiErrorCacheTTL    = 1 * time.Minute        // 负缓存 TTL：429 等错误缓存 1 分钟
 	antigravityErrorTTL = 1 * time.Minute        // Antigravity 错误缓存 TTL（可恢复错误）
 	apiQueryMaxJitter   = 800 * time.Millisecond // 用量查询最大随机延迟
-	windowStatsCacheTTL = 1 * time.Minute
+	// Keep dashboard and quota-window reads close to the latest recorded request.
+	// Usage records are already written through the bounded worker pool, so a
+	// short cache avoids the former one-minute lag without creating a query storm.
+	windowStatsCacheTTL = 5 * time.Second
 	openAIProbeCacheTTL = 10 * time.Minute
 	grokProbeRetryTTL   = 1 * time.Minute
 	grokFreeQuotaWindow = 24 * time.Hour

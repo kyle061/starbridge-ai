@@ -29,8 +29,8 @@
         </p>
 
         <!-- Client Tabs -->
-        <div v-if="clientTabs.length" class="overflow-x-auto border-b border-gray-200 dark:border-dark-700">
-          <nav class="-mb-px flex min-w-max gap-4 sm:gap-6" aria-label="Client">
+        <div v-if="clientTabs.length" class="overflow-hidden border-b border-gray-200 dark:border-dark-700">
+          <nav class="-mb-px flex flex-wrap gap-x-4 gap-y-1 sm:gap-x-6" aria-label="Client">
             <button
               v-for="tab in clientTabs"
               :key="tab.id"
@@ -111,8 +111,8 @@
         </div>
 
         <!-- OS/Shell Tabs -->
-        <div v-if="showShellTabs" class="overflow-x-auto border-b border-gray-200 dark:border-dark-700">
-          <nav class="-mb-px flex min-w-max gap-4" aria-label="Tabs">
+        <div v-if="showShellTabs" class="overflow-hidden border-b border-gray-200 dark:border-dark-700">
+          <nav class="-mb-px flex flex-wrap gap-x-4 gap-y-1" aria-label="Tabs">
             <button
               v-for="tab in currentTabs"
               :key="tab.id"
@@ -167,7 +167,7 @@
                 </button>
               </div>
               <!-- Code Content -->
-              <pre class="p-4 text-sm font-mono text-gray-100 overflow-x-auto"><code v-if="file.highlighted" v-html="file.highlighted"></code><code v-else v-text="file.content"></code></pre>
+              <pre class="break-all whitespace-pre-wrap overflow-x-hidden p-4 text-sm font-mono text-gray-100"><code v-if="file.highlighted" v-html="file.highlighted"></code><code v-else v-text="file.content"></code></pre>
             </div>
           </div>
         </div>
@@ -238,7 +238,9 @@ const copiedIndex = ref<number | null>(null)
 const activeTab = ref<string>('unix')
 const activeClientTab = ref<string>('claude')
 type CodexAuthMode = 'env-key' | 'api-key'
-const codexAuthMode = ref<CodexAuthMode>('env-key')
+// Inline auth is the one-click path: the generated config is complete on its own.
+// Keep the environment option for operators who explicitly prefer not to store a key in config.toml.
+const codexAuthMode = ref<CodexAuthMode>('api-key')
 
 // Reset tabs when platform changes
 const defaultClientTab = computed(() => {
@@ -259,12 +261,12 @@ const defaultClientTab = computed(() => {
 watch(() => props.platform, () => {
   activeTab.value = 'unix'
   activeClientTab.value = defaultClientTab.value
-  codexAuthMode.value = 'env-key'
+  codexAuthMode.value = 'api-key'
 }, { immediate: true })
 
 watch(() => props.show, (show) => {
   if (show) {
-    codexAuthMode.value = 'env-key'
+    codexAuthMode.value = 'api-key'
   }
 })
 
@@ -780,25 +782,27 @@ ${keyword('$env:')}${variable('GEMINI_MODEL')}${operator('=')}${string(`"${model
   return { path, content, highlighted }
 }
 
-function generateOpenAIFiles(baseUrl: string, apiKey: string, useWebSocket = false): FileConfig[] {
+function generateOpenAIFiles(baseUrl: string, apiKey: string): FileConfig[] {
   const isWindows = activeTab.value === 'windows'
   const configDir = isWindows ? '%userprofile%\\.codex' : '~/.codex'
 
   // Keep setup independent of a separately downloaded model catalog.
   const configContent = `model = "gpt-6-astra"
-model_provider = "sub2api"
+model_provider = "zero-inference"
 model_reasoning_effort = "xhigh"
 personality = "pragmatic"
 service_tier = "default"
 
-[model_providers.sub2api]
-name = "Sub2API OpenAI"
+[model_providers.zero-inference]
+name = "Zero Inference"
 base_url = "${escapeTomlBasicString(baseUrl)}"
 wire_api = "responses"
-${useWebSocket ? 'supports_websockets = true\n' : ''}${generateCodexProviderAuthConfig(apiKey)}
+supports_websockets = true
+${generateCodexProviderAuthConfig(apiKey)}
 
 [features]
-${useWebSocket ? 'responses_websockets_v2 = true\n' : ''}goals = true`
+responses_websockets_v2 = true
+goals = true`
 
   const files: FileConfig[] = []
   if (codexAuthMode.value === 'env-key') {
@@ -818,12 +822,11 @@ ${useWebSocket ? 'responses_websockets_v2 = true\n' : ''}goals = true`
 
 function generateCodexProviderAuthConfig(apiKey: string): string {
   if (codexAuthMode.value === 'api-key') {
-    return `requires_openai_auth = false
-experimental_bearer_token = "${escapeTomlBasicString(apiKey)}"
-http_headers = { "x-openai-actor-authorization" = "local-image-extension" }`
+    return `experimental_bearer_token = "${escapeTomlBasicString(apiKey)}"
+requires_openai_auth = true`
   }
 
-  return `requires_openai_auth = false
+  return `requires_openai_auth = true
 env_key = "SUB2API_API_KEY"`
 }
 
@@ -1061,7 +1064,7 @@ function generateRoutedCodexFiles(
   const isWindows = activeTab.value === 'windows'
   const configDir = isWindows ? '%userprofile%\\.codex' : '~/.codex'
   const preferredModels: Partial<Record<GroupPlatform, string>> = {
-    openai: 'gpt-5.5',
+    openai: 'gpt-6-astra',
     anthropic: 'claude-sonnet-4-6',
     gemini: 'gemini-2.5-pro',
     antigravity: 'claude-sonnet-4-6',
@@ -1071,7 +1074,7 @@ function generateRoutedCodexFiles(
     deepseek: 'deepseek-v4-pro',
     minimax: 'MiniMax-M3',
     opencode_go: 'glm-5.3',
-    composite: 'gpt-5.5'
+    composite: 'gpt-6-astra'
   }
   const model = preferredModels[platform] || ''
   const labels: Record<GroupPlatform, string> = {
@@ -1088,19 +1091,23 @@ function generateRoutedCodexFiles(
     composite: 'Composite'
   }
   const label = labels[platform]
+  const providerId = platform === 'openai' || platform === 'composite' ? 'zero-inference' : 'sub2api'
+  const providerName = platform === 'openai' || platform === 'composite' ? 'Zero Inference' : `Sub2API ${label}`
+  const isOpenAICodexProvider = providerId === 'zero-inference'
+  const providerOptions = isOpenAICodexProvider
+    ? 'requires_openai_auth = true\nsupports_websockets = true\n\n[features]\nresponses_websockets_v2 = true\ngoals = true'
+    : 'requires_openai_auth = false\nsupports_websockets = false'
   const configContent = `# Codex CLI -> Sub2API ${label} group
-model_provider = "sub2api"
+model_provider = "${providerId}"
 model = "${model}"
-review_model = "${model}"
 
-[model_providers.sub2api]
-name = "Sub2API ${label}"
+[model_providers.${providerId}]
+name = "${providerName}"
 base_url = "${escapeTomlBasicString(baseUrl)}"
 # This file contains the API key. Keep it private and do not commit it.
 experimental_bearer_token = "${escapeTomlBasicString(apiKey)}"
 wire_api = "responses"
-requires_openai_auth = false
-supports_websockets = false`
+${providerOptions}`
 
   return [
     {
@@ -1116,7 +1123,7 @@ supports_websockets = false`
 }
 
 function generateOpenAIWsFiles(baseUrl: string, apiKey: string): FileConfig[] {
-  return generateOpenAIFiles(baseUrl, apiKey, true)
+  return generateOpenAIFiles(baseUrl, apiKey)
 }
 
 function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: string, pathLabel?: string): FileConfig {

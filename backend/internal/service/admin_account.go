@@ -504,6 +504,28 @@ func (s *adminServiceImpl) CreateAccount(ctx context.Context, input *CreateAccou
 				}
 			}
 		}
+		// A Composite key can route OpenAI and DeepSeek models without a group
+		// switch. Keep the concrete default group too for native platform views.
+		if (s.cfg == nil || s.cfg.RunMode != config.RunModeSimple) &&
+			(input.Platform == PlatformOpenAI || input.Platform == PlatformDeepseek) {
+			if compositeGroups, listErr := s.groupRepo.ListActiveByPlatform(ctx, PlatformComposite); listErr == nil {
+				for _, g := range compositeGroups {
+					if g.Name == "composite-default" {
+						alreadyBound := false
+						for _, groupID := range groupIDs {
+							if groupID == g.ID {
+								alreadyBound = true
+								break
+							}
+						}
+						if !alreadyBound {
+							groupIDs = append(groupIDs, g.ID)
+						}
+						break
+					}
+				}
+			}
+		}
 	}
 
 	// 检查混合渠道风险（除非用户已确认）

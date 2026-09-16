@@ -171,6 +171,13 @@ func InitEnt(cfg *config.Config) (*ent.Client, *sql.DB, error) {
 			_ = client.Close()
 			return nil, nil, err
 		}
+	} else {
+		seedCtx, seedCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer seedCancel()
+		if err := ensureStandardRelayDefaultGroups(seedCtx, client); err != nil {
+			_ = client.Close()
+			return nil, nil, err
+		}
 	}
 
 	return client, drv.DB(), nil
