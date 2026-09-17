@@ -1418,8 +1418,8 @@ const executeCcsImport = (row: ApiKey, clientType: CcSwitchClientType) => {
       };
     }
   })`
-  // Keep the imported provider name stable and recognizable in CC-Switch.
-  const providerName = 'starbridaeai'
+  // Use the configured site name so imported profiles carry the operator's brand.
+  const providerName = (publicSettings.value?.site_name || 'Starbridge AI').trim() || 'Starbridge AI'
   const deeplink = buildCcSwitchImportDeeplink({
     baseUrl,
     platform,

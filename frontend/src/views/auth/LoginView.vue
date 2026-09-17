@@ -132,6 +132,7 @@
           :accepted="agreementAccepted"
           :documents="loginAgreementDocuments"
           :mode="loginAgreementMode"
+          :site-name="siteName"
           :updated-at="loginAgreementUpdatedAt"
           :visible="showAgreementModal"
           @accept="acceptLoginAgreement"
@@ -270,6 +271,7 @@ const showPassword = ref<boolean>(false)
 const publicSettingsLoaded = ref<boolean>(false)
 
 // Public settings
+const siteName = ref<string>('Starbridge AI')
 const registrationEnabled = ref<boolean>(false)
 const turnstileEnabled = ref<boolean>(false)
 const turnstileSiteKey = ref<string>('')
@@ -382,6 +384,7 @@ onMounted(async () => {
 
   try {
     const settings = await getPublicSettings()
+    siteName.value = settings.site_name || 'Starbridge AI'
     registrationEnabled.value = settings.registration_enabled === true
     turnstileEnabled.value = settings.turnstile_enabled
     turnstileSiteKey.value = settings.turnstile_site_key || ''

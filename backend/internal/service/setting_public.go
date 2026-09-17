@@ -27,22 +27,22 @@ func defaultLoginAgreementDocuments() []LoginAgreementDocument {
 	return []LoginAgreementDocument{
 		{
 			ID:        "terms",
-			Title:     "服务条款",
+			Title:     "Starbridge AI 服务条款",
 			ContentMD: "",
 		},
 		{
 			ID:        "usage-policy",
-			Title:     "使用政策",
+			Title:     "Starbridge AI 使用政策",
 			ContentMD: "",
 		},
 		{
 			ID:        "supported-regions",
-			Title:     "支持的国家和地区",
+			Title:     "Starbridge AI 支持的国家和地区",
 			ContentMD: "",
 		},
 		{
 			ID:        "service-specific-terms",
-			Title:     "服务特定条款",
+			Title:     "Starbridge AI 服务特定条款",
 			ContentMD: "",
 		},
 	}
@@ -326,7 +326,7 @@ func (s *SettingService) GetPublicSettings(ctx context.Context) (*PublicSettings
 		AliyunCaptchaRegion:                 normalizeAliyunCaptchaRegion(settings[SettingKeyAliyunCaptchaRegion]),
 		SiteName:                            s.getStringOrDefault(settings, SettingKeySiteName, "Starbridge AI"),
 		SiteLogo:                            settings[SettingKeySiteLogo],
-		SiteSubtitle:                        s.getStringOrDefault(settings, SettingKeySiteSubtitle, "Subscription to API Conversion Platform"),
+		SiteSubtitle:                        s.getStringOrDefault(settings, SettingKeySiteSubtitle, "Multi-model AI API Gateway"),
 		APIBaseURL:                          settings[SettingKeyAPIBaseURL],
 		ContactInfo:                         settings[SettingKeyContactInfo],
 		DocURL:                              settings[SettingKeyDocURL],

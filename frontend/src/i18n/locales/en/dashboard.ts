@@ -175,7 +175,7 @@ export default {
         authModeEnvKey: 'Environment variable',
         authModeApiKey: 'Inline API key (recommended)',
         authModeApiKeyRestartNotice: 'After saving this configuration, completely quit and restart Codex Desktop or CLI, then create a new task so the client can rebuild its tool registry.',
-        configTomlEnvKeyHint: 'This configuration reads the API key from SUB2API_API_KEY and requires an extra environment setup.',
+        configTomlEnvKeyHint: 'This configuration reads the API key from STARBRIDGE_API_KEY and requires an extra environment setup.',
         configTomlHint: 'This single-file configuration contains the API key. Keep it private and do not commit it.',
         note: 'Save config.toml under ~/.codex and restart Codex. The key is already in this file by default; only Environment variable mode needs the extra shell command.',
         noteWindows: 'Save config.toml under %userprofile%\\.codex and restart Codex. The key is already in this file by default; only Environment variable mode needs the extra shell command.',
@@ -202,9 +202,9 @@ export default {
       },
       grok: {
         description:
-          'Configure Grok CLI, Claude Code, Codex, or OpenCode to send requests through your Sub2API Grok group. Text models use Responses; image/video use Imagine model IDs on media endpoints.',
-        claudeDescription: 'Configure Claude Code to send Messages API traffic through your Sub2API Grok group.',
-        codexDescription: 'Configure Codex to send Responses API traffic through your Sub2API Grok group.',
+          'Configure Grok CLI, Claude Code, Codex, or OpenCode to send requests through your Starbridge AI Grok group. Text models use Responses; image/video use Imagine model IDs on media endpoints.',
+        claudeDescription: 'Configure Claude Code to send Messages API traffic through your Starbridge AI Grok group.',
+        codexDescription: 'Configure Codex to send Responses API traffic through your Starbridge AI Grok group.',
         configTomlHint:
           'Official path: ~/.grok/config.toml (or $GROK_HOME). Fill [endpoints] (models_base_url / models_list_url / xai_api_base_url / cli_chat_proxy_base_url), [auth] preferred_method=api_key, [models], [session], and [features] image/video overrides. Prefer env_key over api_key; every text model needs api_backend=responses. Back up before merge, then run grok inspect.',
         codexConfigTomlHint:

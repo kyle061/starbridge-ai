@@ -23,7 +23,11 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 	// 检查是否已有设置
 	_, err := s.settingRepo.GetValue(ctx, SettingKeyRegistrationEnabled)
 	if err == nil {
-		// 已有设置，不需要初始化
+		// Preserve operator-customized values while migrating only the old
+		// built-in branding defaults.
+		if err := s.migrateLegacyBranding(ctx); err != nil {
+			return fmt.Errorf("migrate legacy branding: %w", err)
+		}
 		return nil
 	}
 	if !errors.Is(err, ErrSettingNotFound) {
@@ -273,6 +277,87 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 	return s.settingRepo.SetMultiple(ctx, defaults)
 }
 
+// migrateLegacyBranding updates only values that still equal the upstream
+// defaults. Any operator-provided branding is left untouched.
+func (s *SettingService) migrateLegacyBranding(ctx context.Context) error {
+	keys := []string{
+		SettingKeySiteName,
+		SettingKeySiteSubtitle,
+		SettingKeySMTPFromName,
+		SettingProductNamePrefix,
+		SettingKeyLoginAgreementDocuments,
+	}
+	values, err := s.settingRepo.GetMultiple(ctx, keys)
+	if err != nil {
+		return err
+	}
+	updates := make(map[string]string)
+	legacyDefaults := map[string]string{
+		SettingKeySiteName:        "Sub2API",
+		SettingKeySiteSubtitle:    "Subscription to API Conversion Platform",
+		SettingKeySMTPFromName:   "Sub2API",
+		SettingProductNamePrefix: "Sub2API",
+	}
+	newDefaults := map[string]string{
+		SettingKeySiteName:      "Starbridge AI",
+		SettingKeySiteSubtitle:  "Multi-model AI API Gateway",
+		SettingKeySMTPFromName:  "Starbridge AI",
+		SettingProductNamePrefix: "Starbridge AI",
+	}
+	for key, value := range legacyDefaults {
+		if strings.TrimSpace(values[key]) == value {
+			updates[key] = newDefaults[key]
+		}
+	}
+	if brandedDocuments, changed := migrateLegacyLoginAgreementDocuments(values[SettingKeyLoginAgreementDocuments]); changed {
+		updates[SettingKeyLoginAgreementDocuments] = brandedDocuments
+	}
+	if len(updates) == 0 {
+		return nil
+	}
+	return s.settingRepo.SetMultiple(ctx, updates)
+}
+
+func migrateLegacyLoginAgreementDocuments(raw string) (string, bool) {
+	if strings.TrimSpace(raw) == "" {
+		return "", false
+	}
+	var documents []LoginAgreementDocument
+	if err := json.Unmarshal([]byte(raw), &documents); err != nil {
+		return "", false
+	}
+	legacyTitles := map[string]string{
+		"terms":                   "服务条款",
+		"usage-policy":            "使用政策",
+		"supported-regions":       "支持的国家和地区",
+		"service-specific-terms":  "服务特定条款",
+	}
+	brandedTitles := map[string]string{
+		"terms":                   "Starbridge AI 服务条款",
+		"usage-policy":            "Starbridge AI 使用政策",
+		"supported-regions":       "Starbridge AI 支持的国家和地区",
+		"service-specific-terms":  "Starbridge AI 服务特定条款",
+	}
+	changed := false
+	for i := range documents {
+		id := normalizeLoginAgreementDocumentID(documents[i].ID)
+		legacyTitle, ok := legacyTitles[id]
+		if !ok || strings.TrimSpace(documents[i].Title) != legacyTitle {
+			continue
+		}
+		documents[i].Title = brandedTitles[id]
+		changed = true
+	}
+	if !changed {
+		return "", false
+	}
+	encoded, err := marshalLoginAgreementDocuments(documents)
+	if err != nil {
+		return "", false
+	}
+	return encoded, true
+}
+
 func parseForwardedClientIPHeadersSetting(value string) ([]string, error) {
 	var headers []string
 	if err := json.Unmarshal([]byte(value), &headers); err != nil {
@@ -359,7 +444,7 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 		ForwardedClientIPHeaders:               forwardedClientIPHeaders,
 		SiteName:                               s.getStringOrDefault(settings, SettingKeySiteName, "Starbridge AI"),
 		SiteLogo:                               settings[SettingKeySiteLogo],
-		SiteSubtitle:                           s.getStringOrDefault(settings, SettingKeySiteSubtitle, "Subscription to API Conversion Platform"),
+		SiteSubtitle:                           s.getStringOrDefault(settings, SettingKeySiteSubtitle, "Multi-model AI API Gateway"),
 		APIBaseURL:                             settings[SettingKeyAPIBaseURL],
 		ContactInfo:                            settings[SettingKeyContactInfo],
 		DocURL:                                 settings[SettingKeyDocURL],

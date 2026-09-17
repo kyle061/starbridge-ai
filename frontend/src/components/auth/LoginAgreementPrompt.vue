@@ -84,6 +84,7 @@
                 <p class="mt-2 text-sm leading-6 text-gray-600 dark:text-dark-300">
                   {{
                     t('legal.loginAgreementPrompt.dialogDescription', {
+                      site: siteName,
                       date: updatedAt || t('legal.loginAgreementPrompt.recently'),
                     })
                   }}
@@ -154,9 +155,11 @@ const props = withDefaults(defineProps<{
   accepted: boolean
   documents: LoginAgreementDocument[]
   mode: 'modal' | 'checkbox' | string
+  siteName?: string
   updatedAt?: string
   visible: boolean
 }>(), {
+  siteName: 'Starbridge AI',
   updatedAt: ''
 })
 
@@ -168,6 +171,7 @@ const emit = defineEmits<{
 
 const dialogVisible = computed(() => props.visible && documents.value.length > 0)
 const documents = computed(() => props.documents.filter((doc) => doc.title.trim()))
+const siteName = computed(() => props.siteName?.trim() || 'Starbridge AI')
 const updatedAt = computed(() => props.updatedAt || '')
 const accepted = computed(() => props.accepted)
 const mode = computed(() => props.mode === 'checkbox' ? 'checkbox' : 'modal')

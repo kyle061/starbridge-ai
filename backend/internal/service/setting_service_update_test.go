@@ -573,6 +573,25 @@ func TestSettingService_InitializeDefaultSettingsPersistsConfiguredForwardedClie
 	require.JSONEq(t, `["X-Cdn-Ip","True-Client-Ip"]`, repo.values[SettingKeyForwardedClientIPHeaders])
 }
 
+func TestSettingService_InitializeDefaultSettingsMigratesOnlyLegacyBranding(t *testing.T) {
+	repo := &forwardedIPMigrationRepoStub{values: map[string]string{
+		SettingKeyRegistrationEnabled: "true",
+		SettingKeySiteName:            "Sub2API",
+		SettingKeySiteSubtitle:        "Subscription to API Conversion Platform",
+		SettingKeySMTPFromName:        "Custom Sender",
+		SettingProductNamePrefix:      "Sub2API",
+		SettingKeyLoginAgreementDocuments: `[{"id":"terms","title":"服务条款","content_md":""},{"id":"custom","title":"自定义条款","content_md":"正文"}]`,
+	}}
+	svc := NewSettingService(repo, &config.Config{})
+
+	require.NoError(t, svc.InitializeDefaultSettings(context.Background()))
+	require.Equal(t, "Starbridge AI", repo.values[SettingKeySiteName])
+	require.Equal(t, "Multi-model AI API Gateway", repo.values[SettingKeySiteSubtitle])
+	require.Equal(t, "Custom Sender", repo.values[SettingKeySMTPFromName])
+	require.Equal(t, "Starbridge AI", repo.values[SettingProductNamePrefix])
+	require.JSONEq(t, `[{"id":"terms","title":"Starbridge AI 服务条款","content_md":""},{"id":"custom","title":"自定义条款","content_md":"正文"}]`, repo.values[SettingKeyLoginAgreementDocuments])
+}
+
 func TestSettingService_UpdateSettings_APIKeyACLTrustForwardedIPRefreshesConfig(t *testing.T) {
 	repo := &settingUpdateRepoStub{}
 	cfg := &config.Config{}

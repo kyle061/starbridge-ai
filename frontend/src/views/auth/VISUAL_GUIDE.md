@@ -11,8 +11,8 @@ Both LoginView and RegisterView use the AuthLayout component, which provides:
 │                                             │
 │  ┌─────────────────────────────────────┐   │
 │  │                                     │   │
-│  │         Sub2API Logo                │   │
-│  │  "Subscription to API Conversion"   │   │
+│  │      Starbridge AI Logo             │   │
+│  │  "Multi-model AI API Gateway"      │   │
 │  │                                     │   │
 │  └─────────────────────────────────────┘   │
 │                                             │
@@ -39,8 +39,8 @@ Centered: Both horizontally and vertically
 ```
 ┌─────────────────────────────────────────────┐
 │                                             │
-│         🔷 Sub2API                          │
-│    Subscription to API Conversion Platform  │
+│      🔷 Starbridge AI                       │
+│      Multi-model AI API Gateway             │
 │                                             │
 │  ┌─────────────────────────────────────┐   │
 │  │                                     │   │
@@ -133,13 +133,13 @@ Centered: Both horizontally and vertically
 ```
 ┌─────────────────────────────────────────────┐
 │                                             │
-│         🔷 Sub2API                          │
-│    Subscription to API Conversion Platform  │
+│      🔷 Starbridge AI                       │
+│      Multi-model AI API Gateway             │
 │                                             │
 │  ┌─────────────────────────────────────┐   │
 │  │                                     │   │
 │  │        Create Account               │   │
-│  │     Sign up to start using Sub2API  │   │
+│  │  Sign up to start using Starbridge AI │  │
 │  │                                     │   │
 │  │  Username                           │   │
 │  │  ┌────────────────────────────────┐ │   │

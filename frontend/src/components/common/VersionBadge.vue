@@ -653,8 +653,8 @@ import Icon from '@/components/icons/Icon.vue'
 import { formatPublicVersion } from '@/utils/publicVersion'
 
 const GITHUB_REPO = 'kyle061/starbridge-ai'
-// Docker Hub image published by CI (tags carry no "v" prefix, e.g. weishaw/sub2api:0.1.146)
-const DOCKER_IMAGE = 'weishaw/sub2api'
+// Image name used by the Starbridge deployment workflow (tags carry no "v" prefix).
+const DOCKER_IMAGE = 'starbridge-ai'
 
 const { t } = useI18n()
 

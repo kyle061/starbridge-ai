@@ -788,13 +788,13 @@ function generateOpenAIFiles(baseUrl: string, apiKey: string): FileConfig[] {
 
   // Keep setup independent of a separately downloaded model catalog.
   const configContent = `model = "gpt-6-astra"
-model_provider = "starbridaeai"
+model_provider = "starbridgeai"
 model_reasoning_effort = "xhigh"
 personality = "pragmatic"
 service_tier = "default"
 
-[model_providers.starbridaeai]
-name = "starbridaeai"
+[model_providers.starbridgeai]
+name = "Starbridge AI"
 base_url = "${escapeTomlBasicString(baseUrl)}"
 wire_api = "responses"
 supports_websockets = true
@@ -826,20 +826,20 @@ function generateCodexProviderAuthConfig(apiKey: string): string {
 requires_openai_auth = true`
   }
 
-  return `requires_openai_auth = true
-env_key = "SUB2API_API_KEY"`
+    return `requires_openai_auth = true
+env_key = "STARBRIDGE_API_KEY"`
 }
 
 function generateCodexApiKeyEnvironmentFile(apiKey: string, windows: boolean): FileConfig {
   if (windows) {
     return {
       path: 'PowerShell',
-      content: `$env:SUB2API_API_KEY=${quotePowerShell(apiKey)}`
+      content: `$env:STARBRIDGE_API_KEY=${quotePowerShell(apiKey)}`
     }
   }
   return {
     path: 'Terminal',
-    content: `export SUB2API_API_KEY=${quotePosixShell(apiKey)}`
+    content: `export STARBRIDGE_API_KEY=${quotePosixShell(apiKey)}`
   }
 }
 
@@ -893,15 +893,15 @@ $env:XAI_API_KEY="${apiKey}"`
 export XAI_API_KEY="${apiKey}"`
   }
 
-  // Shape follows Grok Build user guide (~/.grok/docs + custom-models) and production-ready Sub2API setups.
+  // Shape follows Grok Build user guide (~/.grok/docs + custom-models) and production-ready Starbridge AI setups.
   // Text models only (Responses). Image/video: Imagine model IDs on media endpoints / feature overrides.
   // Credential order: api_key field → env_key → signed-in session → XAI_API_KEY global fallback.
   const modelsListUrl = `${baseUrl.replace(/\/+$/, '')}/models`
-  const configContent = `# Grok Build CLI → Sub2API Grok group (API key auth).
+  const configContent = `# Grok Build CLI → Starbridge AI Grok group (API key auth).
 # Docs: ~/.grok/docs/user-guide/05-configuration.md + 11-custom-models.md
 # Verify after save: grok inspect
 #
-# IMPORTANT: api_backend must be "responses" for Sub2API Grok (POST /v1/responses).
+# IMPORTANT: api_backend must be "responses" for Starbridge AI Grok (POST /v1/responses).
 # If omitted, Grok Build defaults to chat_completions (/v1/chat/completions).
 # Keep api_backend = "responses" on every model entry.
 #
@@ -916,7 +916,7 @@ models_list_url = "${modelsListUrl}"        # optional override (env: GROK_MODEL
 xai_api_base_url = "${baseUrl}"             # public xAI API base override for gateway routing
 cli_chat_proxy_base_url = "${baseUrl}"      # CLI chat-proxy base (env: GROK_CLI_CHAT_PROXY_BASE_URL)
 
-# Prefer API key when using a custom gateway (matches Sub2API).
+# Prefer API key when using a custom gateway (matches Starbridge AI).
 # Requires XAI_API_KEY env or per-model env_key / api_key.
 [auth]
 preferred_method = "api_key"
@@ -924,7 +924,7 @@ preferred_method = "api_key"
 [model."grok-4.5"]
 model = "grok-4.5"                          # id sent to the API
 name = "Grok 4.5"                           # shown in /model picker
-description = "Grok 4.5 via Sub2API (Responses)"
+description = "Grok 4.5 via Starbridge AI (Responses)"
 # base_url inherits from [endpoints].models_base_url; override only if needed:
 # base_url = "${baseUrl}"
 env_key = "XAI_API_KEY"                     # or: api_key = "${apiKey}"  (not recommended)
@@ -987,7 +987,7 @@ image_description = "grok-4.5"              # vision/describe-image helper model
 [session]
 auto_compact_threshold_percent = 80         # auto-compact at this % of context_window (default 85)
 
-# Imagine tools: model IDs go to Sub2API media endpoints (not the text [model.*] catalog).
+# Imagine tools: model IDs go to Starbridge AI media endpoints (not the text [model.*] catalog).
 # Enable only if the Grok group allows image/video generation.
 [features]
 image_gen = true
@@ -1018,13 +1018,13 @@ function generateGrokCodexFiles(baseUrl: string, apiKey: string): FileConfig[] {
   const configDir = isWindowsPath ? '%userprofile%\\.codex' : '~/.codex'
   const model = 'grok-4.5'
 
-  const configContent = `# Codex CLI → Sub2API Grok group
+  const configContent = `# Codex CLI → Starbridge AI Grok group
 # Docs: Codex config reference (model_providers.*, wire_api = "responses")
 #
 # Text models only. Image/video: grok-imagine-image / grok-imagine-video on media endpoints.
 # Switch model: grok-4.5 | grok-4.3 | grok-build-0.1 | grok-4.20-multi-agent-0309 (text / web_search)
 
-model_provider = "sub2api"
+model_provider = "starbridge"
 model = "${model}"
 
 # Optional:
@@ -1032,15 +1032,15 @@ model = "${model}"
 # model_reasoning_effort = "medium"
 # model_context_window = 500000
 
-[model_providers.sub2api]
-name = "Sub2API Grok"
+[model_providers.starbridge]
+name = "Starbridge AI Grok"
 base_url = "${escapeTomlBasicString(baseUrl)}"
 # This file contains the API key. Keep it private and do not commit it.
 experimental_bearer_token = "${escapeTomlBasicString(apiKey)}"
 wire_api = "responses"
 # API-key providers: do not require ChatGPT OAuth login
 requires_openai_auth = false
-# Grok/Sub2API path is HTTP/SSE; disable WS (Codex may otherwise try WebSocket first)
+# Grok/Starbridge AI path is HTTP/SSE; disable WS (Codex may otherwise try WebSocket first)
 supports_websockets = false
 
 # Optional:
@@ -1091,13 +1091,13 @@ function generateRoutedCodexFiles(
     composite: 'Composite'
   }
   const label = labels[platform]
-  const providerId = platform === 'openai' || platform === 'composite' ? 'starbridaeai' : 'sub2api'
-  const providerName = platform === 'openai' || platform === 'composite' ? 'starbridaeai' : `Sub2API ${label}`
-  const isOpenAICodexProvider = providerId === 'starbridaeai'
+  const providerId = platform === 'openai' || platform === 'composite' ? 'starbridgeai' : 'starbridge'
+  const providerName = platform === 'openai' || platform === 'composite' ? 'Starbridge AI' : `Starbridge AI ${label}`
+  const isOpenAICodexProvider = providerId === 'starbridgeai'
   const providerOptions = isOpenAICodexProvider
     ? 'requires_openai_auth = true\nsupports_websockets = true\n\n[features]\nresponses_websockets_v2 = true\ngoals = true'
     : 'requires_openai_auth = false\nsupports_websockets = false'
-  const configContent = `# Codex CLI -> Sub2API ${label} group
+  const configContent = `# Codex CLI -> Starbridge AI ${label} group
 model_provider = "${providerId}"
 model = "${model}"
 
@@ -1679,9 +1679,9 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
   } else if (platform === 'openai') {
     provider[platform].models = openaiModels
   } else if (platform === 'grok') {
-    // Custom provider pointing at Sub2API OpenAI-compatible Responses/Chat endpoints.
+    // Custom provider pointing at Starbridge AI OpenAI-compatible Responses/Chat endpoints.
     provider[platform].npm = '@ai-sdk/openai-compatible'
-    provider[platform].name = 'Grok via Sub2API'
+    provider[platform].name = 'Grok via Starbridge AI'
     provider[platform].models = grokModels
   }
 

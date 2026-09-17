@@ -71,7 +71,7 @@ const appStore = useAppStore()
 
 const siteName = computed(() => appStore.siteName || 'Starbridge AI')
 const siteLogo = computed(() => sanitizeUrl(appStore.siteLogo || '', { allowRelative: true, allowDataUrl: true }))
-const siteSubtitle = computed(() => appStore.cachedPublicSettings?.site_subtitle || 'Subscription to API Conversion Platform')
+const siteSubtitle = computed(() => appStore.cachedPublicSettings?.site_subtitle || 'Multi-model AI API Gateway')
 const settingsLoaded = computed(() => appStore.publicSettingsLoaded)
 
 const currentYear = computed(() => new Date().getFullYear())

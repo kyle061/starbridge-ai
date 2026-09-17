@@ -7779,6 +7779,7 @@
               <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {{ t("admin.settings.payment.description") }}
                 <a
+                  v-if="paymentGuideHref"
                   :href="paymentGuideHref"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -7825,7 +7826,7 @@
                       v-model="form.payment_product_name_prefix"
                       type="text"
                       class="input"
-                      placeholder="Sub2API"
+                      placeholder="Starbridge AI"
                     />
                   </div>
                   <div>
@@ -7847,7 +7848,7 @@
                       class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 dark:border-dark-600 dark:bg-dark-800 dark:text-gray-300"
                     >
                       {{
-                        (form.payment_product_name_prefix || "Sub2API") +
+                        (form.payment_product_name_prefix || "Starbridge AI") +
                         " 100 " +
                         (form.payment_product_name_suffix || "CNY")
                       }}
@@ -8244,6 +8245,7 @@
                   <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">
                     {{ t("admin.settings.payment.enabledPaymentTypesHint") }}
                     <a
+                      v-if="paymentMethodsHref"
                       :href="paymentMethodsHref"
                       target="_blank"
                       rel="noopener noreferrer"
@@ -8888,6 +8890,7 @@ import { extractApiErrorMessage, extractI18nErrorMessage } from "@/utils/apiErro
 import { useAppStore } from "@/stores";
 import { useAdminSettingsStore } from "@/stores/adminSettings";
 import { normalizeVisibleMethod } from "@/components/payment/paymentFlow";
+import { sanitizeUrl } from "@/utils/url";
 import {
   isRegistrationEmailSuffixDomainValid,
   normalizeRegistrationEmailSuffixDomain,
@@ -8913,16 +8916,10 @@ function localText(zh: string, en: string): string {
 }
 
 const paymentGuideHref = computed(() =>
-  locale.value.startsWith("zh")
-    ? "https://github.com/Wei-Shaw/sub2api/blob/main/docs/PAYMENT_CN.md"
-    : "https://github.com/Wei-Shaw/sub2api/blob/main/docs/PAYMENT.md",
+  sanitizeUrl(appStore.cachedPublicSettings?.doc_url || appStore.docUrl || ""),
 );
 
-const paymentMethodsHref = computed(() =>
-  locale.value.startsWith("zh")
-    ? "https://github.com/Wei-Shaw/sub2api/blob/main/docs/PAYMENT_CN.md#支持的支付方式"
-    : "https://github.com/Wei-Shaw/sub2api/blob/main/docs/PAYMENT.md#supported-payment-methods",
-);
+const paymentMethodsHref = computed(() => paymentGuideHref.value);
 
 type SettingsTab =
   | "general"
@@ -9115,22 +9112,22 @@ function defaultLoginAgreementDocuments(): LoginAgreementDocument[] {
   return [
     {
       id: "terms",
-      title: localText("服务条款", "Terms of Service"),
+      title: localText("Starbridge AI 服务条款", "Starbridge AI Terms of Service"),
       content_md: "",
     },
     {
       id: "usage-policy",
-      title: localText("使用政策", "Usage Policy"),
+      title: localText("Starbridge AI 使用政策", "Starbridge AI Usage Policy"),
       content_md: "",
     },
     {
       id: "supported-regions",
-      title: localText("支持的国家和地区", "Supported Countries and Regions"),
+      title: localText("Starbridge AI 支持的国家和地区", "Starbridge AI Supported Countries and Regions"),
       content_md: "",
     },
     {
       id: "service-specific-terms",
-      title: localText("服务特定条款", "Service-Specific Terms"),
+      title: localText("Starbridge AI 服务特定条款", "Starbridge AI Service-Specific Terms"),
       content_md: "",
     },
   ];
@@ -9623,7 +9620,7 @@ const form = reactive<SettingsForm>({
   default_user_rpm_limit: 0,
   site_name: "Starbridge AI",
   site_logo: "",
-  site_subtitle: "Subscription to API Conversion Platform",
+  site_subtitle: "Multi-model AI API Gateway",
   api_base_url: "",
   contact_info: "",
   doc_url: "",
@@ -11149,6 +11146,20 @@ async function saveSettings() {
         ),
       );
       return;
+    }
+    if (form.login_agreement_enabled) {
+      const emptyContentDocument = normalizedLoginAgreementDocuments.find(
+        (doc) => !doc.content_md,
+      );
+      if (emptyContentDocument) {
+        appStore.showError(
+          localText(
+            `启用登录条款确认时，文档「${emptyContentDocument.title}」必须填写正文。`,
+            `Document "${emptyContentDocument.title}" must contain content when login agreement is enabled.`,
+          ),
+        );
+        return;
+      }
     }
     const duplicateLoginAgreementDocumentId =
       findDuplicateLoginAgreementDocumentId(normalizedLoginAgreementDocuments);

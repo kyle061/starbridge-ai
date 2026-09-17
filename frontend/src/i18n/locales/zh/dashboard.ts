@@ -175,7 +175,7 @@ export default {
         authModeEnvKey: '环境变量',
         authModeApiKey: '密钥写入配置（推荐）',
         authModeApiKeyRestartNotice: '保存此配置后，必须完全退出并重启 Codex Desktop 或 CLI，然后新建 task，让客户端重新构建工具注册表。',
-        configTomlEnvKeyHint: '此配置从 SUB2API_API_KEY 读取密钥，需要额外设置环境变量。',
+        configTomlEnvKeyHint: '此配置从 STARBRIDGE_API_KEY 读取密钥，需要额外设置环境变量。',
         configTomlHint: '单文件配置已包含 API Key；请妥善保管且不要提交到代码仓库。',
         note: '将 config.toml 保存到 ~/.codex 后重启 Codex 即可。默认密钥已在这个文件中；只有选择「环境变量」模式时才需要额外运行命令。',
         noteWindows:
@@ -206,9 +206,9 @@ export default {
       },
       grok: {
         description:
-          '配置 Grok CLI、Claude Code、Codex 或 OpenCode，让请求通过当前 Sub2API Grok 分组发送。文本模型走 Responses；图片/视频使用 Imagine 模型 ID 与媒体端点。',
-        claudeDescription: '配置 Claude Code，让 Messages API 请求通过当前 Sub2API Grok 分组发送。',
-        codexDescription: '配置 Codex，让 Responses API 请求通过当前 Sub2API Grok 分组发送。',
+          '配置 Grok CLI、Claude Code、Codex 或 OpenCode，让请求通过当前 Starbridge AI Grok 分组发送。文本模型走 Responses；图片/视频使用 Imagine 模型 ID 与媒体端点。',
+        claudeDescription: '配置 Claude Code，让 Messages API 请求通过当前 Starbridge AI Grok 分组发送。',
+        codexDescription: '配置 Codex，让 Responses API 请求通过当前 Starbridge AI Grok 分组发送。',
         configTomlHint:
           '官方路径：~/.grok/config.toml（或 $GROK_HOME）。请填写 [endpoints]（models_base_url / models_list_url / xai_api_base_url / cli_chat_proxy_base_url）、[auth] preferred_method=api_key、[models]、[session]、[features] 图片/视频覆盖。优先 env_key，勿硬编码 api_key；文本模型必须 api_backend=responses。合并前备份，保存后运行 grok inspect。',
         codexConfigTomlHint:
