@@ -35,7 +35,17 @@ func clientRequestedModel(c *gin.Context, fallback string) string {
 }
 
 func clientRequestedUsageFields(c *gin.Context, mapping service.ChannelMappingResult, fallbackModel, upstreamModel string) service.ChannelUsageFields {
-	return mapping.ToUsageFields(clientRequestedModel(c, fallbackModel), upstreamModel)
+	requestedModel := clientRequestedModel(c, fallbackModel)
+	fields := mapping.ToUsageFields(requestedModel, upstreamModel)
+	if fields.ModelMappingChain == "" && c != nil && c.Request != nil {
+		// Composite routes are meaningful even when the public and upstream model
+		// IDs are identical, so keep the explicit route visible in usage records.
+		if publicModel, ok := service.RequestedPublicModelFromContext(c.Request.Context()); ok &&
+			strings.TrimSpace(publicModel) != "" && strings.TrimSpace(upstreamModel) != "" {
+			fields.ModelMappingChain = strings.TrimSpace(publicModel) + "→" + strings.TrimSpace(upstreamModel)
+		}
+	}
+	return fields
 }
 
 func runContentModeration(c *gin.Context, reqLog *zap.Logger, svc *service.ContentModerationService, apiKey *service.APIKey, subject middleware2.AuthSubject, protocol string, model string, body []byte) *service.ContentModerationDecision {
