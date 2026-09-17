@@ -12436,7 +12436,15 @@ function getProviderVisibleMethods(
       });
     }
   } else if (provider.provider_key === "easypay") {
-    supportedTypes.forEach(addMethod);
+    const normalizedTypes = supportedTypes
+      .map((type) => type.trim().toLowerCase())
+      .filter(Boolean);
+    if (normalizedTypes.length === 0 || (normalizedTypes.length === 1 && normalizedTypes[0] === "easypay")) {
+      methods.add("alipay");
+      methods.add("wxpay");
+    } else {
+      supportedTypes.forEach(addMethod);
+    }
   }
 
   return Array.from(methods);

@@ -45,6 +45,16 @@ func enabledVisibleMethodsForProvider(providerKey, supportedTypes string) []stri
 			}
 		}
 	case payment.TypeEasyPay:
+		// Older EasyPay records used the provider key itself ("easypay") as
+		// supported_types. Migration 101 removed that provider key and left
+		// some records empty. EasyPay's built-in protocol supports both of the
+		// user-facing methods, so keep those legacy records usable until the
+		// repair migration has been applied.
+		if strings.TrimSpace(supportedTypes) == "" || strings.EqualFold(strings.TrimSpace(supportedTypes), payment.TypeEasyPay) {
+			addMethod(payment.TypeAlipay)
+			addMethod(payment.TypeWxpay)
+			break
+		}
 		for _, supportedType := range splitTypes(supportedTypes) {
 			addMethod(supportedType)
 		}

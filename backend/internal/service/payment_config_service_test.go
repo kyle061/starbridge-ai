@@ -327,6 +327,7 @@ func TestBuildVisibleMethodSourceAvailability(t *testing.T) {
 	instances := []*dbent.PaymentProviderInstance{
 		{ProviderKey: payment.TypeAlipay, SupportedTypes: "alipay"},
 		{ProviderKey: payment.TypeEasyPay, SupportedTypes: "wxpay_direct, alipay"},
+		{ProviderKey: payment.TypeEasyPay, SupportedTypes: ""},
 		{ProviderKey: payment.TypeWxpay, SupportedTypes: "wxpay_direct"},
 	}
 

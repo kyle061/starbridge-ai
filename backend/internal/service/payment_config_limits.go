@@ -235,7 +235,7 @@ func pcGroupByPaymentType(instances []*dbent.PaymentProviderInstance) map[string
 			add(payment.TypeStripe, inst)
 			continue
 		}
-		for _, t := range splitTypes(inst.SupportedTypes) {
+		for _, t := range enabledVisibleMethodsForProvider(inst.ProviderKey, inst.SupportedTypes) {
 			add(t, inst)
 		}
 	}

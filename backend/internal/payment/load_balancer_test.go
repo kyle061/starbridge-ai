@@ -98,6 +98,22 @@ func TestInstanceSupportsType(t *testing.T) {
 	}
 }
 
+func TestInstanceSupportsPaymentTypeRepairsLegacyEasyPayValue(t *testing.T) {
+	t.Parallel()
+
+	inst := testInstance(1, TypeEasyPay, "")
+	inst.SupportedTypes = TypeEasyPay
+	if !instanceSupportsPaymentType(inst, TypeAlipay) {
+		t.Fatal("legacy EasyPay value should support alipay")
+	}
+	if !instanceSupportsPaymentType(inst, TypeWxpay) {
+		t.Fatal("legacy EasyPay value should support wxpay")
+	}
+	if instanceSupportsPaymentType(inst, TypeStripe) {
+		t.Fatal("legacy EasyPay value should not support stripe")
+	}
+}
+
 func TestGetInstanceChannelLimitsFallsBackToLegacyDirectAliases(t *testing.T) {
 	t.Parallel()
 

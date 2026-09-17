@@ -672,9 +672,17 @@ function reset(defaultKey: string) {
 function loadProvider(provider: ProviderInstance) {
   form.name = provider.name
   form.provider_key = provider.provider_key
-  form.supported_types = Array.isArray(provider.supported_types)
+  const storedSupportedTypes = Array.isArray(provider.supported_types)
     ? [...provider.supported_types]
     : []
+  // Older EasyPay records used the provider key as the supported type, and
+  // migration 101 could leave that list empty. Show the built-in methods so
+  // an existing instance remains editable and usable after an upgrade.
+  form.supported_types = provider.provider_key === 'easypay' && (
+    storedSupportedTypes.length === 0 || storedSupportedTypes.length === 1 && storedSupportedTypes[0] === 'easypay'
+  )
+    ? [...(PROVIDER_SUPPORTED_TYPES[provider.provider_key] || [])]
+    : storedSupportedTypes
   form.enabled = provider.enabled
   // Coerce to a valid value for this provider. Guards against stale data
   // (e.g. "popup" written by an older client) showing up as an unselected

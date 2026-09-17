@@ -537,3 +537,13 @@ func TestGetAvailableMethodLimitsPreservesLegacyCrossProviderBehaviorWhenVisible
 	require.Equal(t, 10.0, resp.GlobalMin)
 	require.Equal(t, 400.0, resp.GlobalMax)
 }
+
+func TestPcGroupByPaymentTypeRepairsLegacyEmptyEasyPayMethods(t *testing.T) {
+	groups := pcGroupByPaymentType([]*dbent.PaymentProviderInstance{
+		makeInstance(1, payment.TypeEasyPay, "", ""),
+	})
+
+	require.Len(t, groups[payment.TypeAlipay], 1)
+	require.Len(t, groups[payment.TypeWxpay], 1)
+	require.Same(t, groups[payment.TypeAlipay][0], groups[payment.TypeWxpay][0])
+}

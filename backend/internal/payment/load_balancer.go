@@ -144,7 +144,7 @@ func (lb *DefaultLoadBalancer) queryEnabledInstances(
 			if inst.ProviderKey == TypeStripe {
 				matched = append(matched, inst)
 			}
-		} else if InstanceSupportsType(inst.SupportedTypes, paymentType) {
+		} else if instanceSupportsPaymentType(inst, paymentType) {
 			if expectedWxpayJSAPIAppID != "" && normalizeVisibleMethodSupportType(paymentType) == TypeWxpay && inst.ProviderKey == TypeWxpay {
 				config, cfgErr := lb.decryptConfig(inst.Config)
 				if cfgErr != nil {
@@ -162,6 +162,21 @@ func (lb *DefaultLoadBalancer) queryEnabledInstances(
 		return nil, fmt.Errorf("no enabled instance for payment type %s", paymentType)
 	}
 	return matched, nil
+}
+
+// instanceSupportsPaymentType keeps legacy EasyPay records usable while the
+// repair migration is being applied. Older records may store the provider key
+// itself ("easypay") in supported_types; that value represents EasyPay's two
+// built-in visible methods, not a standalone payment method.
+func instanceSupportsPaymentType(inst *dbent.PaymentProviderInstance, paymentType PaymentType) bool {
+	if inst != nil && strings.EqualFold(strings.TrimSpace(inst.ProviderKey), TypeEasyPay) &&
+		strings.EqualFold(strings.TrimSpace(inst.SupportedTypes), TypeEasyPay) {
+		switch normalizeVisibleMethodSupportType(paymentType) {
+		case TypeAlipay, TypeWxpay:
+			return true
+		}
+	}
+	return inst != nil && InstanceSupportsType(inst.SupportedTypes, paymentType)
 }
 
 // attachDailyUsage queries daily usage for each instance in a single pass.
