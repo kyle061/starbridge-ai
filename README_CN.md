@@ -59,5 +59,4 @@ docker compose up -d --build
 
 - [星桥部署与接入指南](docs/STARBRIDGE.md)
 - [支付配置指南](docs/PAYMENT_CN.md)
-- [支付研究记录](docs/AILINK_PAYMENT_RESEARCH_CN.md)
 - [管理员合规承诺](docs/legal/admin-compliance.zh.md)
