@@ -139,6 +139,24 @@ describe('PaymentProviderDialog payment guide', () => {
     expect(wrapper.text()).toContain('/api/v1/payment/webhook/stripe')
   })
 
+  it('accepts a classic EasyPay merchant key without RSA keys', async () => {
+    const wrapper = mountDialog()
+
+    ;(wrapper.vm as unknown as { reset: (key: string) => void }).reset('easypay')
+    await nextTick()
+
+    const textInputs = wrapper.findAll('input[type="text"]')
+    await textInputs[0].setValue('Classic EasyPay')
+    await textInputs[1].setValue('pid-123')
+    await wrapper.find('input[type="password"]').setValue('merchant-key')
+    await wrapper.find('form').trigger('submit.prevent')
+
+    const payload = wrapper.emitted('save')?.[0]?.[0] as { config: Record<string, string> }
+    expect(payload.config.pkey).toBe('merchant-key')
+    expect(payload.config.privateKey).toBeUndefined()
+    expect(payload.config.publicKey).toBeUndefined()
+  })
+
   it('emits an empty Airwallex accountId when the admin clears it', async () => {
     const provider = providerFactory({
       config: {

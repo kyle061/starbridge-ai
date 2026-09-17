@@ -127,8 +127,12 @@ export const PROVIDER_CALLBACK_PATHS: Record<string, CallbackPaths> = {
 export const PROVIDER_CONFIG_FIELDS: Record<string, ConfigFieldDef[]> = {
   easypay: [
     { key: 'pid', label: 'PID', sensitive: false },
-    { key: 'privateKey', label: '', sensitive: true },
-    { key: 'publicKey', label: '', sensitive: true },
+    // EasyPay has two compatible signing protocols. The RSA fields are used by
+    // ezfp-style gateways, while pkey is used by the widely deployed classic
+    // submit.php/mapi.php MD5 gateways.
+    { key: 'privateKey', label: '', sensitive: true, optional: true },
+    { key: 'publicKey', label: '', sensitive: true, optional: true },
+    { key: 'pkey', label: '', sensitive: true, optional: true },
     { key: 'apiBase', label: '', sensitive: false, defaultValue: 'https://www.ezfp.cn', hintKey: 'admin.settings.payment.field_ezfpApiBaseHint' },
     { key: 'cidAlipay', label: '', sensitive: false, optional: true },
     { key: 'cidWxpay', label: '', sensitive: false, optional: true },

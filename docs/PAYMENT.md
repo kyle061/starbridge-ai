@@ -105,8 +105,13 @@ Each provider type requires different credentials. Select the type when adding a
 
 ### EasyPay
 
-Built-in integration targets the ezfp.cn RSA API and exposes Alipay and WeChat Pay only.
-Enter the provider root URL, for example `https://www.ezfp.cn`; the integration calls:
+The built-in integration exposes Alipay and WeChat Pay and supports both common
+EasyPay-compatible protocols:
+
+- **ezfp RSA** — configure the merchant private key and provider public key
+- **Classic MD5** — configure the merchant Key for gateways exposing `submit.php`, `mapi.php`, and `api.php`
+
+Enter the provider root URL, for example `https://www.ezfp.cn` or your actual EasyPay address; do not enter a specific endpoint path. The integration calls:
 
 - Hosted payment: `POST/GET /api/pay/submit`
 - Create payment: `POST /api/pay/create`
@@ -114,17 +119,20 @@ Enter the provider root URL, for example `https://www.ezfp.cn`; the integration 
 - Refund: `POST /api/pay/refund`
 - Query refund: `POST /api/pay/refundquery`
 
-Requests and callbacks use `SHA256WithRSA`. The merchant private key signs requests; the provider public key verifies responses and notifications. The success code is `code=0`.
+RSA requests and callbacks use `SHA256WithRSA`: the merchant private key signs requests and the provider public key verifies responses and notifications. Classic gateways use an `MD5` merchant Key instead. RSA uses success code `code=0`; classic gateways use `code=1`.
 
 | Parameter | Description | Required |
 |-----------|-------------|----------|
 | **Merchant ID (PID)** | EasyPay merchant ID | Yes |
-| **Merchant Private Key** | RSA private key in PEM format | Yes |
-| **Provider Public Key** | PEM public key used to verify responses and notifications | Yes |
+| **Merchant Private Key** | RSA private key in PEM format; required for RSA | Conditional |
+| **Provider Public Key** | PEM public key used to verify responses and notifications; required for RSA | Conditional |
+| **Merchant Key** | Merchant secret for the classic MD5 protocol; mutually exclusive with RSA | Conditional |
 | **API Base URL** | Provider root URL, such as `https://www.ezfp.cn` | Yes |
 | **Alipay/WeChat Channel ID** | ezfp `channel_id`; leave empty when not onboarded | No |
 
 The supported visible methods are `alipay` and `wxpay`. QR Code mode uses the create endpoint; redirect mode uses the hosted submit endpoint. The webhook accepts GET or POST and credits an order only after validating `sign`, `pid`, and `trade_status=TRADE_SUCCESS`.
+
+If your provider gives you only a PID, Key, and gateway address, enter the Key in the **Merchant Key** field and leave the RSA fields empty. Balance recharge then calls the classic `/mapi.php` API and credits the user after the `/api/v1/payment/webhook/easypay` callback is verified.
 
 ### Alipay (Direct)
 

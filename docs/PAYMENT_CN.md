@@ -113,8 +113,12 @@ Starbridge AI 内置支付系统，支持用户自助充值，无需部署独立
 
 ### EasyPay（易支付）
 
-内置兼容 ezfp.cn 官方 RSA 接口的易支付接入，只开放支付宝和微信支付。
-API 基础地址填写服务商根地址，例如 `https://www.ezfp.cn`；系统会自动调用：
+内置易支付接入，只开放支付宝和微信支付，兼容两类常见协议：
+
+- **ezfp RSA 协议**：填写商户私钥和服务商公钥
+- **传统 MD5 协议**：填写商户密钥（Key），适用于提供 `submit.php` / `mapi.php` / `api.php` 的易支付站点
+
+API 基础地址填写服务商根地址，例如 `https://www.ezfp.cn` 或你实际使用的易支付地址；不要填写具体接口路径。系统会按协议自动调用：
 
 - 页面跳转支付：`POST/GET /api/pay/submit`
 - 统一下单：`POST /api/pay/create`
@@ -122,17 +126,20 @@ API 基础地址填写服务商根地址，例如 `https://www.ezfp.cn`；系统
 - 订单退款：`POST /api/pay/refund`
 - 退款查询：`POST /api/pay/refundquery`
 
-请求和回调使用 `SHA256WithRSA`。商户私钥用于请求签名，服务商公钥用于验签；接口成功码为 `code=0`。
+RSA 协议的请求和回调使用 `SHA256WithRSA`，商户私钥用于请求签名，服务商公钥用于验签；传统协议使用 `MD5` 商户密钥签名。RSA 接口成功码为 `code=0`，传统接口成功码为 `code=1`。
 
 | 参数 | 说明 | 必填 |
 |------|------|------|
 | **商户 ID（PID）** | EasyPay 商户 ID | 是 |
-| **商户私钥（Private Key）** | RSA 私钥，PEM 格式 | 是 |
-| **服务商公钥（Public Key）** | 用于校验接口返回和异步通知，PEM 格式 | 是 |
+| **商户私钥（Private Key）** | RSA 私钥，PEM 格式；RSA 协议必填 | 条件 |
+| **服务商公钥（Public Key）** | 用于校验接口返回和异步通知，PEM 格式；RSA 协议必填 | 条件 |
+| **商户密钥（Key）** | 传统 MD5 协议的商户密钥；与 RSA 二选一 | 条件 |
 | **API 地址** | 服务商根地址，例如 `https://www.ezfp.cn` | 是 |
 | **支付宝/微信通道 ID** | 对应 ezfp 的 `channel_id`，未进件时留空 | 否 |
 
 易支付支持的可见方式为 `alipay` 和 `wxpay`。二维码模式调用统一下单接口，跳转模式调用页面跳转接口。异步通知地址使用 `GET` 或 `POST` 均可，系统会校验 `sign`、`pid`、`trade_status=TRADE_SUCCESS` 后再入账。
+
+如果你的服务商后台只提供 PID、Key 和接口地址，请在服务商配置中填写 **商户密钥（Key）**，RSA 私钥和公钥留空；余额充值会调用传统的 `/mapi.php` API，支付完成后通过 `/api/v1/payment/webhook/easypay` 回调自动入账。
 
 ### 支付宝官方
 

@@ -594,6 +594,22 @@ function handleSave() {
     }
   }
 
+  // EasyPay supports both the ezfp RSA protocol and the classic MD5 protocol.
+  // Keep the choice implicit so existing provider records remain compatible:
+  // a new provider must supply either both RSA keys or the classic merchant key.
+  // On edits, reject only a partially entered RSA pair; blank sensitive fields
+  // are intentionally allowed so the backend can preserve existing secrets.
+  if (form.provider_key === 'easypay') {
+    const privateKey = (config.privateKey || '').trim()
+    const publicKey = (config.publicKey || '').trim()
+    const pkey = (config.pkey || '').trim()
+    if ((!props.editing && !pkey && !(privateKey && publicKey)) ||
+      ((privateKey && !publicKey) || (!privateKey && publicKey))) {
+      emitValidationError(t('admin.settings.payment.validationEasyPaySigningRequired'))
+      return
+    }
+  }
+
   const clearableConfigKeys = new Set(
     (PROVIDER_CONFIG_FIELDS[form.provider_key] || [])
       .filter(field => field.clearable)
