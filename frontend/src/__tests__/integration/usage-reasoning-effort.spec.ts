@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent } from 'vue'
+import { createPinia } from 'pinia'
 
 import UserUsageView from '@/views/user/UsageView.vue'
 import AdminUsageView from '@/views/admin/UsageView.vue'
@@ -248,7 +249,10 @@ describe('usage reasoning effort page display', () => {
 
   it('user usage page only shows the requested reasoning effort', async () => {
     const wrapper = mount(UserUsageView, {
-      global: { stubs: sharedPageStubs },
+      global: {
+        plugins: [createPinia()],
+        stubs: sharedPageStubs,
+      },
     })
     await flushPromises()
 
@@ -262,6 +266,7 @@ describe('usage reasoning effort page display', () => {
   it('admin usage page shows requested and mapped effort after the column is enabled', async () => {
     const wrapper = mount(AdminUsageView, {
       global: {
+        plugins: [createPinia()],
         stubs: {
           ...sharedPageStubs,
           UsageFilters: adminFiltersStub,
@@ -297,6 +302,7 @@ describe('usage reasoning effort page display', () => {
 
     const wrapper = mount(AdminUsageView, {
       global: {
+        plugins: [createPinia()],
         stubs: {
           ...sharedPageStubs,
           UsageFilters: adminFiltersStub,
