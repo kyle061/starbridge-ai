@@ -95,8 +95,8 @@ func TestParsePaymentConfig(t *testing.T) {
 	t.Run("empty vals uses defaults", func(t *testing.T) {
 		t.Parallel()
 		cfg := svc.parsePaymentConfig(map[string]string{})
-		if !cfg.BalanceDisabled {
-			t.Fatal("expected balance recharge to be closed by default")
+		if cfg.BalanceDisabled {
+			t.Fatal("expected balance recharge to be open by default")
 		}
 		if cfg.Enabled {
 			t.Fatal("expected Enabled=false by default")
@@ -561,9 +561,13 @@ func paymentConfigStrPtr(value string) *string {
 func TestPaymentRechargePreviewRejectsNewOrdersUntilEnabled(t *testing.T) {
 	ctx := context.Background()
 	configService := &PaymentConfigService{settingRepo: &paymentConfigSettingRepoStub{
-		values: map[string]string{SettingPaymentEnabled: "true"},
+		values: map[string]string{
+			SettingPaymentEnabled:     "true",
+			SettingBalancePayDisabled: "true",
+		},
 	}}
-	// No user repository or provider: closure must happen before checkout work.
+	// An explicit disable must reject before checkout work; the missing setting
+	// path is covered by the parser default test above.
 	svc := &PaymentService{configService: configService}
 	for _, orderType := range []string{"", payment.OrderTypeBalance} {
 		_, err := svc.CreateOrder(ctx, CreateOrderRequest{UserID: 1, Amount: 10, OrderType: orderType})
