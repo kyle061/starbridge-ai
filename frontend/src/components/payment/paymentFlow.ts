@@ -151,10 +151,21 @@ export function decidePaymentLaunch(
   context: PaymentLaunchContext,
 ): PaymentLaunchDecision {
   const visibleMethod = normalizeVisibleMethod(context.visibleMethod) || context.visibleMethod
+  const responsePaymentMode = (result.payment_mode || '').trim().toLowerCase()
+  const qrCapableMethod = visibleMethod === 'alipay' || visibleMethod === 'wxpay'
+  // Some EasyPay-compatible gateways return the hosted payment URL even when
+  // qrcode mode is selected. It is still a valid QR payload, so preserve the
+  // QR checkout instead of leaving the user with an empty/unhandled state.
+  const qrCode = result.qr_code || (
+    qrCapableMethod
+      && (responsePaymentMode === 'qrcode' || responsePaymentMode === 'native' || context.forceQRCode === true)
+      ? result.pay_url || ''
+      : ''
+  )
   const baseState = createPaymentRecoverySnapshot({
     orderId: result.order_id,
     amount: result.amount,
-    qrCode: result.qr_code || '',
+    qrCode,
     expiresAt: result.expires_at || '',
     paymentType: visibleMethod,
     payUrl: result.pay_url || '',
@@ -222,7 +233,7 @@ export function decidePaymentLaunch(
     : context.isMobile
   const prefersRedirect = normalizedPaymentMode === 'redirect'
     || normalizedPaymentMode === 'popup'
-    || (effectiveMobile && !!baseState.payUrl)
+    || (effectiveMobile && !!baseState.payUrl && normalizedPaymentMode !== 'qrcode' && normalizedPaymentMode !== 'native')
   const prefersQr = normalizedPaymentMode === 'qrcode'
     || normalizedPaymentMode === 'native'
     || (!prefersRedirect && !!baseState.qrCode)

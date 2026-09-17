@@ -185,6 +185,32 @@ describe('PaymentStatusPanel', () => {
     expect(wrapper.emitted('success')).toHaveLength(1)
   })
 
+  it('continues provider reconciliation beyond the initial retry window', async () => {
+    pollOrderStatus.mockResolvedValue(orderFactory('PENDING'))
+    verifyOrder.mockResolvedValue({ data: orderFactory('PENDING') })
+
+    const wrapper = mount(PaymentStatusPanel, {
+      props: {
+        orderId: 42,
+        qrCode: 'https://pay.example.com/qr/42',
+        expiresAt: '2099-01-01T12:30:00Z',
+        paymentType: 'alipay',
+        orderType: 'subscription',
+      },
+      global: {
+        stubs: { Icon: true },
+      },
+    })
+
+    await flushPromises()
+    await vi.advanceTimersByTimeAsync(120000)
+    await flushPromises()
+
+    expect(verifyOrder.mock.calls.length).toBeGreaterThan(6)
+    expect(wrapper.emitted('success')).toBeUndefined()
+    wrapper.unmount()
+  })
+
   it('actively verifies a pending mobile Alipay precreate order', async () => {
     const originalLocation = window.location
     const originalHidden = Object.getOwnPropertyDescriptor(document, 'hidden')

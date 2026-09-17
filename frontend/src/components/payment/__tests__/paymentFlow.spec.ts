@@ -189,6 +189,33 @@ describe('decidePaymentLaunch', () => {
     expect(decision.paymentState.qrCode).toBe('https://pay.example.com/qr/session')
   })
 
+  it('uses the hosted URL as a QR payload when qrcode mode has no qr_code field', () => {
+    const decision = decidePaymentLaunch(createOrderResult({
+      pay_url: 'https://pay.example.com/checkout/session',
+      payment_mode: 'qrcode',
+    }), {
+      visibleMethod: 'wxpay',
+      orderType: 'subscription',
+      isMobile: false,
+    })
+
+    expect(decision.kind).toBe('qr_waiting')
+    expect(decision.paymentState.qrCode).toBe('https://pay.example.com/checkout/session')
+  })
+
+  it('keeps qrcode mode on mobile instead of overriding it with a redirect', () => {
+    const decision = decidePaymentLaunch(createOrderResult({
+      pay_url: 'https://pay.example.com/checkout/session',
+      payment_mode: 'qrcode',
+    }), {
+      visibleMethod: 'alipay',
+      orderType: 'subscription',
+      isMobile: true,
+    })
+
+    expect(decision.kind).toBe('qr_waiting')
+  })
+
   it('returns wechat oauth launch when backend requires in-app authorization', () => {
     const decision = decidePaymentLaunch(createOrderResult({
       result_type: 'oauth_required',

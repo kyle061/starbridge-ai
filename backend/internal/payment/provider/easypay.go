@@ -543,11 +543,16 @@ func (e *EasyPay) queryEzfpOrder(ctx context.Context, tradeNo string) (*payment.
 		}, nil
 	}
 	status := payment.ProviderStatusPending
-	switch response["status"] {
-	case "1":
+	queryStatus := strings.ToUpper(strings.TrimSpace(response["status"]))
+	tradeStatus := strings.ToUpper(strings.TrimSpace(response["trade_status"]))
+	switch queryStatus {
+	case "1", "PAID", "TRADE_SUCCESS":
 		status = payment.ProviderStatusPaid
-	case "2":
+	case "2", "REFUNDED", "TRADE_REFUND":
 		status = payment.ProviderStatusRefunded
+	}
+	if tradeStatus == tradeStatusSuccess {
+		status = payment.ProviderStatusPaid
 	}
 	responseTradeNo := strings.TrimSpace(response["trade_no"])
 	if responseTradeNo == "" {

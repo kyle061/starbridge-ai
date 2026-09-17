@@ -284,12 +284,10 @@ const outcome = ref<PaymentOutcome | null>(null)
 
 let pollTimer: ReturnType<typeof setInterval> | null = null
 let countdownTimer: ReturnType<typeof setInterval> | null = null
-let verifyAttempts = 0
 let lastVerifyAt = 0
 let alipayLauncher: AlipayDeepLinkLauncher | null = null
 
 const VERIFY_RETRY_INTERVAL_MS = 15000
-const VERIFY_RETRY_MAX_ATTEMPTS = 6
 
 const isAlipay = computed(() => isBuiltInAlipayMethod(props.paymentType))
 const isWxpay = computed(() => isBuiltInWxpayMethod(props.paymentType))
@@ -340,7 +338,8 @@ function formatGatewayAmount(value: number, currency?: string | null): string {
 }
 
 function isSuccessStatus(status: string | null | undefined): boolean {
-  return status === 'COMPLETED' || status === 'PAID' || status === 'RECHARGING'
+  const normalized = String(status || '').trim().toUpperCase()
+  return normalized === 'COMPLETED' || normalized === 'PAID' || normalized === 'RECHARGING'
 }
 
 function reopenPopup() {
@@ -399,12 +398,14 @@ async function tryRecoverPendingOrder(order: PaymentOrder): Promise<PaymentOrder
   const normalizedStatus = String(order.status || '').trim().toUpperCase()
   if (normalizedStatus !== 'PENDING') return order
   const now = Date.now()
-  if (verifyAttempts >= VERIFY_RETRY_MAX_ATTEMPTS || now - lastVerifyAt < VERIFY_RETRY_INTERVAL_MS) {
+  // Keep reconciling until the order reaches a terminal state or the countdown
+  // expires. Webhook delivery can be delayed beyond the first minute, and the
+  // backend verify endpoint also performs the provider-side fulfillment.
+  if (now - lastVerifyAt < VERIFY_RETRY_INTERVAL_MS) {
     return order
   }
 
   lastVerifyAt = now
-  verifyAttempts += 1
   try {
     const result = await paymentAPI.verifyOrder(outTradeNo)
     return result.data ?? order
@@ -431,10 +432,10 @@ async function pollStatus() {
       paidOrder.value = order
       setOutcome('success')
       emit('success')
-    } else if (order.status === 'CANCELLED') {
+    } else if (String(order.status || '').trim().toUpperCase() === 'CANCELLED') {
       cleanup()
       setOutcome('cancelled')
-    } else if (order.status === 'EXPIRED' || order.status === 'FAILED') {
+    } else if (['EXPIRED', 'FAILED'].includes(String(order.status || '').trim().toUpperCase())) {
       cleanup()
       setOutcome('expired')
     }
@@ -477,7 +478,6 @@ function cleanup() {
 
 // Initialize on mount
 qrUrl.value = props.qrCode
-verifyAttempts = 0
 lastVerifyAt = 0
 let seconds = 30 * 60
 if (props.expiresAt) {
