@@ -329,7 +329,7 @@ func compositeRouteCandidatesForSelection(ctx context.Context, openAICompatible 
 		}
 		filtered = append(filtered, candidate)
 	}
-	if len(filtered) < 2 {
+	if len(filtered) < 2 && !(gpt6FinalExecution && len(filtered) > 0) {
 		return nil
 	}
 	return filtered
