@@ -335,7 +335,7 @@ func (s *CRSSyncService) SyncFromCRS(ctx context.Context, input SyncFromCRSInput
 			credentials["intercept_warmup_requests"] = false
 		}
 		priority := clampPriority(src.Priority)
-		concurrency := 3
+		concurrency := DefaultAccountConcurrency
 		status := mapCRSStatus(src.IsActive, src.Status)
 
 		// 🔧 Preserve all CRS extra fields and add sync metadata
@@ -480,7 +480,7 @@ func (s *CRSSyncService) SyncFromCRS(ctx context.Context, input SyncFromCRSInput
 
 		credentials := sanitizeCredentialsMap(src.Credentials)
 		priority := clampPriority(src.Priority)
-		concurrency := 3
+		concurrency := DefaultAccountConcurrency
 		if src.MaxConcurrentTasks > 0 {
 			concurrency = src.MaxConcurrentTasks
 		}
@@ -618,7 +618,7 @@ func (s *CRSSyncService) SyncFromCRS(ctx context.Context, input SyncFromCRSInput
 			}
 		}
 		priority := clampPriority(src.Priority)
-		concurrency := 3
+		concurrency := DefaultAccountConcurrency
 		status := mapCRSStatus(src.IsActive, src.Status)
 
 		// 🔧 Preserve all CRS extra fields and add sync metadata
@@ -776,7 +776,7 @@ func (s *CRSSyncService) SyncFromCRS(ctx context.Context, input SyncFromCRSInput
 
 		credentials := sanitizeCredentialsMap(src.Credentials)
 		priority := clampPriority(src.Priority)
-		concurrency := 3
+		concurrency := DefaultAccountConcurrency
 		status := mapCRSStatus(src.IsActive, src.Status)
 
 		extra := make(map[string]any, len(src.Extra)+3)
@@ -957,7 +957,7 @@ func (s *CRSSyncService) SyncFromCRS(ctx context.Context, input SyncFromCRSInput
 				Credentials: credentials,
 				Extra:       extra,
 				ProxyID:     proxyID,
-				Concurrency: 3,
+				Concurrency: DefaultAccountConcurrency,
 				Priority:    clampPriority(src.Priority),
 				Status:      mapCRSStatus(src.IsActive, src.Status),
 				Schedulable: src.Schedulable,
@@ -1087,7 +1087,7 @@ func (s *CRSSyncService) SyncFromCRS(ctx context.Context, input SyncFromCRSInput
 				Credentials: credentials,
 				Extra:       extra,
 				ProxyID:     proxyID,
-				Concurrency: 3,
+				Concurrency: DefaultAccountConcurrency,
 				Priority:    clampPriority(src.Priority),
 				Status:      mapCRSStatus(src.IsActive, src.Status),
 				Schedulable: src.Schedulable,

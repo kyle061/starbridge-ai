@@ -89,6 +89,10 @@ type Account struct {
 	compositeRouteUpstreamModel  string
 }
 
+// DefaultAccountConcurrency is the default request concurrency for newly
+// created upstream accounts when the caller does not provide an override.
+const DefaultAccountConcurrency = 10
+
 type OpenAIEndpointCapability string
 
 const openAILongContextBillingEnabledKey = "openai_long_context_billing_enabled"

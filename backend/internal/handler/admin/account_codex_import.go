@@ -173,7 +173,7 @@ func (h *AccountHandler) importCodexSessions(ctx context.Context, req CodexSessi
 	if req.UpdateExisting != nil {
 		updateExisting = *req.UpdateExisting
 	}
-	concurrency := 3
+	concurrency := service.DefaultAccountConcurrency
 	if req.Concurrency != nil {
 		concurrency = *req.Concurrency
 	}
