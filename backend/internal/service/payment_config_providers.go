@@ -204,12 +204,24 @@ func (s *PaymentConfigService) CreateProviderInstance(ctx context.Context, req C
 		return nil, err
 	}
 	allowUserRefund := req.AllowUserRefund && req.RefundEnabled
-	return s.entClient.PaymentProviderInstance.Create().
+	instance, err := s.entClient.PaymentProviderInstance.Create().
 		SetProviderKey(req.ProviderKey).SetName(req.Name).SetConfig(enc).
 		SetSupportedTypes(typesStr).SetEnabled(req.Enabled).SetPaymentMode(req.PaymentMode).
 		SetSortOrder(req.SortOrder).SetLimits(req.Limits).SetRefundEnabled(req.RefundEnabled).
 		SetAllowUserRefund(allowUserRefund).
 		Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if req.Enabled {
+		if err := s.ensureVisibleMethodRoutingForProvider(ctx, req.ProviderKey, typesStr); err != nil {
+			// Provider creation has already succeeded. Keep it usable and let
+			// checkout-info repair/report the routing on the next request rather
+			// than turning a settings write failure into a misleading create error.
+			slog.Warn("failed to initialize visible payment method routing", "provider", req.ProviderKey, "instance_id", instance.ID, "error", err)
+		}
+	}
+	return instance, nil
 }
 
 func validateProviderRequest(providerKey, name, supportedTypes string) error {
@@ -457,7 +469,16 @@ func (s *PaymentConfigService) UpdateProviderInstance(ctx context.Context, id in
 	if req.PaymentMode != nil {
 		u.SetPaymentMode(*req.PaymentMode)
 	}
-	return u.Save(ctx)
+	updated, err := u.Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if finalEnabled {
+		if err := s.ensureVisibleMethodRoutingForProvider(ctx, current.ProviderKey, nextSupportedTypes); err != nil {
+			slog.Warn("failed to initialize visible payment method routing", "provider", current.ProviderKey, "instance_id", id, "error", err)
+		}
+	}
+	return updated, nil
 }
 
 // GetUserRefundEligibleInstanceIDs returns provider instance IDs that allow user refund.

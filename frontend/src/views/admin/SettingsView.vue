@@ -8299,29 +8299,16 @@
                     </div>
                   </div>
                 </div>
-                <!-- Row 4: Enabled payment types (provider badges like sub2apipay) -->
+                <!-- Legacy provider switch -->
                 <div>
                   <label class="input-label">{{
                     t("admin.settings.payment.enabledPaymentTypes")
                   }}</label>
-                  <div class="mt-1.5 flex flex-wrap gap-2">
-                    <button
-                      v-for="pt in allPaymentTypes"
-                      :key="pt.value"
-                      type="button"
-                      @click="togglePaymentType(pt.value)"
-                      :class="[
-                        'rounded-lg border px-3 py-1.5 text-sm font-medium transition-all',
-                        isPaymentTypeEnabled(pt.value)
-                          ? 'border-primary-500 bg-primary-500 text-white shadow-sm'
-                          : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:border-dark-600 dark:bg-dark-800 dark:text-gray-300 dark:hover:border-dark-500',
-                      ]"
-                    >
-                      {{ pt.label }}
-                    </button>
-                  </div>
                   <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-                    {{ t("admin.settings.payment.enabledPaymentTypesHint") }}
+                    {{ localText(
+                      "服务商是否启用请在下方服务商卡片中单独控制；EasyPay 不再受旧版服务商开关限制。",
+                      "Enable or disable each provider in its card below. EasyPay no longer depends on the legacy provider switch.",
+                    ) }}
                     <a
                       v-if="paymentMethodsHref"
                       :href="paymentMethodsHref"
@@ -8384,8 +8371,7 @@
             v-if="form.payment_enabled"
             :providers="providers"
             :loading="providersLoading"
-            :can-create="hasAnyPaymentTypeEnabled"
-            :enabled-payment-types="form.payment_enabled_types"
+            :can-create="true"
             :all-payment-types="allPaymentTypes"
             :redirect-label="t('admin.settings.payment.easypayRedirect')"
             @refresh="loadProviders"
@@ -8970,7 +8956,6 @@ import { affiliatesAPI, type AffiliateAdminEntry, type SimpleUser as AffiliateSi
 import { extractApiErrorMessage, extractI18nErrorMessage } from "@/utils/apiError";
 import { useAppStore } from "@/stores";
 import { useAdminSettingsStore } from "@/stores/adminSettings";
-import { normalizeVisibleMethod } from "@/components/payment/paymentFlow";
 import { sanitizeUrl } from "@/utils/url";
 import {
   isRegistrationEmailSuffixDomainValid,
@@ -12464,44 +12449,6 @@ const allPaymentTypes = computed(() => [
   { value: "airwallex", label: t("payment.methods.airwallex") },
 ]);
 
-function isPaymentTypeEnabled(type: string): boolean {
-  return form.payment_enabled_types.includes(type);
-}
-
-const hasAnyPaymentTypeEnabled = computed(
-  () => form.payment_enabled_types.length > 0,
-);
-
-function togglePaymentType(type: string) {
-  if (form.payment_enabled_types.includes(type)) {
-    form.payment_enabled_types = form.payment_enabled_types.filter(
-      (t) => t !== type,
-    );
-    // Disable all provider instances matching this type
-    disableProvidersByType(type);
-  } else {
-    form.payment_enabled_types = [...form.payment_enabled_types, type];
-  }
-}
-
-async function disableProvidersByType(type: string) {
-  const matching = providers.value.filter(
-    (p) => p.provider_key === type && p.enabled,
-  );
-  for (const p of matching) {
-    try {
-      await adminAPI.payment.updateProvider(p.id, { enabled: false });
-      p.enabled = false;
-    } catch (err: unknown) {
-      slog("disable provider failed", p.id, err);
-    }
-  }
-}
-
-function slog(...args: unknown[]) {
-  console.warn("[payment]", ...args);
-}
-
 const providersLoading = ref(false);
 const providerSaving = ref(false);
 const providers = ref<ProviderInstance[]>([]);
@@ -12522,8 +12469,10 @@ const providerKeyOptions = computed(() => [
 ]);
 
 const enabledProviderKeyOptions = computed(() => {
-  const enabled = form.payment_enabled_types;
-  return providerKeyOptions.value.filter((opt) => enabled.includes(opt.value));
+  // Provider instances are the source of truth after payment routing was
+  // introduced. The legacy ENABLED_PAYMENT_TYPES setting no longer contains
+  // the `easypay` provider key, so using it here prevents creating EasyPay.
+  return providerKeyOptions.value;
 });
 
 const loadBalanceOptions = computed(() => [
@@ -12556,103 +12505,6 @@ const cancelRateLimitModeOptions = computed(() => [
     label: t("admin.settings.payment.cancelRateLimitWindowModeFixed"),
   },
 ]);
-
-type ProviderEnablementCandidate = Pick<
-  ProviderInstance,
-  "id" | "provider_key" | "supported_types" | "enabled" | "name"
->;
-
-function getProviderVisibleMethods(
-  provider: ProviderEnablementCandidate,
-): Array<"alipay" | "wxpay"> {
-  if (!provider.enabled) {
-    return [];
-  }
-
-  const supportedTypes = Array.isArray(provider.supported_types)
-    ? provider.supported_types
-    : [];
-  const methods = new Set<"alipay" | "wxpay">();
-  const addMethod = (type: string) => {
-    const method = normalizeVisibleMethod(type);
-    if (method === "alipay" || method === "wxpay") {
-      methods.add(method);
-    }
-  };
-
-  if (provider.provider_key === "alipay") {
-    if (supportedTypes.length === 0) {
-      methods.add("alipay");
-    } else {
-      supportedTypes.forEach((type) => {
-        if (normalizeVisibleMethod(type) === "alipay") {
-          methods.add("alipay");
-        }
-      });
-    }
-  } else if (provider.provider_key === "wxpay") {
-    if (supportedTypes.length === 0) {
-      methods.add("wxpay");
-    } else {
-      supportedTypes.forEach((type) => {
-        if (normalizeVisibleMethod(type) === "wxpay") {
-          methods.add("wxpay");
-        }
-      });
-    }
-  } else if (provider.provider_key === "easypay") {
-    const normalizedTypes = supportedTypes
-      .map((type) => type.trim().toLowerCase())
-      .filter(Boolean);
-    if (normalizedTypes.length === 0 || (normalizedTypes.length === 1 && normalizedTypes[0] === "easypay")) {
-      methods.add("alipay");
-      methods.add("wxpay");
-    } else {
-      supportedTypes.forEach(addMethod);
-    }
-  }
-
-  return Array.from(methods);
-}
-
-function findProviderEnablementConflict(
-  candidate: ProviderEnablementCandidate,
-): { method: "alipay" | "wxpay"; conflicting: ProviderInstance } | null {
-  const claimedMethods = getProviderVisibleMethods(candidate);
-  if (claimedMethods.length === 0) {
-    return null;
-  }
-
-  for (const other of providers.value) {
-    if (other.id === candidate.id || !other.enabled) {
-      continue;
-    }
-
-    const otherMethods = getProviderVisibleMethods(other);
-    const matchedMethod = claimedMethods.find((method) =>
-      otherMethods.includes(method),
-    );
-    if (matchedMethod) {
-      return {
-        method: matchedMethod,
-        conflicting: other,
-      };
-    }
-  }
-
-  return null;
-}
-
-function showProviderEnablementConflict(
-  conflict: { method: "alipay" | "wxpay"; conflicting: ProviderInstance },
-) {
-  appStore.showError(
-    t("admin.settings.payment.enableConflict", {
-      method: t(`payment.methods.${conflict.method}`),
-      provider: conflict.conflicting.name,
-    }),
-  );
-}
 
 async function loadProviders() {
   providersLoading.value = true;
@@ -12691,21 +12543,6 @@ function openEditProvider(provider: ProviderInstance) {
 async function handleSaveProvider(payload: Partial<ProviderInstance>) {
   providerSaving.value = true;
   try {
-    const candidate: ProviderEnablementCandidate = {
-      id: editingProvider.value?.id ?? 0,
-      provider_key:
-        payload.provider_key ?? editingProvider.value?.provider_key ?? "",
-      supported_types:
-        payload.supported_types ?? editingProvider.value?.supported_types ?? [],
-      enabled: payload.enabled ?? editingProvider.value?.enabled ?? false,
-      name: payload.name ?? editingProvider.value?.name ?? "",
-    };
-    const conflict = findProviderEnablementConflict(candidate);
-    if (conflict) {
-      showProviderEnablementConflict(conflict);
-      return;
-    }
-
     if (editingProvider.value) {
       await adminAPI.payment.updateProvider(editingProvider.value.id, payload);
     } else {
@@ -12732,20 +12569,6 @@ async function handleToggleField(
   else if (field === "refund_enabled") newValue = !provider.refund_enabled;
   else newValue = !provider.allow_user_refund;
 
-  if (field === "enabled" && newValue) {
-    const conflict = findProviderEnablementConflict({
-      id: provider.id,
-      provider_key: provider.provider_key,
-      supported_types: provider.supported_types,
-      enabled: true,
-      name: provider.name,
-    });
-    if (conflict) {
-      showProviderEnablementConflict(conflict);
-      return;
-    }
-  }
-
   const payload: Record<string, boolean> = { [field]: newValue };
   // Cascade: turning off refund_enabled also turns off allow_user_refund
   if (field === "refund_enabled" && !newValue) {
@@ -12766,17 +12589,6 @@ async function handleToggleType(provider: ProviderInstance, type: string) {
   const updated = currentTypes.includes(type)
     ? currentTypes.filter((t) => t !== type)
     : [...currentTypes, type];
-  const conflict = findProviderEnablementConflict({
-    id: provider.id,
-    provider_key: provider.provider_key,
-    supported_types: updated,
-    enabled: provider.enabled,
-    name: provider.name,
-  });
-  if (conflict) {
-    showProviderEnablementConflict(conflict);
-    return;
-  }
   try {
     await adminAPI.payment.updateProvider(provider.id, {
       supported_types: updated,

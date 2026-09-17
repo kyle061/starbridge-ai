@@ -169,14 +169,36 @@ func (lb *DefaultLoadBalancer) queryEnabledInstances(
 // itself ("easypay") in supported_types; that value represents EasyPay's two
 // built-in visible methods, not a standalone payment method.
 func instanceSupportsPaymentType(inst *dbent.PaymentProviderInstance, paymentType PaymentType) bool {
-	if inst != nil && strings.EqualFold(strings.TrimSpace(inst.ProviderKey), TypeEasyPay) &&
-		strings.EqualFold(strings.TrimSpace(inst.SupportedTypes), TypeEasyPay) {
-		switch normalizeVisibleMethodSupportType(paymentType) {
-		case TypeAlipay, TypeWxpay:
-			return true
-		}
+	if inst == nil {
+		return false
 	}
-	return inst != nil && InstanceSupportsType(inst.SupportedTypes, paymentType)
+
+	if strings.EqualFold(strings.TrimSpace(inst.ProviderKey), TypeEasyPay) {
+		// EasyPay is a gateway, not a user-facing method. Legacy instances
+		// often stored an empty supported_types value (or the provider key
+		// itself), which means the built-in Alipay and WeChat channels are
+		// available. Keep this rule aligned with
+		// enabledVisibleMethodsForProvider so checkout display and order
+		// selection cannot disagree.
+		normalizedPaymentType := normalizeVisibleMethodSupportType(paymentType)
+		if strings.TrimSpace(inst.SupportedTypes) == "" {
+			return normalizedPaymentType == TypeAlipay || normalizedPaymentType == TypeWxpay
+		}
+		legacyBuiltins := false
+		for _, supportedType := range strings.Split(inst.SupportedTypes, ",") {
+			supportedType = strings.TrimSpace(supportedType)
+			if strings.EqualFold(supportedType, TypeEasyPay) {
+				legacyBuiltins = true
+				continue
+			}
+			if normalizeVisibleMethodSupportType(supportedType) == normalizedPaymentType {
+				return true
+			}
+		}
+		return legacyBuiltins && (normalizedPaymentType == TypeAlipay || normalizedPaymentType == TypeWxpay)
+	}
+
+	return InstanceSupportsType(inst.SupportedTypes, paymentType)
 }
 
 // attachDailyUsage queries daily usage for each instance in a single pass.

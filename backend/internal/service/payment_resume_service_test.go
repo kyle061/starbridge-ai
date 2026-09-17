@@ -658,7 +658,7 @@ func TestVisibleMethodLoadBalancerUsesConfiguredSourceWhenMultipleProvidersEnabl
 	}
 }
 
-func TestVisibleMethodLoadBalancerPreservesLegacyCrossProviderRoutingWhenSourceMissing(t *testing.T) {
+func TestVisibleMethodLoadBalancerPrefersEasyPayWhenSourceMissing(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -703,8 +703,8 @@ func TestVisibleMethodLoadBalancerPreservesLegacyCrossProviderRoutingWhenSourceM
 	if err != nil {
 		t.Fatalf("SelectInstance returned error: %v", err)
 	}
-	if inner.lastProviderKey != "" {
-		t.Fatalf("lastProviderKey = %q, want legacy cross-provider empty key", inner.lastProviderKey)
+	if inner.lastProviderKey != payment.TypeEasyPay {
+		t.Fatalf("lastProviderKey = %q, want %q", inner.lastProviderKey, payment.TypeEasyPay)
 	}
 	if inner.lastPaymentType != payment.TypeAlipay {
 		t.Fatalf("lastPaymentType = %q, want %q", inner.lastPaymentType, payment.TypeAlipay)

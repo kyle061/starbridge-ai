@@ -62,6 +62,7 @@ export interface MethodLimitsResponse {
 
 /** Response from /payment/checkout-info API — single call for the payment page */
 export interface CheckoutInfoResponse {
+  payment_enabled: boolean
   methods: Record<string, MethodLimit>
   global_min: number
   global_max: number

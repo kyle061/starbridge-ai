@@ -50,12 +50,21 @@ func enabledVisibleMethodsForProvider(providerKey, supportedTypes string) []stri
 		// some records empty. EasyPay's built-in protocol supports both of the
 		// user-facing methods, so keep those legacy records usable until the
 		// repair migration has been applied.
-		if strings.TrimSpace(supportedTypes) == "" || strings.EqualFold(strings.TrimSpace(supportedTypes), payment.TypeEasyPay) {
+		if strings.TrimSpace(supportedTypes) == "" {
 			addMethod(payment.TypeAlipay)
 			addMethod(payment.TypeWxpay)
 			break
 		}
 		for _, supportedType := range splitTypes(supportedTypes) {
+			if strings.EqualFold(strings.TrimSpace(supportedType), payment.TypeEasyPay) {
+				// Some intermediate versions persisted the legacy provider key
+				// alongside the actual channel names (for example
+				// "easypay,alipay"). It is not a user-facing method, but it still
+				// means EasyPay can process its two built-in channels.
+				addMethod(payment.TypeAlipay)
+				addMethod(payment.TypeWxpay)
+				continue
+			}
 			addMethod(supportedType)
 		}
 	}
@@ -135,6 +144,25 @@ func distinctVisibleMethodProviderKeys(instances []*dbent.PaymentProviderInstanc
 	return keys
 }
 
+// preferredVisibleMethodProviderKey chooses a deterministic provider for
+// legacy installations that have more than one enabled provider but have not
+// saved the newer visible-method source setting yet. EasyPay is preferred so
+// an existing EasyPay configuration remains usable after the routing feature
+// is introduced; an explicitly configured source is still handled by
+// resolveVisibleMethodProviderKey below.
+func preferredVisibleMethodProviderKey(instances []*dbent.PaymentProviderInstance) string {
+	for _, providerKey := range distinctVisibleMethodProviderKeys(instances) {
+		if strings.EqualFold(strings.TrimSpace(providerKey), payment.TypeEasyPay) {
+			return strings.TrimSpace(providerKey)
+		}
+	}
+	keys := distinctVisibleMethodProviderKeys(instances)
+	if len(keys) == 0 {
+		return ""
+	}
+	return strings.TrimSpace(keys[0])
+}
+
 func selectVisibleMethodInstanceByProviderKey(instances []*dbent.PaymentProviderInstance, providerKey string) *dbent.PaymentProviderInstance {
 	providerKey = strings.TrimSpace(providerKey)
 	if providerKey == "" {
@@ -160,6 +188,74 @@ func (s *PaymentConfigService) validateVisibleMethodEnablementConflicts(
 	// method. Order creation and limits will route through the configured source.
 	_, _, _, _, _ = ctx, excludeID, providerKey, supportedTypes, enabled
 	return nil
+}
+
+// ensureVisibleMethodRoutingForProvider repairs the legacy state where an
+// enabled provider exists but the newer visible-method routing settings were
+// never initialized. This is deliberately conservative: an existing source
+// selection (including a disabled method with a saved source) is preserved;
+// only an empty or invalid source is initialized from the provider being
+// enabled.
+func (s *PaymentConfigService) ensureVisibleMethodRoutingForProvider(ctx context.Context, providerKey, supportedTypes string) error {
+	if s == nil || s.settingRepo == nil {
+		return nil
+	}
+
+	methods := enabledVisibleMethodsForProvider(providerKey, supportedTypes)
+	if len(methods) == 0 {
+		return nil
+	}
+	keys := []string{
+		SettingPaymentVisibleMethodAlipayEnabled,
+		SettingPaymentVisibleMethodAlipaySource,
+		SettingPaymentVisibleMethodWxpayEnabled,
+		SettingPaymentVisibleMethodWxpaySource,
+	}
+	values, err := s.settingRepo.GetMultiple(ctx, keys)
+	if err != nil {
+		return fmt.Errorf("get visible payment method routing: %w", err)
+	}
+
+	updates := make(map[string]string, len(methods)*2)
+	for _, method := range methods {
+		enabledKey := visibleMethodEnabledSettingKey(method)
+		sourceKey := visibleMethodSourceSettingKey(method)
+		if enabledKey == "" || sourceKey == "" {
+			continue
+		}
+		if NormalizeVisibleMethodSource(method, values[sourceKey]) != "" {
+			// A non-empty valid source means the administrator has already
+			// selected a route. Do not override its enabled/disabled choice.
+			continue
+		}
+		source, ok := visibleMethodSourceForProvider(method, providerKey)
+		if !ok {
+			continue
+		}
+		updates[enabledKey] = "true"
+		updates[sourceKey] = source
+	}
+	if len(updates) == 0 {
+		return nil
+	}
+	return s.settingRepo.SetMultiple(ctx, updates)
+}
+
+func visibleMethodSourceForProvider(method, providerKey string) (string, bool) {
+	method = NormalizeVisibleMethod(method)
+	providerKey = strings.TrimSpace(strings.ToLower(providerKey))
+	switch {
+	case method == payment.TypeAlipay && providerKey == payment.TypeAlipay:
+		return VisibleMethodSourceOfficialAlipay, true
+	case method == payment.TypeAlipay && providerKey == payment.TypeEasyPay:
+		return VisibleMethodSourceEasyPayAlipay, true
+	case method == payment.TypeWxpay && providerKey == payment.TypeWxpay:
+		return VisibleMethodSourceOfficialWechat, true
+	case method == payment.TypeWxpay && providerKey == payment.TypeEasyPay:
+		return VisibleMethodSourceEasyPayWechat, true
+	default:
+		return "", false
+	}
 }
 
 func (s *PaymentConfigService) resolveVisibleMethodSourceProviderKey(ctx context.Context, method string) (string, error) {
@@ -210,14 +306,15 @@ func (s *PaymentConfigService) resolveVisibleMethodProviderKey(
 			return "", err
 		}
 		if providerKey == "" {
-			return "", nil
+			return preferredVisibleMethodProviderKey(matching), nil
 		}
 		selected := selectVisibleMethodInstanceByProviderKey(matching, providerKey)
 		if selected == nil {
-			return "", infraerrors.BadRequest(
-				"INVALID_PAYMENT_VISIBLE_METHOD_SOURCE",
-				fmt.Sprintf("%s source has no enabled provider instance", method),
-			)
+			// A valid source can become stale when an admin disables or removes
+			// that provider after saving the routing setting. Keep checkout and
+			// order creation usable by falling back to the preferred enabled
+			// instance (EasyPay first for legacy installations).
+			return preferredVisibleMethodProviderKey(matching), nil
 		}
 		return strings.TrimSpace(selected.ProviderKey), nil
 	}

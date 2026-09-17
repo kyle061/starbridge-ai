@@ -142,6 +142,7 @@ func (h *PaymentHandler) GetCheckoutInfo(c *gin.Context) {
 	}
 
 	response.Success(c, checkoutInfoResponse{
+		PaymentEnabled:                cfg.Enabled,
 		Methods:                       limitsResp.Methods,
 		GlobalMin:                     limitsResp.GlobalMin,
 		GlobalMax:                     limitsResp.GlobalMax,
@@ -159,6 +160,7 @@ func (h *PaymentHandler) GetCheckoutInfo(c *gin.Context) {
 }
 
 type checkoutInfoResponse struct {
+	PaymentEnabled                bool                            `json:"payment_enabled"`
 	Methods                       map[string]service.MethodLimits `json:"methods"`
 	GlobalMin                     float64                         `json:"global_min"`
 	GlobalMax                     float64                         `json:"global_max"`

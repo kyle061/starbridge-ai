@@ -102,15 +102,42 @@ func TestInstanceSupportsPaymentTypeRepairsLegacyEasyPayValue(t *testing.T) {
 	t.Parallel()
 
 	inst := testInstance(1, TypeEasyPay, "")
-	inst.SupportedTypes = TypeEasyPay
-	if !instanceSupportsPaymentType(inst, TypeAlipay) {
-		t.Fatal("legacy EasyPay value should support alipay")
+	for _, supportedTypes := range []string{"", TypeEasyPay} {
+		inst.SupportedTypes = supportedTypes
+		if !instanceSupportsPaymentType(inst, TypeAlipay) {
+			t.Fatalf("legacy EasyPay value %q should support alipay", supportedTypes)
+		}
+		if !instanceSupportsPaymentType(inst, TypeWxpay) {
+			t.Fatalf("legacy EasyPay value %q should support wxpay", supportedTypes)
+		}
+		if instanceSupportsPaymentType(inst, TypeStripe) {
+			t.Fatalf("legacy EasyPay value %q should not support stripe", supportedTypes)
+		}
 	}
-	if !instanceSupportsPaymentType(inst, TypeWxpay) {
-		t.Fatal("legacy EasyPay value should support wxpay")
+}
+
+func TestInstanceSupportsPaymentTypeRepairsMixedLegacyEasyPayValue(t *testing.T) {
+	t.Parallel()
+
+	inst := testInstance(1, TypeEasyPay, "")
+	for _, supportedTypes := range []string{"easypay,alipay", "alipay,easypay", "easypay,ldc"} {
+		inst.SupportedTypes = supportedTypes
+		if !instanceSupportsPaymentType(inst, TypeAlipay) {
+			t.Fatalf("mixed legacy EasyPay value %q should support alipay", supportedTypes)
+		}
+		if !instanceSupportsPaymentType(inst, TypeWxpay) {
+			t.Fatalf("mixed legacy EasyPay value %q should support wxpay", supportedTypes)
+		}
+		if instanceSupportsPaymentType(inst, TypeStripe) {
+			t.Fatalf("mixed legacy EasyPay value %q should not support stripe", supportedTypes)
+		}
+		if instanceSupportsPaymentType(inst, TypeAirwallex) {
+			t.Fatalf("mixed legacy EasyPay value %q should not support airwallex", supportedTypes)
+		}
 	}
-	if instanceSupportsPaymentType(inst, TypeStripe) {
-		t.Fatal("legacy EasyPay value should not support stripe")
+	inst.SupportedTypes = "easypay,ldc"
+	if !instanceSupportsPaymentType(inst, "ldc") {
+		t.Fatal("mixed legacy EasyPay value should preserve custom methods")
 	}
 }
 

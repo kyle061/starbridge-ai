@@ -60,7 +60,6 @@
           <div class="min-w-0 flex-1">
             <ProviderCard
               :provider="p"
-              :enabled="isEnabled(p.provider_key)"
               :available-types="getTypes(p.provider_key)"
               @toggle-field="(field) => emit('toggleField', p, field)"
               @toggle-type="(type) => emit('toggleType', p, type)"
@@ -105,7 +104,6 @@ const props = defineProps<{
   providers: ProviderInstance[]
   loading: boolean
   canCreate: boolean
-  enabledPaymentTypes: string[]
   allPaymentTypes: TypeOption[]
   redirectLabel: string
 }>()
@@ -134,10 +132,6 @@ function onDragEnd() {
     sort_order: idx,
   }))
   emit('reorder', updates)
-}
-
-function isEnabled(providerKey: string): boolean {
-  return props.enabledPaymentTypes.includes(providerKey)
 }
 
 function getTypes(providerKey: string): TypeOption[] {
