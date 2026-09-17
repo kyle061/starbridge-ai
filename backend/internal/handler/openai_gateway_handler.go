@@ -2550,7 +2550,7 @@ func (h *OpenAIGatewayHandler) ResponsesWebSocket(c *gin.Context) {
 	wsAttemptMessage, preparationErr := h.prepareGPT6Request(c, apiKey, reqModel, firstMessage, true)
 	if preparationErr != nil {
 		reqLog.Warn("openai.websocket_gpt6_preparation_failed", zap.Error(preparationErr))
-		closeOpenAIClientWS(wsConn, coderws.StatusServiceUnavailable, "GPT6 requirements preparation is temporarily unavailable")
+		closeOpenAIClientWS(wsConn, coderws.StatusTryAgainLater, "GPT6 requirements preparation is temporarily unavailable")
 		return
 	}
 	waitForWSSameAccountRetry := func(account *service.Account, failoverErr *service.UpstreamFailoverError) bool {
