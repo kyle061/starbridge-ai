@@ -779,6 +779,7 @@ export default {
         validationEasyPayCustomMethodPrefixReserved: 'Custom EasyPay payment types cannot start with alipay or wxpay',
         validationEasyPayCustomMethodDuplicate: 'Custom EasyPay payment types must be unique',
         field_apiBase: 'API Base URL',
+        field_ezfpApiBaseHint: 'For ezfp, enter the provider root such as https://www.ezfp.cn, not a specific /api/pay/create endpoint.',
         field_notifyUrl: 'Notify URL',
         field_returnUrl: 'Return URL',
         callbackBaseUrl: 'Callback Base URL',

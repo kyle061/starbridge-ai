@@ -113,15 +113,26 @@ Starbridge AI 内置支付系统，支持用户自助充值，无需部署独立
 
 ### EasyPay（易支付）
 
-兼容任何 EasyPay 协议的支付服务商。
+内置兼容 ezfp.cn 官方 RSA 接口的易支付接入，只开放支付宝和微信支付。
+API 基础地址填写服务商根地址，例如 `https://www.ezfp.cn`；系统会自动调用：
+
+- 页面跳转支付：`POST/GET /api/pay/submit`
+- 统一下单：`POST /api/pay/create`
+- 订单查询：`POST /api/pay/query`
+- 订单退款：`POST /api/pay/refund`
+- 退款查询：`POST /api/pay/refundquery`
+
+请求和回调使用 `SHA256WithRSA`。商户私钥用于请求签名，服务商公钥用于验签；接口成功码为 `code=0`。
 
 | 参数 | 说明 | 必填 |
 |------|------|------|
 | **商户 ID（PID）** | EasyPay 商户 ID | 是 |
-| **商户密钥（PKey）** | EasyPay 商户密钥 | 是 |
-| **API 地址** | EasyPay API 基础地址 | 是 |
-| **支付宝通道 ID** | 指定支付宝通道（可选） | 否 |
-| **微信通道 ID** | 指定微信通道（可选） | 否 |
+| **商户私钥（Private Key）** | RSA 私钥，PEM 格式 | 是 |
+| **服务商公钥（Public Key）** | 用于校验接口返回和异步通知，PEM 格式 | 是 |
+| **API 地址** | 服务商根地址，例如 `https://www.ezfp.cn` | 是 |
+| **支付宝/微信通道 ID** | 对应 ezfp 的 `channel_id`，未进件时留空 | 否 |
+
+易支付支持的可见方式为 `alipay` 和 `wxpay`。二维码模式调用统一下单接口，跳转模式调用页面跳转接口。异步通知地址使用 `GET` 或 `POST` 均可，系统会校验 `sign`、`pid`、`trade_status=TRADE_SUCCESS` 后再入账。
 
 ### 支付宝官方
 

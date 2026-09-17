@@ -134,6 +134,12 @@ func TestValidateEasyPayCustomMethods(t *testing.T) {
 			supportedTypes: "alipay,wxpay,usdt_trc20",
 		},
 		{
+			name:           "ezfp RSA mode only supports built-in payment types",
+			config:         map[string]string{"privateKey": "rsa-private", "publicKey": "ezfp-public"},
+			supportedTypes: "alipay,wxpay,usdt_trc20",
+			wantErr:        "ezfp EasyPay only supports alipay and wxpay",
+		},
+		{
 			name:           "custom type still rejects periods",
 			config:         map[string]string{"customMethods": `[{"type":"usdt.trc20","upstreamType":"usdt.trc20"}]`},
 			supportedTypes: "alipay,wxpay,usdt.trc20",
@@ -250,6 +256,8 @@ func TestIsSensitiveProviderConfigField(t *testing.T) {
 
 		// EasyPay
 		{"easypay", "pkey", true},
+		{"easypay", "privateKey", true},
+		{"easypay", "publicKey", true},
 		{"easypay", "pid", false},
 		{"easypay", "apiBase", false},
 

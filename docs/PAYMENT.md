@@ -105,15 +105,26 @@ Each provider type requires different credentials. Select the type when adding a
 
 ### EasyPay
 
-Compatible with any payment service that implements the EasyPay protocol.
+Built-in integration targets the ezfp.cn RSA API and exposes Alipay and WeChat Pay only.
+Enter the provider root URL, for example `https://www.ezfp.cn`; the integration calls:
+
+- Hosted payment: `POST/GET /api/pay/submit`
+- Create payment: `POST /api/pay/create`
+- Query order: `POST /api/pay/query`
+- Refund: `POST /api/pay/refund`
+- Query refund: `POST /api/pay/refundquery`
+
+Requests and callbacks use `SHA256WithRSA`. The merchant private key signs requests; the provider public key verifies responses and notifications. The success code is `code=0`.
 
 | Parameter | Description | Required |
 |-----------|-------------|----------|
 | **Merchant ID (PID)** | EasyPay merchant ID | Yes |
-| **Merchant Key (PKey)** | EasyPay merchant secret key | Yes |
-| **API Base URL** | EasyPay API base address | Yes |
-| **Alipay Channel ID** | Specify Alipay channel (optional) | No |
-| **WeChat Channel ID** | Specify WeChat channel (optional) | No |
+| **Merchant Private Key** | RSA private key in PEM format | Yes |
+| **Provider Public Key** | PEM public key used to verify responses and notifications | Yes |
+| **API Base URL** | Provider root URL, such as `https://www.ezfp.cn` | Yes |
+| **Alipay/WeChat Channel ID** | ezfp `channel_id`; leave empty when not onboarded | No |
+
+The supported visible methods are `alipay` and `wxpay`. QR Code mode uses the create endpoint; redirect mode uses the hosted submit endpoint. The webhook accepts GET or POST and credits an order only after validating `sign`, `pid`, and `trade_status=TRADE_SUCCESS`.
 
 ### Alipay (Direct)
 

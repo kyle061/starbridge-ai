@@ -111,7 +111,7 @@ var pendingOrderStatuses = []string{
 // Key matching is case-insensitive. Non-listed keys (e.g. appId, notifyUrl,
 // stripe publishableKey) are returned in plaintext by the admin GET API.
 var providerSensitiveConfigFields = map[string]map[string]struct{}{
-	payment.TypeEasyPay:   {"pkey": {}},
+	payment.TypeEasyPay:   {"pkey": {}, "privatekey": {}, "publickey": {}},
 	payment.TypeAlipay:    {"privatekey": {}, "publickey": {}, "alipaypublickey": {}},
 	payment.TypeWxpay:     {"privatekey": {}, "apiv3key": {}, "publickey": {}},
 	payment.TypeStripe:    {"secretkey": {}, "webhooksecret": {}},
@@ -123,7 +123,7 @@ var providerSensitiveConfigFields = map[string]map[string]struct{}{
 // all provider identity fields that are snapshotted into orders or used by
 // webhook/refund verification.
 var providerPendingOrderProtectedConfigFields = map[string]map[string]struct{}{
-	payment.TypeEasyPay:   {"pkey": {}, "pid": {}},
+	payment.TypeEasyPay:   {"pkey": {}, "privatekey": {}, "publickey": {}, "pid": {}},
 	payment.TypeAlipay:    {"privatekey": {}, "publickey": {}, "alipaypublickey": {}, "appid": {}},
 	payment.TypeWxpay:     {"privatekey": {}, "apiv3key": {}, "publickey": {}, "appid": {}, "mpappid": {}, "mchid": {}, "publickeyid": {}, "certserial": {}},
 	payment.TypeStripe:    {"secretkey": {}, "webhooksecret": {}, "currency": {}},
@@ -235,6 +235,16 @@ type easyPayCustomMethodConfig struct {
 func validateEasyPayCustomMethods(config map[string]string, supportedTypes string) error {
 	if config == nil {
 		config = map[string]string{}
+	}
+	if strings.TrimSpace(config["privateKey"]) != "" || strings.TrimSpace(config["publicKey"]) != "" {
+		for _, supportedType := range splitTypes(supportedTypes) {
+			supportedType = strings.TrimSpace(supportedType)
+			if supportedType == "" || supportedType == payment.TypeAlipay || supportedType == payment.TypeWxpay {
+				continue
+			}
+			return infraerrors.BadRequest("VALIDATION_ERROR", "ezfp EasyPay only supports alipay and wxpay")
+		}
+		return nil
 	}
 	raw := strings.TrimSpace(config["customMethods"])
 	methods := make([]easyPayCustomMethodConfig, 0)

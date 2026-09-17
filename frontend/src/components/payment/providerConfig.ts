@@ -127,8 +127,9 @@ export const PROVIDER_CALLBACK_PATHS: Record<string, CallbackPaths> = {
 export const PROVIDER_CONFIG_FIELDS: Record<string, ConfigFieldDef[]> = {
   easypay: [
     { key: 'pid', label: 'PID', sensitive: false },
-    { key: 'pkey', label: 'PKey', sensitive: true },
-    { key: 'apiBase', label: '', sensitive: false },
+    { key: 'privateKey', label: '', sensitive: true },
+    { key: 'publicKey', label: '', sensitive: true },
+    { key: 'apiBase', label: '', sensitive: false, defaultValue: 'https://www.ezfp.cn', hintKey: 'admin.settings.payment.field_ezfpApiBaseHint' },
     { key: 'cidAlipay', label: '', sensitive: false, optional: true },
     { key: 'cidWxpay', label: '', sensitive: false, optional: true },
   ],
