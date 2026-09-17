@@ -275,6 +275,41 @@ describe('admin UsageTable tooltip', () => {
     expect(text).toContain('$0.069568')
   })
 
+  it('does not show the raw cost summary in customer billing view', async () => {
+    const wrapper = mount(UsageTable, {
+      props: {
+        data: [{
+          ...baseImageRow,
+          actual_cost: 0.18,
+          total_cost: 0.03,
+          input_cost: 0.03,
+          billing_mode: 'per_request',
+        }],
+        loading: false,
+        columns: [],
+        billingView: 'customer',
+        showAccountBilling: false,
+      },
+      global: {
+        stubs: {
+          DataTable: DataTableStub,
+          EmptyState: true,
+          Icon: true,
+          Teleport: true,
+        },
+      },
+    })
+
+    const triggers = wrapper.findAll('.group.relative')
+    await triggers[triggers.length - 1].trigger('mouseenter')
+    await nextTick()
+
+    const text = wrapper.text()
+    expect(text).not.toContain('Original')
+    expect(text).toContain('User billed')
+    expect(text).toContain('$0.18000000')
+  })
+
   it.each(['token', 'image', 'per_request'])('keeps eight decimal places in %s cost details', async (billingMode) => {
     const row = {
       ...baseImageRow,

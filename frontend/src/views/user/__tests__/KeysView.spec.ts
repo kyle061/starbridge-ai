@@ -455,6 +455,21 @@ describe('user KeysView column settings', () => {
     wrapper.unmount()
   })
 
+  it('preselects the combined OpenAI and DeepSeek relay over single-provider groups', async () => {
+    getAvailableGroups.mockResolvedValue([
+      { id: 1, name: 'openai-default', platform: 'openai' },
+      { id: 2, name: 'deepseek-default', platform: 'deepseek' },
+      { id: 3, name: 'composite-default', platform: 'composite' }
+    ])
+    const wrapper = await mountView()
+    await wrapper.get('[data-tour="keys-create-btn"]').trigger('click')
+    await wrapper.get('[data-tour="key-form-name"]').setValue('Combined relay')
+    await wrapper.get('#key-form').trigger('submit')
+    await flushPromises()
+    expect(createKey).toHaveBeenCalledWith('Combined relay', 3)
+    wrapper.unmount()
+  })
+
   it('preserves administrator limits when renaming a key', async () => {
     const key = { ...createApiKey(), group_id: 1, quota: 10, quota_used: 4,
       rate_limit_5h: 2, rate_limit_1d: 8, rate_limit_7d: 30, expires_at: '2030-01-01T00:00:00Z' }

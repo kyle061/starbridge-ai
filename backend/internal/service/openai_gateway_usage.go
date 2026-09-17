@@ -43,6 +43,9 @@ type OpenAIRecordUsageInput struct {
 	// Responses handler from stream=true + compaction_trigger. It never stores
 	// the request payload and does not replace the transport request type.
 	NativeCompactionV2 bool
+	// BillingMultiplierOverride is used for an internal preparation pass. It
+	// changes only customer billing; upstream/account cost fields stay raw.
+	BillingMultiplierOverride *float64
 	ChannelUsageFields
 }
 
@@ -325,6 +328,14 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 	multiplier = retailUsageRate(s.cfg, cost, multiplier)
 	imageMultiplier = retailUsageRate(s.cfg, cost, imageMultiplier)
 	videoMultiplier = retailUsageRate(s.cfg, cost, videoMultiplier)
+	if input.BillingMultiplierOverride != nil && *input.BillingMultiplierOverride > 0 {
+		multiplier = *input.BillingMultiplierOverride
+		imageMultiplier = *input.BillingMultiplierOverride
+		videoMultiplier = *input.BillingMultiplierOverride
+		if cost != nil {
+			cost.ActualCost = cost.TotalCost * *input.BillingMultiplierOverride
+		}
+	}
 
 	// Determine billing type
 	isSubscriptionBilling := subscription != nil && apiKey.Group != nil && apiKey.Group.IsSubscriptionType()

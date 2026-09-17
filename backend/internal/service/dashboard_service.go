@@ -10,6 +10,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/timezone"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/usagestats"
 )
 
@@ -122,6 +123,63 @@ func (s *DashboardService) GetDashboardStats(ctx context.Context) (*usagestats.D
 		return nil, fmt.Errorf("get dashboard stats: %w", err)
 	}
 	return stats, nil
+}
+
+// GetDashboardStatsWithBillingView returns the dashboard entity metrics in the
+// requested admin billing view. The regular dashboard cache intentionally
+// remains raw because it is shared by the default endpoint; customer view
+// token totals must be rebuilt from usage logs so each row's multiplier is
+// applied before aggregation.
+func (s *DashboardService) GetDashboardStatsWithBillingView(ctx context.Context, customerView bool) (*usagestats.DashboardStats, error) {
+	stats, err := s.GetDashboardStats(ctx)
+	if err != nil || !customerView {
+		return stats, err
+	}
+
+	now := timezone.Now()
+	todayStart := timezone.Today()
+	overall, err := s.usageRepo.GetStatsWithFilters(ctx, usagestats.UsageLogFilters{CustomerView: true})
+	if err != nil {
+		return nil, fmt.Errorf("get customer dashboard usage stats: %w", err)
+	}
+	today, err := s.usageRepo.GetStatsWithFilters(ctx, usagestats.UsageLogFilters{
+		StartTime:    &todayStart,
+		EndTime:      &now,
+		CustomerView: true,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get customer dashboard today stats: %w", err)
+	}
+
+	project := func(target *usagestats.DashboardStats, source *usagestats.UsageStats, today bool) {
+		if today {
+			target.TodayRequests = source.TotalRequests
+			target.TodayInputTokens = source.TotalInputTokens
+			target.TodayOutputTokens = source.TotalOutputTokens
+			target.TodayCacheCreationTokens = source.TotalCacheCreationTokens
+			target.TodayCacheReadTokens = source.TotalCacheReadTokens
+			target.TodayTokens = source.TotalTokens
+			target.TodayCost = source.TotalActualCost
+			target.TodayActualCost = source.TotalActualCost
+			target.TodayAccountCost = source.TotalActualCost
+			return
+		}
+		target.TotalRequests = source.TotalRequests
+		target.TotalInputTokens = source.TotalInputTokens
+		target.TotalOutputTokens = source.TotalOutputTokens
+		target.TotalCacheCreationTokens = source.TotalCacheCreationTokens
+		target.TotalCacheReadTokens = source.TotalCacheReadTokens
+		target.TotalTokens = source.TotalTokens
+		target.TotalCost = source.TotalActualCost
+		target.TotalActualCost = source.TotalActualCost
+		target.TotalAccountCost = source.TotalActualCost
+		target.AverageDurationMs = source.AverageDurationMs
+	}
+
+	projected := *stats
+	project(&projected, overall, false)
+	project(&projected, today, true)
+	return &projected, nil
 }
 
 func (s *DashboardService) GetUsageTrendWithFilters(ctx context.Context, startTime, endTime time.Time, granularity string, userID, apiKeyID, accountID, groupID int64, model string, requestType *int16, stream *bool, billingType *int8) ([]usagestats.TrendDataPoint, error) {

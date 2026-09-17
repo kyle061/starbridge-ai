@@ -134,6 +134,40 @@ func TestCompositeTargetPlatformMiddlewareUsesExplicitRouteAndRewritesBody(t *te
 	require.Equal(t, http.StatusNoContent, w.Code)
 }
 
+func TestCompositeGPT6MiddlewareRewritesToOpenAIAndKeepsPreparationFallback(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	resolver := service.NewCompositeRouteResolver(compositeRouteRepoStub{routes: []service.CompositeModelRoute{
+		{ID: 1, GroupID: 1, PublicModel: "gpt-6-astra", MatchType: service.CompositeRouteMatchExact,
+			TargetPlatform: service.PlatformOpenAI, UpstreamModel: "gpt-6-astra", Endpoint: service.CompositeRouteEndpointAny, Priority: 10, Enabled: true},
+		{ID: 2, GroupID: 1, PublicModel: "gpt-6-astra", MatchType: service.CompositeRouteMatchExact,
+			TargetPlatform: service.PlatformDeepseek, UpstreamModel: "deepseek-v4-pro", Endpoint: service.CompositeRouteEndpointAny, Priority: 20, Enabled: true},
+	}})
+	router.Use(gin.HandlerFunc(servermiddleware.APIKeyAuthMiddleware(func(c *gin.Context) {
+		c.Set(string(servermiddleware.ContextKeyAPIKey), &service.APIKey{Group: &service.Group{ID: 1, Platform: service.PlatformComposite}})
+		c.Next()
+	})))
+	router.Use(compositeTargetPlatformMiddleware(resolver))
+	router.POST("/v1/responses", func(c *gin.Context) {
+		public, ok := service.RequestedPublicModelFromContext(c.Request.Context())
+		require.True(t, ok)
+		require.Equal(t, "gpt-6-astra", public)
+		candidates := service.CompositeRouteCandidatesFromContext(c.Request.Context())
+		require.Len(t, candidates, 2)
+		require.Equal(t, service.PlatformOpenAI, candidates[0].TargetPlatform)
+		require.Equal(t, service.PlatformDeepseek, candidates[1].TargetPlatform)
+		body, err := io.ReadAll(c.Request.Body)
+		require.NoError(t, err)
+		require.JSONEq(t, `{"model":"gpt-6-astra","input":"hello","stream":true}`, string(body))
+		c.Status(http.StatusNoContent)
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/responses", strings.NewReader(`{"model":"gpt-6-astra","input":"hello","stream":true}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	require.Equal(t, http.StatusNoContent, w.Code)
+}
+
 func TestCompositeTargetPlatformMiddlewareRewritesNestedLiveModel(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()

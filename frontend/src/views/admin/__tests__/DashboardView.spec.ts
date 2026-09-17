@@ -143,4 +143,36 @@ describe('admin DashboardView', () => {
       granularity: 'hour'
     }))
   })
+
+  it('reloads dashboard usage data in customer billing view after toggling', async () => {
+    const wrapper = mount(DashboardView, {
+      global: {
+        stubs: {
+          AppLayout: { template: '<div><slot /></div>' },
+          LoadingSpinner: true,
+          Icon: true,
+          DateRangePicker: true,
+          Select: true,
+          ModelDistributionChart: true,
+          TokenUsageTrend: true,
+          Line: true
+        }
+      }
+    })
+
+    await flushPromises()
+    getSnapshotV2.mockClear()
+    getUserUsageTrend.mockClear()
+    getUserSpendingRanking.mockClear()
+
+    const toggle = wrapper.get('[data-testid="dashboard-billing-view-toggle"]')
+    expect(toggle.attributes('aria-checked')).toBe('false')
+    await toggle.trigger('click')
+    await flushPromises()
+
+    expect(toggle.attributes('aria-checked')).toBe('true')
+    expect(getSnapshotV2).toHaveBeenCalledWith(expect.objectContaining({ billing_view: 'customer' }))
+    expect(getUserUsageTrend).toHaveBeenCalledWith(expect.objectContaining({ billing_view: 'customer' }))
+    expect(getUserSpendingRanking).toHaveBeenCalledWith(expect.objectContaining({ billing_view: 'customer' }))
+  })
 })

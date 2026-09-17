@@ -18,20 +18,21 @@ import (
 
 // GetUserStatsAggregated returns aggregated usage statistics for a user using database-level aggregation
 func (r *usageLogRepository) GetUserStatsAggregated(ctx context.Context, userID int64, startTime, endTime time.Time) (*usagestats.UsageStats, error) {
-	query := `
+	tokens := newUsageLogTokenExpressions("", usagestats.CustomerBillingViewFromContext(ctx))
+	query := fmt.Sprintf(`
 		SELECT
 			COUNT(*) as total_requests,
-			COALESCE(SUM(input_tokens), 0) as total_input_tokens,
-			COALESCE(SUM(output_tokens), 0) as total_output_tokens,
-			COALESCE(SUM(cache_creation_tokens + cache_read_tokens), 0) as total_cache_tokens,
-			COALESCE(SUM(cache_creation_tokens), 0) as total_cache_creation_tokens,
-			COALESCE(SUM(cache_read_tokens), 0) as total_cache_read_tokens,
+			COALESCE(SUM(%s), 0) as total_input_tokens,
+			COALESCE(SUM(%s), 0) as total_output_tokens,
+			COALESCE(SUM(%s + %s), 0) as total_cache_tokens,
+			COALESCE(SUM(%s), 0) as total_cache_creation_tokens,
+			COALESCE(SUM(%s), 0) as total_cache_read_tokens,
 			COALESCE(SUM(total_cost), 0) as total_cost,
 			COALESCE(SUM(actual_cost), 0) as total_actual_cost,
 			COALESCE(AVG(COALESCE(duration_ms, 0)), 0) as avg_duration_ms
 		FROM usage_logs
 		WHERE user_id = $1 AND created_at >= $2 AND created_at < $3
-	`
+	`, tokens.input, tokens.output, tokens.cacheCreate, tokens.cacheRead, tokens.cacheCreate, tokens.cacheRead)
 
 	var stats usagestats.UsageStats
 	if err := scanSingleRow(
@@ -57,20 +58,21 @@ func (r *usageLogRepository) GetUserStatsAggregated(ctx context.Context, userID 
 
 // GetAPIKeyStatsAggregated returns aggregated usage statistics for an API key using database-level aggregation
 func (r *usageLogRepository) GetAPIKeyStatsAggregated(ctx context.Context, apiKeyID int64, startTime, endTime time.Time) (*usagestats.UsageStats, error) {
-	query := `
+	tokens := newUsageLogTokenExpressions("", usagestats.CustomerBillingViewFromContext(ctx))
+	query := fmt.Sprintf(`
 		SELECT
 			COUNT(*) as total_requests,
-			COALESCE(SUM(input_tokens), 0) as total_input_tokens,
-			COALESCE(SUM(output_tokens), 0) as total_output_tokens,
-			COALESCE(SUM(cache_creation_tokens + cache_read_tokens), 0) as total_cache_tokens,
-			COALESCE(SUM(cache_creation_tokens), 0) as total_cache_creation_tokens,
-			COALESCE(SUM(cache_read_tokens), 0) as total_cache_read_tokens,
+			COALESCE(SUM(%s), 0) as total_input_tokens,
+			COALESCE(SUM(%s), 0) as total_output_tokens,
+			COALESCE(SUM(%s + %s), 0) as total_cache_tokens,
+			COALESCE(SUM(%s), 0) as total_cache_creation_tokens,
+			COALESCE(SUM(%s), 0) as total_cache_read_tokens,
 			COALESCE(SUM(total_cost), 0) as total_cost,
 			COALESCE(SUM(actual_cost), 0) as total_actual_cost,
 			COALESCE(AVG(COALESCE(duration_ms, 0)), 0) as avg_duration_ms
 		FROM usage_logs
 		WHERE api_key_id = $1 AND created_at >= $2 AND created_at < $3
-	`
+	`, tokens.input, tokens.output, tokens.cacheCreate, tokens.cacheRead, tokens.cacheCreate, tokens.cacheRead)
 
 	var stats usagestats.UsageStats
 	if err := scanSingleRow(
@@ -187,14 +189,15 @@ func (r *usageLogRepository) GetModelStatsAggregated(ctx context.Context, modelN
 // 性能优化：使用 GROUP BY 在数据库层按日期分组聚合，避免应用层循环分组统计
 func (r *usageLogRepository) GetDailyStatsAggregated(ctx context.Context, userID int64, startTime, endTime time.Time) (result []map[string]any, err error) {
 	tzName := resolveUsageStatsTimezone()
-	query := `
+	tokens := newUsageLogTokenExpressions("", usagestats.CustomerBillingViewFromContext(ctx))
+	query := fmt.Sprintf(`
 		SELECT
 			-- 使用应用时区分组，避免数据库会话时区导致日边界偏移。
 			TO_CHAR(created_at AT TIME ZONE $4, 'YYYY-MM-DD') as date,
 			COUNT(*) as total_requests,
-			COALESCE(SUM(input_tokens), 0) as total_input_tokens,
-			COALESCE(SUM(output_tokens), 0) as total_output_tokens,
-			COALESCE(SUM(cache_creation_tokens + cache_read_tokens), 0) as total_cache_tokens,
+			COALESCE(SUM(%s), 0) as total_input_tokens,
+			COALESCE(SUM(%s), 0) as total_output_tokens,
+			COALESCE(SUM(%s + %s), 0) as total_cache_tokens,
 			COALESCE(SUM(total_cost), 0) as total_cost,
 			COALESCE(SUM(actual_cost), 0) as total_actual_cost,
 			COALESCE(AVG(COALESCE(duration_ms, 0)), 0) as avg_duration_ms
@@ -202,7 +205,7 @@ func (r *usageLogRepository) GetDailyStatsAggregated(ctx context.Context, userID
 		WHERE user_id = $1 AND created_at >= $2 AND created_at < $3
 		GROUP BY 1
 		ORDER BY 1
-	`
+	`, tokens.input, tokens.output, tokens.cacheCreate, tokens.cacheRead)
 
 	rows, err := r.sql.QueryContext(ctx, query, userID, startTime, endTime, tzName)
 	if err != nil {
@@ -699,16 +702,26 @@ func (r *usageLogRepository) GetStatsWithFilters(ctx context.Context, filters Us
 		conditions = append(conditions, fmt.Sprintf("created_at < $%d", len(args)+1))
 		args = append(args, *filters.EndTime)
 	}
+	tokens := newUsageLogTokenExpressions("", filters.CustomerView)
+	tokenSelect := `
+				input_tokens,
+				output_tokens,
+				cache_creation_tokens,
+				cache_read_tokens`
+	if filters.CustomerView {
+		tokenSelect = fmt.Sprintf(`
+				%s AS input_tokens,
+				%s AS output_tokens,
+				%s AS cache_creation_tokens,
+				%s AS cache_read_tokens`, tokens.input, tokens.output, tokens.cacheCreate, tokens.cacheRead)
+	}
 
 	query := fmt.Sprintf(`
 		WITH scoped AS (
 			SELECT
 				COALESCE(NULLIF(TRIM(inbound_endpoint), ''), 'unknown') AS inbound_endpoint,
 				COALESCE(NULLIF(TRIM(upstream_endpoint), ''), 'unknown') AS upstream_endpoint,
-				input_tokens,
-				output_tokens,
-				cache_creation_tokens,
-				cache_read_tokens,
+				%s,
 				total_cost,
 				actual_cost,
 				COALESCE(account_stats_cost, total_cost) * COALESCE(account_rate_multiplier, 1) AS account_cost,
@@ -735,9 +748,9 @@ func (r *usageLogRepository) GetStatsWithFilters(ctx context.Context, filters Us
 			(),
 			(inbound_endpoint),
 			(upstream_endpoint),
-			(inbound_endpoint, upstream_endpoint)
+				(inbound_endpoint, upstream_endpoint)
 		)
-	`, buildWhere(conditions))
+	`, tokenSelect, buildWhere(conditions))
 
 	stats := &UsageStats{}
 	var totalAccountCost float64

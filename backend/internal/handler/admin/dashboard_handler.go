@@ -79,7 +79,7 @@ func parseOptionalBoolDashboardFilter(c *gin.Context, name string) (*bool, error
 // GetStats handles getting dashboard statistics
 // GET /api/v1/admin/dashboard/stats
 func (h *DashboardHandler) GetStats(c *gin.Context) {
-	stats, err := h.dashboardService.GetDashboardStats(c.Request.Context())
+	stats, err := h.dashboardService.GetDashboardStatsWithBillingView(c.Request.Context(), isCustomerBillingView(c))
 	if err != nil {
 		response.Error(c, 500, "Failed to get dashboard statistics")
 		return
@@ -273,10 +273,14 @@ func (h *DashboardHandler) GetUsageTrend(c *gin.Context) {
 		return
 	}
 
-	trend, hit, err := h.getUsageTrendCached(c.Request.Context(), startTime, endTime, granularity, userID, apiKeyID, accountID, groupID, model, requestType, stream, nativeCompactionV2, billingType, upstreamModelMismatch)
+	customerView := isCustomerBillingView(c)
+	trend, hit, err := h.getUsageTrendCached(c.Request.Context(), startTime, endTime, granularity, userID, apiKeyID, accountID, groupID, model, requestType, stream, nativeCompactionV2, billingType, upstreamModelMismatch, customerView)
 	if err != nil {
 		response.Error(c, 500, "Failed to get usage trend")
 		return
+	}
+	if customerView {
+		trend = customerTrend(trend)
 	}
 	c.Header("X-Snapshot-Cache", cacheStatusValue(hit))
 
@@ -365,10 +369,14 @@ func (h *DashboardHandler) GetModelStats(c *gin.Context) {
 		return
 	}
 
-	stats, hit, err := h.getModelStatsCached(c.Request.Context(), startTime, endTime, userID, apiKeyID, accountID, groupID, modelSource, requestType, stream, nativeCompactionV2, billingType, upstreamModelMismatch)
+	customerView := isCustomerBillingView(c)
+	stats, hit, err := h.getModelStatsCached(c.Request.Context(), startTime, endTime, userID, apiKeyID, accountID, groupID, modelSource, requestType, stream, nativeCompactionV2, billingType, upstreamModelMismatch, customerView)
 	if err != nil {
 		response.Error(c, 500, "Failed to get model statistics")
 		return
+	}
+	if customerView {
+		stats = customerModels(stats)
 	}
 	c.Header("X-Snapshot-Cache", cacheStatusValue(hit))
 
@@ -447,10 +455,14 @@ func (h *DashboardHandler) GetGroupStats(c *gin.Context) {
 		return
 	}
 
-	stats, hit, err := h.getGroupStatsCached(c.Request.Context(), startTime, endTime, userID, apiKeyID, accountID, groupID, requestType, stream, nativeCompactionV2, billingType, upstreamModelMismatch)
+	customerView := isCustomerBillingView(c)
+	stats, hit, err := h.getGroupStatsCached(c.Request.Context(), startTime, endTime, userID, apiKeyID, accountID, groupID, requestType, stream, nativeCompactionV2, billingType, upstreamModelMismatch, customerView)
 	if err != nil {
 		response.Error(c, 500, "Failed to get group statistics")
 		return
+	}
+	if customerView {
+		stats = customerGroups(stats)
 	}
 	c.Header("X-Snapshot-Cache", cacheStatusValue(hit))
 
@@ -473,7 +485,8 @@ func (h *DashboardHandler) GetAPIKeyUsageTrend(c *gin.Context) {
 		limit = 5
 	}
 
-	trend, hit, err := h.getAPIKeyUsageTrendCached(c.Request.Context(), startTime, endTime, granularity, limit)
+	customerView := isCustomerBillingView(c)
+	trend, hit, err := h.getAPIKeyUsageTrendCached(usagestats.WithCustomerBillingView(c.Request.Context(), customerView), startTime, endTime, granularity, limit)
 	if err != nil {
 		response.Error(c, 500, "Failed to get API key usage trend")
 		return
@@ -500,7 +513,8 @@ func (h *DashboardHandler) GetUserUsageTrend(c *gin.Context) {
 		limit = 12
 	}
 
-	trend, hit, err := h.getUserUsageTrendCached(c.Request.Context(), startTime, endTime, granularity, limit)
+	customerView := isCustomerBillingView(c)
+	trend, hit, err := h.getUserUsageTrendCached(c.Request.Context(), startTime, endTime, granularity, limit, customerView)
 	if err != nil {
 		response.Error(c, 500, "Failed to get user usage trend")
 		return
@@ -540,15 +554,18 @@ func parseRankingLimit(raw string) int {
 func (h *DashboardHandler) GetUserSpendingRanking(c *gin.Context) {
 	startTime, endTime := parseTimeRange(c)
 	limit := parseRankingLimit(c.DefaultQuery("limit", "12"))
+	customerView := isCustomerBillingView(c)
 
 	keyRaw, _ := json.Marshal(struct {
 		Start string `json:"start"`
 		End   string `json:"end"`
 		Limit int    `json:"limit"`
+		CustomerView bool `json:"customer_view"`
 	}{
-		Start: startTime.UTC().Format(time.RFC3339),
-		End:   endTime.UTC().Format(time.RFC3339),
-		Limit: limit,
+		Start:         startTime.UTC().Format(time.RFC3339),
+		End:           endTime.UTC().Format(time.RFC3339),
+		Limit:         limit,
+		CustomerView:  customerView,
 	})
 	cacheKey := string(keyRaw)
 	if cached, ok := dashboardUsersRankingCache.Get(cacheKey); ok {
@@ -557,7 +574,7 @@ func (h *DashboardHandler) GetUserSpendingRanking(c *gin.Context) {
 		return
 	}
 
-	ranking, err := h.dashboardService.GetUserSpendingRanking(c.Request.Context(), startTime, endTime, limit)
+	ranking, err := h.dashboardService.GetUserSpendingRanking(usagestats.WithCustomerBillingView(c.Request.Context(), customerView), startTime, endTime, limit)
 	if err != nil {
 		response.Error(c, 500, "Failed to get user spending ranking")
 		return
@@ -565,6 +582,7 @@ func (h *DashboardHandler) GetUserSpendingRanking(c *gin.Context) {
 
 	payload := gin.H{
 		"ranking":           ranking.Ranking,
+		"total_cost":       ranking.TotalCost,
 		"total_actual_cost": ranking.TotalActualCost,
 		"total_requests":    ranking.TotalRequests,
 		"total_tokens":      ranking.TotalTokens,
@@ -741,12 +759,18 @@ func (h *DashboardHandler) GetUserBreakdown(c *gin.Context) {
 		}
 	}
 
+	customerView := isCustomerBillingView(c)
+	dim.CustomerView = customerView
 	stats, err := h.dashboardService.GetUserBreakdownStats(
 		c.Request.Context(), startTime, endTime, dim, limit,
 	)
 	if err != nil {
 		response.Error(c, 500, "Failed to get user breakdown stats")
 		return
+	}
+
+	if customerView {
+		stats = customerUserBreakdown(stats)
 	}
 
 	response.Success(c, gin.H{

@@ -82,8 +82,8 @@
               <th class="pb-2 text-left">{{ t('usage.endpoint') }}</th>
               <th class="pb-2 text-right">{{ t('admin.dashboard.requests') }}</th>
               <th class="pb-2 text-right">{{ t('admin.dashboard.tokens') }}</th>
-              <th class="pb-2 text-right">{{ t('admin.dashboard.actual') }}</th>
-              <th class="pb-2 text-right">{{ t('admin.dashboard.standard') }}</th>
+              <th class="pb-2 text-right">{{ billingView === 'customer' ? t('admin.dashboard.actual') : t('admin.dashboard.standard') }}</th>
+              <th v-if="billingView === 'raw'" class="pb-2 text-right">{{ t('admin.dashboard.actual') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -107,17 +107,19 @@
                   {{ formatTokens(item.total_tokens) }}
                 </td>
                 <td class="py-1.5 text-right text-green-600 dark:text-green-400">
-                  ${{ formatCost(item.actual_cost) }}
+                  ${{ formatCost(displayCost(item)) }}
                 </td>
-                <td class="py-1.5 text-right text-gray-400 dark:text-gray-500">
+                <td v-if="billingView === 'raw'" class="py-1.5 text-right text-gray-400 dark:text-gray-500">
                   ${{ formatCost(item.actual_cost) }}
                 </td>
               </tr>
               <tr v-if="expandedKey === item.endpoint">
-                <td colspan="5" class="p-0">
+                <td :colspan="billingView === 'raw' ? 5 : 4" class="p-0">
                   <UserBreakdownSubTable
                     :items="breakdownItems"
                     :loading="breakdownLoading"
+                    :show-account-cost="billingView === 'raw'"
+                    :billing-view="billingView"
                   />
                 </td>
               </tr>
@@ -164,6 +166,7 @@ const props = withDefaults(
     startDate?: string
     endDate?: string
     filters?: Record<string, any>
+    billingView?: 'raw' | 'customer'
   }>(),
   {
     upstreamEndpointStats: () => [],
@@ -174,7 +177,8 @@ const props = withDefaults(
     source: 'inbound',
     showMetricToggle: false,
     showSourceToggle: false,
-    enableBreakdown: true
+    enableBreakdown: true,
+    billingView: 'raw'
   }
 )
 
@@ -186,6 +190,7 @@ const emit = defineEmits<{
 const expandedKey = ref<string | null>(null)
 const breakdownItems = ref<UserBreakdownItem[]>([])
 const breakdownLoading = ref(false)
+const billingView = computed(() => props.billingView)
 
 const toggleBreakdown = async (endpoint: string) => {
   if (expandedKey.value === endpoint) {
@@ -202,6 +207,7 @@ const toggleBreakdown = async (endpoint: string) => {
       end_date: props.endDate,
       endpoint,
       endpoint_type: props.source,
+      billing_view: billingView.value,
     })
     breakdownItems.value = res.users || []
   } catch {
@@ -303,4 +309,7 @@ const formatCost = (value: number): string => {
   }
   return value.toFixed(4)
 }
+
+const displayCost = (item: { cost?: number | null; actual_cost?: number | null }): number =>
+  Number((billingView.value === 'customer' ? item.actual_cost : (item.cost ?? item.actual_cost)) || 0)
 </script>

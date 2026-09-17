@@ -44,9 +44,9 @@
               <th class="pb-2 text-left">{{ t('admin.dashboard.group') }}</th>
               <th class="pb-2 text-right">{{ t('admin.dashboard.requests') }}</th>
               <th class="pb-2 text-right">{{ t('admin.dashboard.tokens') }}</th>
-              <th class="pb-2 text-right">{{ t('admin.dashboard.actual') }}</th>
+              <th class="pb-2 text-right">{{ billingView === 'customer' ? t('admin.dashboard.actual') : t('admin.dashboard.standard') }}</th>
               <th v-if="showAccountCost" class="pb-2 text-right">{{ t('admin.dashboard.accountCost') }}</th>
-              <th class="pb-2 text-right">{{ t('admin.dashboard.standard') }}</th>
+              <th v-if="billingView === 'raw'" class="pb-2 text-right">{{ t('admin.dashboard.actual') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -74,12 +74,12 @@
                   {{ formatTokens(group.total_tokens) }}
                 </td>
                 <td class="py-1.5 text-right text-green-600 dark:text-green-400">
-                  ${{ formatCost(group.actual_cost) }}
+                  ${{ formatCost(displayCost(group)) }}
                 </td>
                 <td v-if="showAccountCost" class="py-1.5 text-right text-orange-500 dark:text-orange-400">
                   ${{ formatCost(group.account_cost) }}
                 </td>
-                <td class="py-1.5 text-right text-gray-400 dark:text-gray-500">
+                <td v-if="billingView === 'raw'" class="py-1.5 text-right text-gray-400 dark:text-gray-500">
                   ${{ formatCost(group.actual_cost) }}
                 </td>
               </tr>
@@ -90,6 +90,7 @@
                     :items="breakdownItems"
                     :loading="breakdownLoading"
                     :show-account-cost="showAccountCost"
+                    :billing-view="billingView"
                   />
                 </td>
               </tr>
@@ -133,12 +134,14 @@ const props = withDefaults(defineProps<{
   startDate?: string
   endDate?: string
   filters?: Record<string, any>
+  billingView?: 'raw' | 'customer'
 }>(), {
   loading: false,
   metric: 'tokens',
   showMetricToggle: false,
   enableBreakdown: true,
   showAccountCost: true,
+  billingView: 'raw',
 })
 
 const emit = defineEmits<{
@@ -148,8 +151,9 @@ const emit = defineEmits<{
 const expandedKey = ref<string | null>(null)
 const breakdownItems = ref<UserBreakdownItem[]>([])
 const breakdownLoading = ref(false)
-const showAccountCost = computed(() => props.showAccountCost)
-const distributionColspan = computed(() => showAccountCost.value ? 6 : 5)
+const billingView = computed(() => props.billingView)
+const showAccountCost = computed(() => props.showAccountCost && billingView.value === 'raw')
+const distributionColspan = computed(() => 4 + (showAccountCost.value ? 1 : 0) + (billingView.value === 'raw' ? 1 : 0))
 
 const toggleBreakdown = async (type: string, id: number | string) => {
   const key = `${type}-${id}`
@@ -166,6 +170,7 @@ const toggleBreakdown = async (type: string, id: number | string) => {
       start_date: props.startDate,
       end_date: props.endDate,
       group_id: Number(id),
+      billing_view: billingView.value,
     })
     breakdownItems.value = res.users || []
   } catch {
@@ -264,4 +269,7 @@ const formatCost = (value: number | null | undefined): string => {
   }
   return safeValue.toFixed(4)
 }
+
+const displayCost = (group: { cost?: number | null; actual_cost?: number | null }): number =>
+  toFiniteNumber(billingView.value === 'customer' ? group.actual_cost : (group.cost ?? group.actual_cost))
 </script>

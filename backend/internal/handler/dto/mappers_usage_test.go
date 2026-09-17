@@ -161,6 +161,38 @@ func TestUsageLogFromService_UsesRequestedModelAndKeepsUpstreamAdminOnly(t *test
 	require.Contains(t, string(adminJSON), `"upstream_model_mismatch":true`)
 }
 
+func TestUsageLogFromService_ShowsGPT6WithRealDeepSeekUpstream(t *testing.T) {
+	t.Parallel()
+	upstreamModel := "deepseek-v4-pro"
+	log := &service.UsageLog{RequestID: "req_gpt6_deepseek", Model: upstreamModel,
+		RequestedModel: "gpt-6-astra", UpstreamModel: &upstreamModel}
+	require.Equal(t, "gpt-6-astra", UsageLogFromService(log).Model)
+	admin := UsageLogFromServiceAdmin(log)
+	require.Equal(t, "gpt-6-astra", admin.Model)
+	require.NotNil(t, admin.UpstreamModel)
+	require.Equal(t, upstreamModel, *admin.UpstreamModel)
+}
+
+func TestUsageLogFromServiceCustomerProjectsCostsAndHidesUpstream(t *testing.T) {
+	t.Parallel()
+	upstream := "deepseek-v4-pro"
+	log := &service.UsageLog{
+		Model: "deepseek-v4-pro", RequestedModel: "gpt-6-astra", UpstreamModel: &upstream,
+		InputTokens: 10, OutputTokens: 2, InputCost: 1, OutputCost: 2, TotalCost: 3, ActualCost: 18, RateMultiplier: 6,
+	}
+	projected := UsageLogFromServiceCustomer(log)
+	require.Equal(t, "gpt-6-astra", projected.Model)
+	require.Equal(t, 60, projected.InputTokens)
+	require.Equal(t, 12, projected.OutputTokens)
+	require.Equal(t, float64(6), projected.InputCost)
+	require.Equal(t, float64(12), projected.OutputCost)
+	require.Equal(t, float64(18), projected.TotalCost)
+	require.Equal(t, float64(18), projected.ActualCost)
+
+	adminCustomer := UsageLogFromServiceAdminCustomer(log)
+	require.Nil(t, adminCustomer.UpstreamModel)
+}
+
 func TestUsageLogFromService_KeepsUserBillingAndIPWithoutAdminCostFields(t *testing.T) {
 	t.Parallel()
 

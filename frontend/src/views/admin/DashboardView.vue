@@ -113,21 +113,23 @@
                 <p class="text-xs">
                   <span
                     class="text-green-600 dark:text-green-400"
-                    :title="t('admin.dashboard.actual')"
-                    >${{ formatCost(stats.today_actual_cost) }}</span
+                    :title="t(billingView === 'customer' ? 'admin.dashboard.actual' : 'admin.dashboard.standard')"
+                    >${{ formatCost(displayCost(stats.today_cost, stats.today_actual_cost)) }}</span
                   >
-                  <span class="text-gray-400 dark:text-gray-500"> / </span>
-                  <span
-                    class="text-orange-500 dark:text-orange-400"
-                    :title="t('admin.dashboard.accountCost')"
-                    >${{ formatCost(stats.today_account_cost) }}</span
-                  >
-                  <span class="text-gray-400 dark:text-gray-500"> / </span>
-                  <span
-                    class="text-gray-400 dark:text-gray-500"
-                    :title="t('admin.dashboard.standard')"
-                    >${{ formatCost(stats.today_actual_cost) }}</span
-                  >
+                  <template v-if="billingView === 'raw'">
+                    <span class="text-gray-400 dark:text-gray-500"> / </span>
+                    <span
+                      class="text-orange-500 dark:text-orange-400"
+                      :title="t('admin.dashboard.accountCost')"
+                      >${{ formatCost(stats.today_account_cost) }}</span
+                    >
+                    <span class="text-gray-400 dark:text-gray-500"> / </span>
+                    <span
+                      class="text-gray-400 dark:text-gray-500"
+                      :title="t('admin.dashboard.actual')"
+                      >${{ formatCost(stats.today_actual_cost) }}</span
+                    >
+                  </template>
                 </p>
               </div>
             </div>
@@ -149,21 +151,23 @@
                 <p class="text-xs">
                   <span
                     class="text-green-600 dark:text-green-400"
-                    :title="t('admin.dashboard.actual')"
-                    >${{ formatCost(stats.total_actual_cost) }}</span
+                    :title="t(billingView === 'customer' ? 'admin.dashboard.actual' : 'admin.dashboard.standard')"
+                    >${{ formatCost(displayCost(stats.total_cost, stats.total_actual_cost)) }}</span
                   >
-                  <span class="text-gray-400 dark:text-gray-500"> / </span>
-                  <span
-                    class="text-orange-500 dark:text-orange-400"
-                    :title="t('admin.dashboard.accountCost')"
-                    >${{ formatCost(stats.total_account_cost) }}</span
-                  >
-                  <span class="text-gray-400 dark:text-gray-500"> / </span>
-                  <span
-                    class="text-gray-400 dark:text-gray-500"
-                    :title="t('admin.dashboard.standard')"
-                    >${{ formatCost(stats.total_actual_cost) }}</span
-                  >
+                  <template v-if="billingView === 'raw'">
+                    <span class="text-gray-400 dark:text-gray-500"> / </span>
+                    <span
+                      class="text-orange-500 dark:text-orange-400"
+                      :title="t('admin.dashboard.accountCost')"
+                      >${{ formatCost(stats.total_account_cost) }}</span
+                    >
+                    <span class="text-gray-400 dark:text-gray-500"> / </span>
+                    <span
+                      class="text-gray-400 dark:text-gray-500"
+                      :title="t('admin.dashboard.actual')"
+                      >${{ formatCost(stats.total_actual_cost) }}</span
+                    >
+                  </template>
                 </p>
               </div>
             </div>
@@ -294,6 +298,12 @@
                   />
                 </div>
               </div>
+              <div class="flex items-center gap-2 border-l border-gray-200 pl-4 dark:border-dark-700">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {{ billingView === 'customer' ? '客户口径' : '真实口径' }}
+                </span>
+                <Toggle v-model="customerView" data-testid="dashboard-billing-view-toggle" aria-label="切换用量口径" />
+              </div>
             </div>
           </div>
 
@@ -303,17 +313,20 @@
               :model-stats="modelStats"
               :enable-ranking-view="true"
               :ranking-items="rankingItems"
+              :ranking-total-cost="rankingTotalCost"
               :ranking-total-actual-cost="rankingTotalActualCost"
               :ranking-total-requests="rankingTotalRequests"
               :ranking-total-tokens="rankingTotalTokens"
               :loading="chartsLoading"
               :ranking-loading="rankingLoading"
               :ranking-error="rankingError"
+              :billing-view="billingView"
+              :show-account-cost="billingView === 'raw'"
               :start-date="startDate"
               :end-date="endDate"
               @ranking-click="goToUserUsage"
             />
-            <TokenUsageTrend :trend-data="trendData" :loading="chartsLoading" />
+            <TokenUsageTrend :trend-data="trendData" :loading="chartsLoading" :billing-view="billingView" />
           </div>
 
           <!-- User Usage Trend (Full Width) -->
@@ -341,7 +354,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
@@ -362,6 +375,7 @@ import DateRangePicker from '@/components/common/DateRangePicker.vue'
 import Select from '@/components/common/Select.vue'
 import ModelDistributionChart from '@/components/charts/ModelDistributionChart.vue'
 import TokenUsageTrend from '@/components/charts/TokenUsageTrend.vue'
+import Toggle from '@/components/common/Toggle.vue'
 import { useBatchImageAccess } from '@/composables/useBatchImageAccess'
 
 import {
@@ -402,9 +416,12 @@ const trendData = ref<TrendDataPoint[]>([])
 const modelStats = ref<ModelStat[]>([])
 const userTrend = ref<UserUsageTrendPoint[]>([])
 const rankingItems = ref<UserSpendingRankingItem[]>([])
+const rankingTotalCost = ref(0)
 const rankingTotalActualCost = ref(0)
 const rankingTotalRequests = ref(0)
 const rankingTotalTokens = ref(0)
+const customerView = ref(false)
+const billingView = computed<'raw' | 'customer'>(() => customerView.value ? 'customer' : 'raw')
 let chartLoadSeq = 0
 let usersTrendLoadSeq = 0
 let rankingLoadSeq = 0
@@ -617,7 +634,8 @@ const goToUserUsage = (item: UserSpendingRankingItem) => {
     query: {
       user_id: String(item.user_id),
       start_date: startDate.value,
-      end_date: endDate.value
+      end_date: endDate.value,
+      billing_view: billingView.value
     }
   })
 }
@@ -659,7 +677,8 @@ const loadDashboardSnapshot = async (includeStats: boolean) => {
       include_trend: true,
       include_model_stats: true,
       include_group_stats: false,
-      include_users_trend: false
+      include_users_trend: false,
+      billing_view: billingView.value
     })
     if (currentSeq !== chartLoadSeq) return
     if (includeStats && response.stats) {
@@ -687,7 +706,8 @@ const loadUsersTrend = async () => {
       start_date: startDate.value,
       end_date: endDate.value,
       granularity: granularity.value,
-      limit: 12
+      limit: 12,
+      billing_view: billingView.value
     })
     if (currentSeq !== usersTrendLoadSeq) return
     userTrend.value = response.trend || []
@@ -710,10 +730,12 @@ const loadUserSpendingRanking = async () => {
     const response = await adminAPI.dashboard.getUserSpendingRanking({
       start_date: startDate.value,
       end_date: endDate.value,
-      limit: rankingLimit
+      limit: rankingLimit,
+      billing_view: billingView.value
     })
     if (currentSeq !== rankingLoadSeq) return
     rankingItems.value = response.ranking || []
+    rankingTotalCost.value = response.total_cost || 0
     rankingTotalActualCost.value = response.total_actual_cost || 0
     rankingTotalRequests.value = response.total_requests || 0
     rankingTotalTokens.value = response.total_tokens || 0
@@ -721,6 +743,7 @@ const loadUserSpendingRanking = async () => {
     if (currentSeq !== rankingLoadSeq) return
     console.error('Error loading user spending ranking:', error)
     rankingItems.value = []
+    rankingTotalCost.value = 0
     rankingTotalActualCost.value = 0
     rankingTotalRequests.value = 0
     rankingTotalTokens.value = 0
@@ -747,6 +770,13 @@ const loadChartData = async () => {
     loadUserSpendingRanking()
   ])
 }
+
+const displayCost = (standardCost: number, actualCost: number): number =>
+  billingView.value === 'customer' ? actualCost : standardCost
+
+watch(customerView, () => {
+  void loadDashboardStats()
+})
 
 onMounted(() => {
   void refreshBatchImageAccess()

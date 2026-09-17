@@ -261,6 +261,10 @@ type OpenAIWSIngressHooks struct {
 	// ReasoningEffortMappings rewrites explicit effort values for this WS session.
 	ReasoningEffortMappings []ReasoningEffortMapping
 	TurnStarted             func(turn int, startedAt time.Time)
+	// TransformRequest may add request-scoped internal context before a
+	// response.create frame is parsed and forwarded. The returned payload is
+	// used for the current turn; non-response frames should be returned as-is.
+	TransformRequest        func(turn int, payload []byte, originalModel string) ([]byte, error)
 	BeforeTurn              func(turn int) error
 	BeforeRequest           func(turn int, payload []byte, originalModel string) error
 	// MapRequestModel resolves the current turn's client model to the model

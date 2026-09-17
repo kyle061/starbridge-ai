@@ -1,7 +1,7 @@
 <template>
   <AppLayout>
     <div class="space-y-6">
-      <UsageStatsCards :stats="usageStats" />
+      <UsageStatsCards :stats="usageStats" :billing-view="billingView" :show-account-cost="billingView === 'raw'" />
       <!-- Charts Section -->
       <div class="space-y-4">
         <div class="card p-4">
@@ -20,6 +20,10 @@
                 <Select v-model="granularity" :options="granularityOptions" @change="loadChartData" />
               </div>
             </div>
+            <div class="flex items-center gap-2 border-l border-gray-200 pl-4 dark:border-dark-700">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ billingView === 'customer' ? '客户口径' : '真实口径' }}</span>
+              <Toggle v-model="customerView" data-testid="usage-billing-view-toggle" :aria-label="'切换用量口径'" />
+            </div>
           </div>
         </div>
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -35,6 +39,8 @@
             :start-date="startDate"
             :end-date="endDate"
             :filters="breakdownFilters"
+            :billing-view="billingView"
+            :show-account-cost="billingView === 'raw'"
           />
           <GroupDistributionChart
             v-model:metric="groupDistributionMetric"
@@ -44,6 +50,8 @@
             :start-date="startDate"
             :end-date="endDate"
             :filters="breakdownFilters"
+            :billing-view="billingView"
+            :show-account-cost="billingView === 'raw'"
           />
         </div>
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -60,8 +68,10 @@
             :start-date="startDate"
             :end-date="endDate"
             :filters="breakdownFilters"
+            :billing-view="billingView"
+            :show-account-cost="billingView === 'raw'"
           />
-          <TokenUsageTrend :trend-data="trendData" :loading="chartsLoading" />
+          <TokenUsageTrend :trend-data="trendData" :loading="chartsLoading" :billing-view="billingView" />
         </div>
       </div>
       <!-- 明细区：tab 栏 + 筛选 + 内容收进同一张卡片，消除割裂感 -->
@@ -128,6 +138,8 @@
             :data="usageLogs"
             :loading="loading"
             :columns="visibleColumns"
+            :billing-view="billingView"
+            :show-account-billing="billingView === 'raw'"
             :server-side-sort="true"
             :default-sort-key="'created_at'"
             :default-sort-order="'desc'"
@@ -159,6 +171,7 @@
             :end-date="endDate"
             :filters="breakdownFilters"
             :model="filters.model"
+            :billing-view="billingView"
             @select-user="handleRankingSelectUser"
           />
         </div>
@@ -205,6 +218,7 @@ import type { OpsErrorLog } from '@/api/admin/ops'
 import ModelDistributionChart from '@/components/charts/ModelDistributionChart.vue'; import GroupDistributionChart from '@/components/charts/GroupDistributionChart.vue'; import TokenUsageTrend from '@/components/charts/TokenUsageTrend.vue'
 import EndpointDistributionChart from '@/components/charts/EndpointDistributionChart.vue'
 import Icon from '@/components/icons/Icon.vue'
+import Toggle from '@/components/common/Toggle.vue'
 import type { AdminUsageLog, TrendDataPoint, ModelStat, GroupStat, EndpointStat, AdminUser } from '@/types'; import type { AdminUsageStatsResponse, AdminUsageQueryParams } from '@/api/admin/usage'
 
 const { t } = useI18n()
@@ -214,6 +228,11 @@ type EndpointSource = 'inbound' | 'upstream' | 'path'
 type ModelDistributionSource = 'requested' | 'upstream' | 'mapping'
 const route = useRoute()
 const usageStats = ref<AdminUsageStatsResponse | null>(null); const usageLogs = ref<AdminUsageLog[]>([]); const loading = ref(false); const exporting = ref(false)
+const customerView = ref(
+  (typeof route.query.billing_view === 'string' && route.query.billing_view.toLowerCase() === 'customer')
+  || (Array.isArray(route.query.billing_view) && route.query.billing_view.includes('customer'))
+)
+const billingView = computed<'raw' | 'customer'>(() => customerView.value ? 'customer' : 'raw')
 const trendData = ref<TrendDataPoint[]>([]); const requestedModelStats = ref<ModelStat[]>([]); const upstreamModelStats = ref<ModelStat[]>([]); const mappingModelStats = ref<ModelStat[]>([]); const groupStats = ref<GroupStat[]>([]); const chartsLoading = ref(false); const modelStatsLoading = ref(false); const granularity = ref<'day' | 'hour'>('hour')
 const modelDistributionMetric = ref<DistributionMetric>('tokens')
 const modelDistributionSource = ref<ModelDistributionSource>('requested')
@@ -392,7 +411,7 @@ const loadLogs = async () => {
   abortController?.abort(); const c = new AbortController(); abortController = c; loading.value = true
   try {
     const res = await adminAPI.usage.list(
-      buildUsageListParams(pagination.page, pagination.page_size, false),
+      { ...buildUsageListParams(pagination.page, pagination.page_size, false), billing_view: billingView.value },
       { signal: c.signal }
     )
     if(!c.signal.aborted) { usageLogs.value = res.items; pagination.total = res.total }
@@ -406,6 +425,7 @@ const loadStats = async (force = false) => {
     const legacyStream = requestType ? requestTypeToLegacyStream(requestType) : filters.value.stream
     const s = await adminAPI.usage.getStats({
       ...filters.value,
+      billing_view: billingView.value,
       stream: legacyStream === null ? undefined : legacyStream,
       ...(force ? { nocache: 1 } : {}),
     })
@@ -457,7 +477,7 @@ const loadModelStats = async (source: ModelDistributionSource, force = false) =>
 	  upstream_model_mismatch: filters.value.upstream_model_mismatch,
     }
 
-    const response = await adminAPI.dashboard.getModelStats({ ...baseParams, model_source: source })
+    const response = await adminAPI.dashboard.getModelStats({ ...baseParams, model_source: source, billing_view: billingView.value })
 
     if (seq !== modelStatsReqSeq) return
 
@@ -510,7 +530,8 @@ const loadChartData = async () => {
       include_trend: true,
       include_model_stats: false,
       include_group_stats: true,
-      include_users_trend: false
+      include_users_trend: false,
+      billing_view: billingView.value
     })
     if (seq !== chartReqSeq) return
     trendData.value = snapshot.trend || []
@@ -531,6 +552,14 @@ const applyFilters = () => {
     errRows.value = []
   }
 }
+
+watch(customerView, () => {
+  invalidateModelStatsCache()
+  loadLogs()
+  loadStats(true)
+  loadModelStats(modelDistributionSource.value, true)
+  loadChartData()
+})
 const refreshData = () => {
   invalidateModelStatsCache()
   loadLogs()
@@ -594,7 +623,7 @@ const exportToExcel = async () => {
     const ws = XLSX.utils.aoa_to_sheet([headers])
     while (true) {
       const res = await adminUsageAPI.list(
-        buildUsageListParams(p, 100, true),
+        { ...buildUsageListParams(p, 100, true), billing_view: billingView.value },
         { signal: c.signal }
       )
       if (c.signal.aborted) break; if (p === 1) { total = res.total; exportProgress.total = total }

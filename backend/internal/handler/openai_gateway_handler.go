@@ -640,6 +640,14 @@ func (h *OpenAIGatewayHandler) Responses(c *gin.Context) {
 	// token 计费部分仍受利润门保护，独立图片/视频端点才在门外。
 	pricingCtx, pricingAt := h.gatewayService.WithOpenAIRequestPricingContext(c.Request.Context(), apiKey.GroupID)
 	c.Request = c.Request.WithContext(pricingCtx)
+	preparedBody, preparationErr := h.prepareGPT6Request(c, apiKey, reqModel, body, true)
+	if preparationErr != nil {
+		reqLog.Warn("openai.gpt6_preparation_failed", zap.Error(preparationErr))
+		h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "preparation_unavailable", "GPT6 requirements preparation is temporarily unavailable", streamStarted)
+		return
+	}
+	body = preparedBody
+	forwardBody = openAIModelMappedBody(preparedBody, channelMapping.Mapped, channelMapping.MappedModel, h.gatewayService.ReplaceModelInBody)
 
 	for {
 		// Streaming Forward intentionally detaches the upstream request so usage can
@@ -2539,7 +2547,12 @@ func (h *OpenAIGatewayHandler) ResponsesWebSocket(c *gin.Context) {
 	sameAccountRetryCount := make(map[int64]int)
 	var lastFailoverErr *service.UpstreamFailoverError
 	var oauth429FailoverState service.OpenAIOAuth429FailoverState
-	wsAttemptMessage := append([]byte(nil), firstMessage...)
+	wsAttemptMessage, preparationErr := h.prepareGPT6Request(c, apiKey, reqModel, firstMessage, true)
+	if preparationErr != nil {
+		reqLog.Warn("openai.websocket_gpt6_preparation_failed", zap.Error(preparationErr))
+		closeOpenAIClientWS(wsConn, coderws.StatusServiceUnavailable, "GPT6 requirements preparation is temporarily unavailable")
+		return
+	}
 	waitForWSSameAccountRetry := func(account *service.Account, failoverErr *service.UpstreamFailoverError) bool {
 		if account == nil || failoverErr == nil || failoverErr.StatusCode != http.StatusTooManyRequests || failoverErr.SameAccountRetryDeadline.IsZero() {
 			return false
@@ -2791,6 +2804,12 @@ func (h *OpenAIGatewayHandler) ResponsesWebSocket(c *gin.Context) {
 			MaxReasoningEffortOverLimit: maxReasoningEffortOverLimit,
 			ReasoningEffortMappings:     reasoningEffortMappings,
 			TurnStarted:                 recordTurnStart,
+			TransformRequest: func(turn int, payload []byte, originalModel string) ([]byte, error) {
+				if turn <= 1 || !service.IsGPT6Model(originalModel) {
+					return payload, nil
+				}
+				return h.prepareGPT6Request(c, apiKey, originalModel, payload, true)
+			},
 			BeforeRequest: func(turn int, payload []byte, originalModel string) error {
 				c.Set(securityAuditWSTurnContextKey, turn)
 				service.BeginOpsStreamTurn(c, turn)

@@ -49,10 +49,13 @@ ChartJS.register(
 
 const { t } = useI18n()
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   trendData: TrendDataPoint[]
   loading?: boolean
-}>()
+  billingView?: 'raw' | 'customer'
+}>(), {
+  billingView: 'customer',
+})
 
 const isDarkMode = computed(() => {
   return document.documentElement.classList.contains('dark')
@@ -155,7 +158,10 @@ const lineOptions = computed(() => ({
           const dataIndex = tooltipItems[0]?.dataIndex
           if (dataIndex !== undefined && props.trendData[dataIndex]) {
             const data = props.trendData[dataIndex]
-            return `Actual: $${formatCost(data.actual_cost)} | Standard: $${formatCost(data.actual_cost)}`
+            if (props.billingView === 'customer') {
+              return `${t('usage.userBilled')}: $${formatCost(data.actual_cost)}`
+            }
+            return `Actual: $${formatCost(data.actual_cost)} | Standard: $${formatCost(data.cost)}`
           }
           return ''
         }

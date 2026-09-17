@@ -58,6 +58,16 @@ func WithCompositeRouteCandidates(ctx context.Context, candidates []CompositeRou
 	return ctx
 }
 
+// WithoutCompositeRouteCandidates scopes a request that needs an explicit
+// platform choice (for example GPT6's internal preparation pass) away from
+// the public composite execution chain.
+func WithoutCompositeRouteCandidates(ctx context.Context) context.Context {
+	if ctx == nil {
+		return nil
+	}
+	return context.WithValue(ctx, compositeRouteCandidatesContextKey{}, []CompositeRouteDecision(nil))
+}
+
 func CompositeRouteCandidatesFromContext(ctx context.Context) []CompositeRouteDecision {
 	if ctx == nil {
 		return nil
@@ -301,9 +311,16 @@ func compositeRouteCandidatesForSelection(ctx context.Context, openAICompatible 
 	if len(candidates) < 2 || isOpenAICompatibleCompositePlatform(candidates[0].TargetPlatform) != openAICompatible {
 		return nil
 	}
+	// GPT6 uses DeepSeek only for the private requirements pass. Keep the
+	// final execution on the selected GPT6 provider even when a DeepSeek
+	// fallback route exists in the composite group.
+	gpt6FinalExecution := IsGPT6Model(candidates[0].PublicModel)
 	filtered := make([]CompositeRouteDecision, 0, len(candidates))
 	for _, candidate := range candidates {
 		if !candidate.Matched || isOpenAICompatibleCompositePlatform(candidate.TargetPlatform) != openAICompatible {
+			continue
+		}
+		if gpt6FinalExecution && candidate.TargetPlatform == PlatformDeepseek {
 			continue
 		}
 		if candidates[0].Endpoint == CompositeRouteEndpointGemini &&

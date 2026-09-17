@@ -898,7 +898,8 @@ func normalizeProxyProbeURLs(targets []ProbeURLConfig) ([]ProbeURLConfig, error)
 }
 
 type BillingConfig struct {
-	RetailPricing RetailPricingConfig `mapstructure:"retail_pricing"`
+	RetailPricing   RetailPricingConfig   `mapstructure:"retail_pricing"`
+	GPT6Preparation GPT6PreparationConfig `mapstructure:"gpt6_preparation"`
 	// RequireBalancePurchase enables Starbridge's prepaid user API access.
 	RequireBalancePurchase bool                 `mapstructure:"require_balance_purchase"`
 	CircuitBreaker         CircuitBreakerConfig `mapstructure:"circuit_breaker"`
@@ -915,6 +916,16 @@ type BillingConfig struct {
 	// UserPlatformQuotaSentinelTTLSeconds sentinel(无 limit 占位)entry 的 TTL,
 	// 显著短于 quota cache 默认 86400s 以控 Redis 内存;默认 3600=1h。
 	UserPlatformQuotaSentinelTTLSeconds int `mapstructure:"user_platform_quota_sentinel_ttl_seconds"`
+}
+
+// GPT6PreparationConfig controls the internal requirements pass used by GPT6
+// in composite groups. The preparation model is never exposed as the public
+// model and its usage is charged with PreparationMultiplier.
+type GPT6PreparationConfig struct {
+	Enabled               bool    `mapstructure:"enabled"`
+	Model                 string  `mapstructure:"model"`
+	PreparationMultiplier float64 `mapstructure:"preparation_multiplier"`
+	MaxOutputTokens       int     `mapstructure:"max_output_tokens"`
 }
 
 // RetailPricingConfig is the single customer pricing policy for all platforms.
@@ -2097,6 +2108,10 @@ func setDefaults() {
 	viper.SetDefault("billing.retail_pricing.standard_multiplier", 2.0)
 	viper.SetDefault("billing.retail_pricing.latest_multiplier", 2.5)
 	viper.SetDefault("billing.retail_pricing.latest_model_prefixes", []string{"gpt-6", "deepseek-v4"})
+	viper.SetDefault("billing.gpt6_preparation.enabled", true)
+	viper.SetDefault("billing.gpt6_preparation.model", "deepseek-v4-pro")
+	viper.SetDefault("billing.gpt6_preparation.preparation_multiplier", 6.0)
+	viper.SetDefault("billing.gpt6_preparation.max_output_tokens", 1200)
 	viper.SetDefault("billing.user_platform_quota_cache_ttl_seconds", 86400)
 	viper.SetDefault("billing.user_platform_quota_sentinel_ttl_seconds", 3600)
 
@@ -3080,6 +3095,17 @@ func (c *Config) Validate() error {
 			if rate <= 0 || math.IsNaN(rate) || math.IsInf(rate, 0) {
 				return fmt.Errorf("billing.retail_pricing.%s must be finite and positive", name)
 			}
+		}
+	}
+	if c.Billing.GPT6Preparation.Enabled {
+		if strings.TrimSpace(c.Billing.GPT6Preparation.Model) == "" {
+			return fmt.Errorf("billing.gpt6_preparation.model must not be empty")
+		}
+		if c.Billing.GPT6Preparation.PreparationMultiplier <= 0 || math.IsNaN(c.Billing.GPT6Preparation.PreparationMultiplier) || math.IsInf(c.Billing.GPT6Preparation.PreparationMultiplier, 0) {
+			return fmt.Errorf("billing.gpt6_preparation.preparation_multiplier must be finite and positive")
+		}
+		if c.Billing.GPT6Preparation.MaxOutputTokens <= 0 {
+			return fmt.Errorf("billing.gpt6_preparation.max_output_tokens must be positive")
 		}
 	}
 	if c.Database.MaxOpenConns <= 0 {

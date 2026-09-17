@@ -269,3 +269,23 @@ func TestClientRequestedModelUsesCompositePublicModel(t *testing.T) {
 	require.Equal(t, "public-alias", fields.ChannelMappedModel)
 	require.Equal(t, "public-alias\u2192gpt-5", fields.ModelMappingChain)
 }
+
+func TestClientRequestedGPT6ModelIsPreservedOnOpenAIExecutionRoute(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	for _, model := range []string{"gpt-6", "gpt-6-astra"} {
+		t.Run(model, func(t *testing.T) {
+			c, _ := gin.CreateTestContext(httptest.NewRecorder())
+			c.Request = httptest.NewRequest("POST", "/v1/responses", nil)
+			c.Request = c.Request.WithContext(service.WithCompositeRouteDecision(c.Request.Context(), service.CompositeRouteDecision{
+				Matched: true, Source: service.CompositeRouteSourceExplicit,
+				PublicModel: model, TargetPlatform: service.PlatformOpenAI, UpstreamModel: "gpt-6-astra",
+			}))
+			require.Equal(t, model, clientRequestedModel(c, "gpt-6-astra"))
+			fields := clientRequestedUsageFields(c, service.ChannelMappingResult{}, "gpt-6-astra", "gpt-6-astra")
+			require.Equal(t, model, fields.OriginalModel)
+			require.Equal(t, model, fields.ChannelMappedModel)
+			require.Equal(t, model+"\u2192gpt-6-astra", fields.ModelMappingChain)
+			require.Equal(t, service.PlatformOpenAI, effectiveAPIKeyPlatform(c, &service.APIKey{Group: &service.Group{Platform: service.PlatformComposite}}))
+		})
+	}
+}

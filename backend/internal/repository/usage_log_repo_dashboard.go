@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/timezone"
@@ -14,12 +15,13 @@ import (
 // getPerformanceStats 获取 RPM 和 TPM（近5分钟平均值，可选按用户过滤）
 func (r *usageLogRepository) getPerformanceStats(ctx context.Context, userID int64) (rpm, tpm int64, err error) {
 	fiveMinutesAgo := time.Now().Add(-5 * time.Minute)
-	query := `
+	tokens := newUsageLogTokenExpressions("", usagestats.CustomerBillingViewFromContext(ctx))
+	query := fmt.Sprintf(`
 		SELECT
 			COUNT(*) as request_count,
-			COALESCE(SUM(input_tokens + output_tokens), 0) as token_count
+			COALESCE(SUM(%s + %s), 0) as token_count
 		FROM usage_logs
-		WHERE created_at >= $1`
+		WHERE created_at >= $1`, tokens.input, tokens.output)
 	args := []any{fiveMinutesAgo}
 	if userID > 0 {
 		query += " AND user_id = $2"
@@ -381,6 +383,7 @@ type PlatformDashboardStats = usagestats.PlatformDashboardStats
 func (r *usageLogRepository) GetUserDashboardStats(ctx context.Context, userID int64) (*UserDashboardStats, error) {
 	stats := &UserDashboardStats{}
 	today := timezone.Today()
+	tokens := newUsageLogTokenExpressions("", usagestats.CustomerBillingViewFromContext(ctx))
 
 	// API Key 统计
 	if err := scanSingleRow(
@@ -403,19 +406,19 @@ func (r *usageLogRepository) GetUserDashboardStats(ctx context.Context, userID i
 	}
 
 	// 累计 Token 统计
-	totalStatsQuery := `
+	totalStatsQuery := fmt.Sprintf(`
 		SELECT
 			COUNT(*) as total_requests,
-			COALESCE(SUM(input_tokens), 0) as total_input_tokens,
-			COALESCE(SUM(output_tokens), 0) as total_output_tokens,
-			COALESCE(SUM(cache_creation_tokens), 0) as total_cache_creation_tokens,
-			COALESCE(SUM(cache_read_tokens), 0) as total_cache_read_tokens,
+			COALESCE(SUM(%s), 0) as total_input_tokens,
+			COALESCE(SUM(%s), 0) as total_output_tokens,
+			COALESCE(SUM(%s), 0) as total_cache_creation_tokens,
+			COALESCE(SUM(%s), 0) as total_cache_read_tokens,
 			COALESCE(SUM(total_cost), 0) as total_cost,
 			COALESCE(SUM(actual_cost), 0) as total_actual_cost,
 			COALESCE(AVG(duration_ms), 0) as avg_duration_ms
 		FROM usage_logs
 		WHERE user_id = $1
-	`
+	`, tokens.input, tokens.output, tokens.cacheCreate, tokens.cacheRead)
 	if err := scanSingleRow(
 		ctx,
 		r.sql,
@@ -435,18 +438,18 @@ func (r *usageLogRepository) GetUserDashboardStats(ctx context.Context, userID i
 	stats.TotalTokens = stats.TotalInputTokens + stats.TotalOutputTokens + stats.TotalCacheCreationTokens + stats.TotalCacheReadTokens
 
 	// 今日 Token 统计
-	todayStatsQuery := `
+	todayStatsQuery := fmt.Sprintf(`
 		SELECT
 			COUNT(*) as today_requests,
-			COALESCE(SUM(input_tokens), 0) as today_input_tokens,
-			COALESCE(SUM(output_tokens), 0) as today_output_tokens,
-			COALESCE(SUM(cache_creation_tokens), 0) as today_cache_creation_tokens,
-			COALESCE(SUM(cache_read_tokens), 0) as today_cache_read_tokens,
+			COALESCE(SUM(%s), 0) as today_input_tokens,
+			COALESCE(SUM(%s), 0) as today_output_tokens,
+			COALESCE(SUM(%s), 0) as today_cache_creation_tokens,
+			COALESCE(SUM(%s), 0) as today_cache_read_tokens,
 			COALESCE(SUM(total_cost), 0) as today_cost,
 			COALESCE(SUM(actual_cost), 0) as today_actual_cost
 		FROM usage_logs
 		WHERE user_id = $1 AND created_at >= $2
-	`
+	`, tokens.input, tokens.output, tokens.cacheCreate, tokens.cacheRead)
 	if err := scanSingleRow(
 		ctx,
 		r.sql,
@@ -478,14 +481,15 @@ func (r *usageLogRepository) GetUserDashboardStats(ctx context.Context, userID i
 	//   1) 无平台归属的极少数行（group/account 都没 platform）会被 HAVING 排除；
 	//   2) usageLogSuccessFilterUL 会把 actual_cost = 0 的失败 placeholder 行排除，
 	//      而 totalStatsQuery/todayStatsQuery 没有这层过滤、会把这些行的 request 计数算进去。
-	platformQuery := `
+	platformTokens := newUsageLogTokenExpressions("ul", usagestats.CustomerBillingViewFromContext(ctx))
+	platformQuery := fmt.Sprintf(`
 		SELECT
 			` + usageLogEffectivePlatformExpr + ` as platform,
 			COUNT(*) as total_requests,
-			COALESCE(SUM(ul.input_tokens + ul.output_tokens + ul.cache_creation_tokens + ul.cache_read_tokens), 0) as total_tokens,
+			COALESCE(SUM(%s), 0) as total_tokens,
 			COALESCE(SUM(ul.actual_cost), 0) as total_actual_cost,
 			COUNT(*) FILTER (WHERE ul.created_at >= $2) as today_requests,
-			COALESCE(SUM(ul.input_tokens + ul.output_tokens + ul.cache_creation_tokens + ul.cache_read_tokens) FILTER (WHERE ul.created_at >= $2), 0) as today_tokens,
+			COALESCE(SUM(%s) FILTER (WHERE ul.created_at >= $2), 0) as today_tokens,
 			COALESCE(SUM(ul.actual_cost) FILTER (WHERE ul.created_at >= $2), 0) as today_actual_cost
 		FROM usage_logs ul
 		LEFT JOIN groups g ON g.id = ul.group_id
@@ -495,7 +499,7 @@ func (r *usageLogRepository) GetUserDashboardStats(ctx context.Context, userID i
 		GROUP BY ` + usageLogEffectivePlatformExpr + `
 		HAVING ` + usageLogEffectivePlatformExpr + ` IS NOT NULL AND ` + usageLogEffectivePlatformExpr + ` <> ''
 		ORDER BY total_actual_cost DESC
-	`
+	`, platformTokens.total, platformTokens.total)
 	rows, err := r.sql.QueryContext(ctx, platformQuery, userID, today)
 	if err != nil {
 		return nil, err
@@ -529,12 +533,13 @@ func (r *usageLogRepository) GetUserDashboardStats(ctx context.Context, userID i
 // getPerformanceStatsByAPIKey 获取指定 API Key 的 RPM 和 TPM（近5分钟平均值）
 func (r *usageLogRepository) getPerformanceStatsByAPIKey(ctx context.Context, apiKeyID int64) (rpm, tpm int64, err error) {
 	fiveMinutesAgo := time.Now().Add(-5 * time.Minute)
-	query := `
+	tokens := newUsageLogTokenExpressions("", usagestats.CustomerBillingViewFromContext(ctx))
+	query := fmt.Sprintf(`
 		SELECT
 			COUNT(*) as request_count,
-			COALESCE(SUM(input_tokens + output_tokens + cache_creation_tokens + cache_read_tokens), 0) as token_count
+			COALESCE(SUM(%s), 0) as token_count
 		FROM usage_logs
-		WHERE created_at >= $1 AND api_key_id = $2`
+		WHERE created_at >= $1 AND api_key_id = $2`, tokens.total)
 	args := []any{fiveMinutesAgo, apiKeyID}
 
 	var requestCount int64
@@ -549,25 +554,26 @@ func (r *usageLogRepository) getPerformanceStatsByAPIKey(ctx context.Context, ap
 func (r *usageLogRepository) GetAPIKeyDashboardStats(ctx context.Context, apiKeyID int64) (*UserDashboardStats, error) {
 	stats := &UserDashboardStats{}
 	today := timezone.Today()
+	tokens := newUsageLogTokenExpressions("", usagestats.CustomerBillingViewFromContext(ctx))
 
 	// API Key 维度不需要统计 key 数量，设为 1
 	stats.TotalAPIKeys = 1
 	stats.ActiveAPIKeys = 1
 
 	// 累计 Token 统计
-	totalStatsQuery := `
+	totalStatsQuery := fmt.Sprintf(`
 		SELECT
 			COUNT(*) as total_requests,
-			COALESCE(SUM(input_tokens), 0) as total_input_tokens,
-			COALESCE(SUM(output_tokens), 0) as total_output_tokens,
-			COALESCE(SUM(cache_creation_tokens), 0) as total_cache_creation_tokens,
-			COALESCE(SUM(cache_read_tokens), 0) as total_cache_read_tokens,
+			COALESCE(SUM(%s), 0) as total_input_tokens,
+			COALESCE(SUM(%s), 0) as total_output_tokens,
+			COALESCE(SUM(%s), 0) as total_cache_creation_tokens,
+			COALESCE(SUM(%s), 0) as total_cache_read_tokens,
 			COALESCE(SUM(total_cost), 0) as total_cost,
 			COALESCE(SUM(actual_cost), 0) as total_actual_cost,
 			COALESCE(AVG(duration_ms), 0) as avg_duration_ms
 		FROM usage_logs
 		WHERE api_key_id = $1
-	`
+	`, tokens.input, tokens.output, tokens.cacheCreate, tokens.cacheRead)
 	if err := scanSingleRow(
 		ctx,
 		r.sql,
@@ -587,18 +593,18 @@ func (r *usageLogRepository) GetAPIKeyDashboardStats(ctx context.Context, apiKey
 	stats.TotalTokens = stats.TotalInputTokens + stats.TotalOutputTokens + stats.TotalCacheCreationTokens + stats.TotalCacheReadTokens
 
 	// 今日 Token 统计
-	todayStatsQuery := `
+	todayStatsQuery := fmt.Sprintf(`
 		SELECT
 			COUNT(*) as today_requests,
-			COALESCE(SUM(input_tokens), 0) as today_input_tokens,
-			COALESCE(SUM(output_tokens), 0) as today_output_tokens,
-			COALESCE(SUM(cache_creation_tokens), 0) as today_cache_creation_tokens,
-			COALESCE(SUM(cache_read_tokens), 0) as today_cache_read_tokens,
+			COALESCE(SUM(%s), 0) as today_input_tokens,
+			COALESCE(SUM(%s), 0) as today_output_tokens,
+			COALESCE(SUM(%s), 0) as today_cache_creation_tokens,
+			COALESCE(SUM(%s), 0) as today_cache_read_tokens,
 			COALESCE(SUM(total_cost), 0) as today_cost,
 			COALESCE(SUM(actual_cost), 0) as today_actual_cost
 		FROM usage_logs
 		WHERE api_key_id = $1 AND created_at >= $2
-	`
+	`, tokens.input, tokens.output, tokens.cacheCreate, tokens.cacheRead)
 	if err := scanSingleRow(
 		ctx,
 		r.sql,

@@ -71,7 +71,7 @@
             <td class="whitespace-nowrap px-4 py-3 text-right text-sm tabular-nums text-gray-500 dark:text-gray-400">{{ fmtTokens(item.output_tokens) }}</td>
             <td class="whitespace-nowrap px-4 py-3 text-right text-sm tabular-nums text-gray-500 dark:text-gray-400">{{ fmtTokens(item.cache_tokens) }}</td>
             <td class="whitespace-nowrap px-4 py-3 text-right text-sm font-medium tabular-nums text-gray-900 dark:text-gray-100">{{ fmtTokens(item.total_tokens) }}</td>
-            <td class="whitespace-nowrap px-4 py-3 text-right text-sm font-medium tabular-nums text-green-600 dark:text-green-400">${{ fmtCost(item.actual_cost) }}</td>
+            <td class="whitespace-nowrap px-4 py-3 text-right text-sm font-medium tabular-nums text-green-600 dark:text-green-400">${{ fmtCost(displayCost(item)) }}</td>
           </tr>
         </tbody>
       </table>
@@ -80,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getUserBreakdown, type UserBreakdownParams } from '@/api/admin/dashboard'
 import { formatCompactNumber, formatCostFixed } from '@/utils/format'
@@ -93,6 +93,7 @@ const props = defineProps<{
   endDate: string
   filters: Record<string, unknown>
   model?: string
+  billingView?: 'raw' | 'customer'
 }>()
 
 defineEmits<{ (e: 'select-user', userId: number, email: string): void }>()
@@ -100,14 +101,19 @@ defineEmits<{ (e: 'select-user', userId: number, email: string): void }>()
 const { t } = useI18n()
 
 type SortKey = NonNullable<UserBreakdownParams['sort_by']>
-const sortableColumns: { key: SortKey; label: string }[] = [
+const baseSortableColumns: { key: SortKey; label: string }[] = [
   { key: 'requests', label: 'admin.usage.tokenRanking.columns.requests' },
   { key: 'input_tokens', label: 'admin.usage.tokenRanking.columns.inputTokens' },
   { key: 'output_tokens', label: 'admin.usage.tokenRanking.columns.outputTokens' },
   { key: 'cache_tokens', label: 'admin.usage.tokenRanking.columns.cacheTokens' },
   { key: 'total_tokens', label: 'admin.usage.tokenRanking.columns.totalTokens' },
-  { key: 'actual_cost', label: 'admin.usage.tokenRanking.columns.cost' },
 ]
+
+const costSortKey = computed<SortKey>(() => props.billingView === 'customer' ? 'actual_cost' : 'cost')
+const sortableColumns = computed(() => [
+  ...baseSortableColumns,
+  { key: costSortKey.value, label: 'admin.usage.tokenRanking.columns.cost' },
+])
 
 const limitOptions = [
   { value: 20, label: 'Top 20' },
@@ -148,6 +154,7 @@ const load = async () => {
       end_date: props.endDate,
       sort_by: sortBy.value,
       limit: limit.value,
+      billing_view: props.billingView,
     }
     if (props.model) params.model = props.model
     const res = await getUserBreakdown(params)
@@ -163,10 +170,18 @@ const load = async () => {
 
 // Reload when the shared filters / date range / model change.
 watch(
-  () => [props.startDate, props.endDate, props.model, JSON.stringify(props.filters)],
-  () => load(),
+  () => [props.startDate, props.endDate, props.model, props.billingView, JSON.stringify(props.filters)],
+  () => {
+    if (sortBy.value === 'cost' || sortBy.value === 'actual_cost') {
+      sortBy.value = costSortKey.value
+    }
+    return load()
+  },
   { immediate: true }
 )
 
 defineExpose({ reload: load })
+
+const displayCost = (item: UserBreakdownItem): number =>
+  props.billingView === 'customer' ? item.actual_cost : (item.cost ?? item.actual_cost)
 </script>

@@ -113,9 +113,9 @@
               <th class="pb-2 text-left">{{ t('admin.dashboard.model') }}</th>
               <th class="pb-2 text-right">{{ t('admin.dashboard.requests') }}</th>
               <th class="pb-2 text-right">{{ t('admin.dashboard.tokens') }}</th>
-              <th class="pb-2 text-right">{{ t('admin.dashboard.actual') }}</th>
+              <th class="pb-2 text-right">{{ billingView === 'customer' ? t('admin.dashboard.actual') : t('admin.dashboard.standard') }}</th>
               <th v-if="showAccountCost" class="pb-2 text-right">{{ t('admin.dashboard.accountCost') }}</th>
-              <th class="pb-2 text-right">{{ t('admin.dashboard.standard') }}</th>
+              <th v-if="billingView === 'raw'" class="pb-2 text-right">{{ t('admin.dashboard.actual') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -143,12 +143,12 @@
                   {{ formatTokens(model.total_tokens) }}
                 </td>
                 <td class="py-1.5 text-right text-green-600 dark:text-green-400">
-                  ${{ formatCost(model.actual_cost) }}
+                  ${{ formatCost(displayCost(model)) }}
                 </td>
                 <td v-if="showAccountCost" class="py-1.5 text-right text-orange-500 dark:text-orange-400">
                   ${{ formatCost(model.account_cost) }}
                 </td>
-                <td class="py-1.5 text-right text-gray-400 dark:text-gray-500">
+                <td v-if="billingView === 'raw'" class="py-1.5 text-right text-gray-400 dark:text-gray-500">
                   ${{ formatCost(model.actual_cost) }}
                 </td>
               </tr>
@@ -158,6 +158,7 @@
                     :items="breakdownItems"
                     :loading="breakdownLoading"
                     :show-account-cost="showAccountCost"
+                    :billing-view="billingView"
                   />
                 </td>
               </tr>
@@ -226,7 +227,7 @@
                 {{ formatTokens(item.tokens) }}
               </td>
               <td class="py-1.5 text-right text-green-600 dark:text-green-400">
-                ${{ formatCost(item.actual_cost) }}
+                ${{ formatCost(displayCost(item)) }}
               </td>
             </tr>
           </tbody>
@@ -266,6 +267,7 @@ const props = withDefaults(defineProps<{
   source?: ModelSource
   enableRankingView?: boolean
   rankingItems?: UserSpendingRankingItem[]
+  rankingTotalCost?: number
   rankingTotalActualCost?: number
   rankingTotalRequests?: number
   rankingTotalTokens?: number
@@ -280,12 +282,14 @@ const props = withDefaults(defineProps<{
   startDate?: string
   endDate?: string
   filters?: Record<string, any>
+  billingView?: 'raw' | 'customer'
 }>(), {
   upstreamModelStats: () => [],
   mappingModelStats: () => [],
   source: 'requested',
   enableRankingView: false,
   rankingItems: () => [],
+  rankingTotalCost: 0,
   rankingTotalActualCost: 0,
   rankingTotalRequests: 0,
   rankingTotalTokens: 0,
@@ -296,7 +300,8 @@ const props = withDefaults(defineProps<{
   enableBreakdown: true,
   showAccountCost: true,
   rankingLoading: false,
-  rankingError: false
+  rankingError: false,
+  billingView: 'raw'
 })
 
 const expandedKey = ref<string | null>(null)
@@ -319,6 +324,7 @@ const toggleBreakdown = async (type: string, id: string) => {
       end_date: props.endDate,
       model: id,
       model_source: props.source,
+      billing_view: billingView.value,
     })
     breakdownItems.value = res.users || []
   } catch {
@@ -335,8 +341,9 @@ const emit = defineEmits<{
 }>()
 
 const enableRankingView = computed(() => props.enableRankingView)
-const showAccountCost = computed(() => props.showAccountCost)
-const distributionColspan = computed(() => showAccountCost.value ? 6 : 5)
+const billingView = computed(() => props.billingView)
+const showAccountCost = computed(() => props.showAccountCost && billingView.value === 'raw')
+const distributionColspan = computed(() => 4 + (showAccountCost.value ? 1 : 0) + (billingView.value === 'raw' ? 1 : 0))
 const activeView = ref<'model_distribution' | 'spending_ranking'>('model_distribution')
 
 const chartColors = [
@@ -385,12 +392,12 @@ const rankingChartData = computed(() => {
   if (!props.rankingItems?.length) return null
 
   const labels = props.rankingItems.map((item, index) => `#${index + 1} ${getRankingUserLabel(item)}`)
-  const data = props.rankingItems.map((item) => toFiniteNumber(item.actual_cost))
+  const data = props.rankingItems.map((item) => toFiniteNumber(displayCost(item)))
   const backgroundColor = chartColors.slice(0, props.rankingItems.length)
 
   if (otherRankingItem.value) {
     labels.push(t('admin.dashboard.spendingRankingOther'))
-    data.push(otherRankingItem.value.actual_cost)
+    data.push(displayCost(otherRankingItem.value))
     backgroundColor.push('#94a3b8')
   }
 
@@ -409,21 +416,22 @@ const rankingChartData = computed(() => {
 const otherRankingItem = computed<RankingDisplayItem | null>(() => {
   if (!props.rankingItems?.length) return null
 
-  const rankedActualCost = props.rankingItems.reduce((sum, item) => sum + toFiniteNumber(item.actual_cost), 0)
+  const rankedCost = props.rankingItems.reduce((sum, item) => sum + toFiniteNumber(displayCost(item)), 0)
   const rankedRequests = props.rankingItems.reduce((sum, item) => sum + toFiniteNumber(item.requests), 0)
   const rankedTokens = props.rankingItems.reduce((sum, item) => sum + toFiniteNumber(item.tokens), 0)
 
-  const otherActualCost = Math.max((props.rankingTotalActualCost || 0) - rankedActualCost, 0)
+  const otherCost = Math.max(rankingTotalCost.value - rankedCost, 0)
   const otherRequests = Math.max((props.rankingTotalRequests || 0) - rankedRequests, 0)
   const otherTokens = Math.max((props.rankingTotalTokens || 0) - rankedTokens, 0)
 
-  if (otherActualCost <= 0.000001 && otherRequests <= 0 && otherTokens <= 0) return null
+  if (otherCost <= 0.000001 && otherRequests <= 0 && otherTokens <= 0) return null
 
   return {
     user_id: 0,
     email: '',
     username: '',
-    actual_cost: otherActualCost,
+    cost: otherCost,
+    actual_cost: otherCost,
     requests: otherRequests,
     tokens: otherTokens,
     isOther: true
@@ -510,6 +518,13 @@ const toFiniteNumber = (value: unknown): number => {
   const numberValue = Number(value)
   return Number.isFinite(numberValue) ? numberValue : 0
 }
+
+const displayCost = (item: { cost?: number | null; actual_cost?: number | null }): number =>
+  toFiniteNumber(billingView.value === 'customer' ? item.actual_cost : (item.cost ?? item.actual_cost))
+
+const rankingTotalCost = computed(() => billingView.value === 'customer'
+  ? toFiniteNumber(props.rankingTotalActualCost)
+  : toFiniteNumber(props.rankingTotalCost || props.rankingTotalActualCost))
 
 const formatCost = (value: number | null | undefined): string => {
   const safeValue = toFiniteNumber(value)

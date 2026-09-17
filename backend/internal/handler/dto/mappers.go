@@ -2,6 +2,7 @@
 package dto
 
 import (
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -749,6 +750,43 @@ func UsageLogFromService(l *service.UsageLog) *UsageLog {
 	return &u
 }
 
+// UsageLogFromServiceCustomer is the customer-safe projection. Raw component
+// costs and token counts are never returned to customers; the persisted
+// effective multiplier is applied per record so mixed-rate aggregates remain
+// auditable and correctly billable.
+func UsageLogFromServiceCustomer(l *service.UsageLog) *UsageLog {
+	if l == nil {
+		return nil
+	}
+	u := usageLogFromServiceUser(l)
+	multiplier := l.RateMultiplier
+	if multiplier <= 0 || math.IsNaN(multiplier) || math.IsInf(multiplier, 0) {
+		multiplier = 1
+	}
+	scale := func(value int) int { return int(math.Round(float64(value) * multiplier)) }
+	scaleCost := func(value float64) float64 { return value * multiplier }
+	u.InputTokens = scale(l.InputTokens)
+	u.OutputTokens = scale(l.OutputTokens)
+	u.CacheCreationTokens = scale(l.CacheCreationTokens)
+	u.CacheReadTokens = scale(l.CacheReadTokens)
+	u.CacheCreation5mTokens = scale(l.CacheCreation5mTokens)
+	u.CacheCreation1hTokens = scale(l.CacheCreation1hTokens)
+	u.ImageInputTokens = scale(l.ImageInputTokens)
+	u.ImageOutputTokens = scale(l.ImageOutputTokens)
+	u.InputCost = scaleCost(l.InputCost)
+	u.OutputCost = scaleCost(l.OutputCost)
+	u.CacheCreationCost = scaleCost(l.CacheCreationCost)
+	u.CacheReadCost = scaleCost(l.CacheReadCost)
+	u.ImageInputCost = scaleCost(l.ImageInputCost)
+	u.ImageOutputCost = scaleCost(l.ImageOutputCost)
+	// TotalCost is the customer-facing charge in this projection. The raw
+	// upstream amount is intentionally unavailable in the customer DTO.
+	u.TotalCost = l.ActualCost
+	u.ActualCost = l.ActualCost
+	u.RateMultiplier = multiplier
+	return &u
+}
+
 // UsageLogFromServiceAdmin converts a service UsageLog to DTO for admin users.
 // It includes minimal Account info (ID, Name only) and IP address.
 func UsageLogFromServiceAdmin(l *service.UsageLog) *AdminUsageLog {
@@ -772,6 +810,16 @@ func UsageLogFromServiceAdmin(l *service.UsageLog) *AdminUsageLog {
 		IPAddress:               l.IPAddress,
 		Account:                 AccountSummaryFromService(l.Account),
 	}
+}
+
+// UsageLogFromServiceAdminCustomer keeps the admin response shape while using
+// exactly the customer-facing cost/model projection. The raw audit fields are
+// omitted in this mode; the default admin mapper remains the audit view.
+func UsageLogFromServiceAdminCustomer(l *service.UsageLog) *AdminUsageLog {
+	if l == nil {
+		return nil
+	}
+	return &AdminUsageLog{UsageLog: *UsageLogFromServiceCustomer(l)}
 }
 
 func userFacingReasoningEffort(l *service.UsageLog) *string {

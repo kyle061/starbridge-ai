@@ -1,7 +1,30 @@
 // Package usagestats provides types for usage statistics and reporting.
 package usagestats
 
-import "time"
+import (
+	"context"
+	"time"
+)
+
+type customerBillingViewContextKey struct{}
+
+// WithCustomerBillingView marks downstream aggregate queries as customer
+// facing. It is intentionally request-scoped so raw admin and customer
+// aggregates can share repository interfaces without changing their shape.
+func WithCustomerBillingView(ctx context.Context, enabled bool) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return context.WithValue(ctx, customerBillingViewContextKey{}, enabled)
+}
+
+func CustomerBillingViewFromContext(ctx context.Context) bool {
+	if ctx == nil {
+		return false
+	}
+	enabled, _ := ctx.Value(customerBillingViewContextKey{}).(bool)
+	return enabled
+}
 
 const (
 	ModelSourceRequested = "requested"
@@ -151,6 +174,7 @@ type UserSpendingRankingItem struct {
 	UserID     int64   `json:"user_id"`
 	Email      string  `json:"email"`
 	Username   string  `json:"username"`
+	Cost       float64 `json:"cost"`        // 未乘客户倍率的原始成本
 	ActualCost float64 `json:"actual_cost"` // 实际扣除
 	Requests   int64   `json:"requests"`
 	Tokens     int64   `json:"tokens"`
@@ -159,6 +183,7 @@ type UserSpendingRankingItem struct {
 // UserSpendingRankingResponse represents ranking rows plus total spend for the time range.
 type UserSpendingRankingResponse struct {
 	Ranking         []UserSpendingRankingItem `json:"ranking"`
+	TotalCost       float64                   `json:"total_cost"`
 	TotalActualCost float64                   `json:"total_actual_cost"`
 	TotalRequests   int64                     `json:"total_requests"`
 	TotalTokens     int64                     `json:"total_tokens"`
@@ -195,6 +220,9 @@ type UserBreakdownDimension struct {
 	BillingType        *int8  // filter by billing_type (non-nil to enable)
 	// SortBy 指定排序列(空 = 默认按 actual_cost)。合法值由 repo 层 allowlist 校验。
 	SortBy string
+	// CustomerView makes token aggregates use each usage row's effective
+	// customer multiplier. Costs already carry the customer charge.
+	CustomerView bool
 }
 
 // APIKeyUsageTrendPoint represents API key usage trend data point
@@ -287,6 +315,9 @@ type UsageLogFilters struct {
 	EndTime               *time.Time
 	// ExactTotal requests exact COUNT(*) for pagination. Default false for fast large-table paging.
 	ExactTotal bool
+	// CustomerView makes token aggregates use each usage row's effective
+	// customer multiplier. Costs already carry the customer charge.
+	CustomerView bool
 }
 
 // UsageStats represents usage statistics

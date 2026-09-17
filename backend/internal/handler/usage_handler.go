@@ -206,6 +206,7 @@ func (h *UsageHandler) parseUserUsageFilters(c *gin.Context, requireRange bool) 
 	return &userUsageFilters{
 		Filters: usagestats.UsageLogFilters{
 			UserID:             subject.UserID,
+			CustomerView:       true,
 			APIKeyID:           apiKeyID,
 			GroupID:            groupID,
 			Model:              strings.TrimSpace(c.Query("model")),
@@ -254,7 +255,7 @@ func (h *UsageHandler) List(c *gin.Context) {
 
 	out := make([]dto.UsageLog, 0, len(records))
 	for i := range records {
-		out = append(out, *dto.UsageLogFromService(&records[i]))
+		out = append(out, *dto.UsageLogFromServiceCustomer(&records[i]))
 	}
 	response.Paginated(c, out, result.Total, page, pageSize)
 }
@@ -400,7 +401,7 @@ func (h *UsageHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, dto.UsageLogFromService(record))
+	response.Success(c, dto.UsageLogFromServiceCustomer(record))
 }
 
 // Stats handles getting usage statistics
@@ -419,6 +420,7 @@ func (h *UsageHandler) Stats(c *gin.Context) {
 	stats.TotalAccountCost = nil
 	stats.UpstreamEndpoints = nil
 	stats.EndpointPaths = nil
+	projectUserUsageStats(stats)
 
 	response.Success(c, stats)
 }
@@ -455,11 +457,15 @@ func (h *UsageHandler) DashboardStats(c *gin.Context) {
 		return
 	}
 
-	stats, err := h.usageService.GetUserDashboardStats(c.Request.Context(), subject.UserID)
+	stats, err := h.usageService.GetUserDashboardStats(
+		usagestats.WithCustomerBillingView(c.Request.Context(), true),
+		subject.UserID,
+	)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
 	}
+	projectUserDashboardStats(stats)
 
 	response.Success(c, stats)
 }
@@ -478,6 +484,7 @@ func (h *UsageHandler) DashboardTrend(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
+	projectUserTrend(trend)
 
 	response.Success(c, gin.H{
 		"trend":       trend,
@@ -506,6 +513,7 @@ func (h *UsageHandler) DashboardModels(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
+	projectUserModelStats(stats)
 
 	response.Success(c, gin.H{
 		"models":     userModelStatsFromUsageStats(stats),
@@ -552,6 +560,7 @@ func (h *UsageHandler) DashboardSnapshotV2(c *gin.Context) {
 			response.ErrorFrom(c, err)
 			return
 		}
+		projectUserTrend(trend)
 		resp["trend"] = trend
 	}
 	if includeModels {
@@ -560,6 +569,7 @@ func (h *UsageHandler) DashboardSnapshotV2(c *gin.Context) {
 			response.ErrorFrom(c, err)
 			return
 		}
+		projectUserModelStats(models)
 		resp["models"] = userModelStatsFromUsageStats(models)
 	}
 	if includeGroups {
@@ -568,6 +578,7 @@ func (h *UsageHandler) DashboardSnapshotV2(c *gin.Context) {
 			response.ErrorFrom(c, err)
 			return
 		}
+		projectUserGroupStats(groups)
 		resp["groups"] = userGroupStatsFromUsageStats(groups)
 	}
 
@@ -590,6 +601,42 @@ func userModelStatsFromUsageStats(stats []usagestats.ModelStat) []userModelStat 
 		})
 	}
 	return out
+}
+
+func projectUserUsageStats(stats *usagestats.UsageStats) {
+	if stats == nil {
+		return
+	}
+	stats.TotalCost = stats.TotalActualCost
+	for i := range stats.Endpoints {
+		stats.Endpoints[i].Cost = stats.Endpoints[i].ActualCost
+	}
+}
+
+func projectUserDashboardStats(stats *usagestats.UserDashboardStats) {
+	if stats == nil {
+		return
+	}
+	stats.TotalCost = stats.TotalActualCost
+	stats.TodayCost = stats.TodayActualCost
+}
+
+func projectUserTrend(trend []usagestats.TrendDataPoint) {
+	for i := range trend {
+		trend[i].Cost = trend[i].ActualCost
+	}
+}
+
+func projectUserModelStats(stats []usagestats.ModelStat) {
+	for i := range stats {
+		stats[i].Cost = stats[i].ActualCost
+	}
+}
+
+func projectUserGroupStats(stats []usagestats.GroupStat) {
+	for i := range stats {
+		stats[i].Cost = stats[i].ActualCost
+	}
 }
 
 func userGroupStatsFromUsageStats(stats []usagestats.GroupStat) []userGroupStat {
@@ -713,6 +760,9 @@ func (h *UsageHandler) GetMyAPIKeyDailyUsage(c *gin.Context) {
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
+	}
+	for i := range items {
+		items[i].Cost = items[i].ActualCost
 	}
 
 	response.Success(c, gin.H{

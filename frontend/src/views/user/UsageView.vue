@@ -33,6 +33,7 @@
             :show-metric-toggle="true"
             :enable-breakdown="false"
             :show-account-cost="false"
+            billing-view="customer"
             :start-date="startDate"
             :end-date="endDate"
           />
@@ -43,6 +44,7 @@
             :show-metric-toggle="true"
             :enable-breakdown="false"
             :show-account-cost="false"
+            billing-view="customer"
             :start-date="startDate"
             :end-date="endDate"
           />
@@ -59,11 +61,12 @@
             :show-source-toggle="false"
             :show-metric-toggle="true"
             :enable-breakdown="false"
+            billing-view="customer"
             :title="t('usage.endpointDistribution')"
             :start-date="startDate"
             :end-date="endDate"
           />
-          <TokenUsageTrend :trend-data="trendData" :loading="chartsLoading" />
+          <TokenUsageTrend :trend-data="trendData" :loading="chartsLoading" billing-view="customer" />
         </div>
       </div>
 
@@ -185,6 +188,7 @@
           :server-side-sort="true"
           :show-account-billing="false"
           :show-upstream-endpoint="false"
+          billing-view="customer"
           default-sort-key="created_at"
           default-sort-order="desc"
           @sort="handleSort"

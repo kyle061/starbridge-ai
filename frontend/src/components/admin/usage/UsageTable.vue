@@ -208,7 +208,7 @@
         <template #cell-cost="{ row }">
           <div class="text-sm">
             <div class="flex items-center gap-1.5">
-              <span class="font-medium text-green-600 dark:text-green-400">${{ row.actual_cost?.toFixed(6) || '0.000000' }}</span>
+              <span class="font-medium text-green-600 dark:text-green-400">${{ displayCost(row).toFixed(6) }}</span>
               <span
                 v-if="row.long_context_billing_applied"
                 data-testid="long-context-billing-marker"
@@ -499,7 +499,7 @@
             <span class="text-gray-400">{{ t('usage.rate') }}</span>
             <span class="font-semibold text-blue-400">{{ formatMultiplier(tooltipData?.rate_multiplier || 1) }}x</span>
           </div>
-          <div class="flex items-center justify-between gap-6">
+          <div v-if="billingView === 'raw'" class="flex items-center justify-between gap-6">
             <span class="text-gray-400">{{ t('usage.original') }}</span>
             <span class="font-medium text-white">${{ tooltipData?.total_cost?.toFixed(8) || '0.00000000' }}</span>
           </div>
@@ -577,6 +577,11 @@ function accountBilled(row: { total_cost?: number | null; account_stats_cost?: n
   return Number.isNaN(result) ? 0 : result
 }
 
+function displayCost(row: AdminUsageLog): number {
+  const value = billingView.value === 'customer' ? row.actual_cost : row.total_cost
+  return Number.isFinite(Number(value)) ? Number(value) : 0
+}
+
 
 import DataTable from '@/components/common/DataTable.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -597,6 +602,7 @@ interface Props {
   showUpstreamEndpoint?: boolean
   /** 嵌入统一卡片内使用：去掉自身卡片外观 */
   flat?: boolean
+  billingView?: 'raw' | 'customer'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -606,7 +612,8 @@ const props = withDefaults(defineProps<Props>(), {
   defaultSortOrder: 'asc',
   showAccountBilling: true,
   showUpstreamEndpoint: true,
-  flat: false
+  flat: false,
+  billingView: 'raw'
 })
 const emit = defineEmits<{
   userClick: [userID: number, email?: string]
@@ -618,6 +625,7 @@ const appStore = useAppStore()
 const copiedRequestId = ref<string | null>(null)
 const showAccountBilling = props.showAccountBilling
 const showUpstreamEndpoint = props.showUpstreamEndpoint
+const billingView = computed(() => props.billingView)
 const ipGeoBatchLoading = ref(false)
 
 const showIpGeoToolbar = computed(() => props.columns.some((col) => col.key === 'ip_address'))

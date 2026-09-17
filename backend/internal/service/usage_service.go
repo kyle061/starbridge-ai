@@ -186,7 +186,7 @@ func (s *UsageService) ListByAccount(ctx context.Context, accountID int64, param
 
 // GetStatsByUser 获取用户的使用统计
 func (s *UsageService) GetStatsByUser(ctx context.Context, userID int64, startTime, endTime time.Time) (*UsageStats, error) {
-	stats, err := s.usageRepo.GetUserStatsAggregated(ctx, userID, startTime, endTime)
+	stats, err := s.usageRepo.GetUserStatsAggregated(usagestats.WithCustomerBillingView(ctx, true), userID, startTime, endTime)
 	if err != nil {
 		return nil, fmt.Errorf("get user stats: %w", err)
 	}
@@ -207,7 +207,7 @@ func (s *UsageService) GetStatsByUser(ctx context.Context, userID int64, startTi
 
 // GetStatsByAPIKey 获取API Key的使用统计
 func (s *UsageService) GetStatsByAPIKey(ctx context.Context, apiKeyID int64, startTime, endTime time.Time) (*UsageStats, error) {
-	stats, err := s.usageRepo.GetAPIKeyStatsAggregated(ctx, apiKeyID, startTime, endTime)
+	stats, err := s.usageRepo.GetAPIKeyStatsAggregated(usagestats.WithCustomerBillingView(ctx, true), apiKeyID, startTime, endTime)
 	if err != nil {
 		return nil, fmt.Errorf("get api key stats: %w", err)
 	}
@@ -273,7 +273,7 @@ func (s *UsageService) GetDailyStats(ctx context.Context, userID int64, days int
 	endTime := time.Now()
 	startTime := endTime.AddDate(0, 0, -days)
 
-	stats, err := s.usageRepo.GetDailyStatsAggregated(ctx, userID, startTime, endTime)
+	stats, err := s.usageRepo.GetDailyStatsAggregated(usagestats.WithCustomerBillingView(ctx, true), userID, startTime, endTime)
 	if err != nil {
 		return nil, fmt.Errorf("get daily stats: %w", err)
 	}
@@ -291,7 +291,7 @@ func (s *UsageService) Delete(ctx context.Context, id int64) error {
 
 // GetUserDashboardStats returns per-user dashboard summary stats.
 func (s *UsageService) GetUserDashboardStats(ctx context.Context, userID int64) (*usagestats.UserDashboardStats, error) {
-	stats, err := s.usageRepo.GetUserDashboardStats(ctx, userID)
+	stats, err := s.usageRepo.GetUserDashboardStats(usagestats.WithCustomerBillingView(ctx, true), userID)
 	if err != nil {
 		return nil, fmt.Errorf("get user dashboard stats: %w", err)
 	}
@@ -300,7 +300,7 @@ func (s *UsageService) GetUserDashboardStats(ctx context.Context, userID int64) 
 
 // GetAPIKeyDashboardStats returns dashboard summary stats filtered by API Key.
 func (s *UsageService) GetAPIKeyDashboardStats(ctx context.Context, apiKeyID int64) (*usagestats.UserDashboardStats, error) {
-	stats, err := s.usageRepo.GetAPIKeyDashboardStats(ctx, apiKeyID)
+	stats, err := s.usageRepo.GetAPIKeyDashboardStats(usagestats.WithCustomerBillingView(ctx, true), apiKeyID)
 	if err != nil {
 		return nil, fmt.Errorf("get api key dashboard stats: %w", err)
 	}
@@ -309,7 +309,7 @@ func (s *UsageService) GetAPIKeyDashboardStats(ctx context.Context, apiKeyID int
 
 // GetUserUsageTrendByUserID returns per-user usage trend.
 func (s *UsageService) GetUserUsageTrendByUserID(ctx context.Context, userID int64, startTime, endTime time.Time, granularity string) ([]usagestats.TrendDataPoint, error) {
-	trend, err := s.usageRepo.GetUserUsageTrendByUserID(ctx, userID, startTime, endTime, granularity)
+	trend, err := s.usageRepo.GetUserUsageTrendByUserID(usagestats.WithCustomerBillingView(ctx, true), userID, startTime, endTime, granularity)
 	if err != nil {
 		return nil, fmt.Errorf("get user usage trend: %w", err)
 	}
@@ -318,6 +318,7 @@ func (s *UsageService) GetUserUsageTrendByUserID(ctx context.Context, userID int
 
 // GetUsageTrendWithFilters returns trend data using the shared usage filter shape.
 func (s *UsageService) GetUsageTrendWithFilters(ctx context.Context, startTime, endTime time.Time, granularity string, filters usagestats.UsageLogFilters) ([]usagestats.TrendDataPoint, error) {
+	ctx = usagestats.WithCustomerBillingView(ctx, filters.CustomerView)
 	type usageTrendWithFiltersRepo interface {
 		GetUsageTrendWithUsageFilters(ctx context.Context, startTime, endTime time.Time, granularity string, filters usagestats.UsageLogFilters) ([]usagestats.TrendDataPoint, error)
 	}
@@ -337,7 +338,7 @@ func (s *UsageService) GetUsageTrendWithFilters(ctx context.Context, startTime, 
 
 // GetUserModelStats returns per-user model usage stats.
 func (s *UsageService) GetUserModelStats(ctx context.Context, userID int64, startTime, endTime time.Time) ([]usagestats.ModelStat, error) {
-	stats, err := s.usageRepo.GetUserModelStats(ctx, userID, startTime, endTime)
+	stats, err := s.usageRepo.GetUserModelStats(usagestats.WithCustomerBillingView(ctx, true), userID, startTime, endTime)
 	if err != nil {
 		return nil, fmt.Errorf("get user model stats: %w", err)
 	}
@@ -347,6 +348,7 @@ func (s *UsageService) GetUserModelStats(ctx context.Context, userID int64, star
 // GetModelStatsWithFiltersBySource returns model stats using the shared usage filter shape.
 func (s *UsageService) GetModelStatsWithFiltersBySource(ctx context.Context, startTime, endTime time.Time, filters usagestats.UsageLogFilters, modelSource string) ([]usagestats.ModelStat, error) {
 	normalizedSource := usagestats.NormalizeModelSource(modelSource)
+	ctx = usagestats.WithCustomerBillingView(ctx, filters.CustomerView)
 	type modelStatsWithUsageFiltersRepo interface {
 		GetModelStatsWithUsageFiltersBySource(ctx context.Context, startTime, endTime time.Time, filters usagestats.UsageLogFilters, source string) ([]usagestats.ModelStat, error)
 	}
@@ -376,6 +378,7 @@ func (s *UsageService) GetModelStatsWithFiltersBySource(ctx context.Context, sta
 
 // GetGroupStatsWithFilters returns group stats using the shared usage filter shape.
 func (s *UsageService) GetGroupStatsWithFilters(ctx context.Context, startTime, endTime time.Time, filters usagestats.UsageLogFilters) ([]usagestats.GroupStat, error) {
+	ctx = usagestats.WithCustomerBillingView(ctx, filters.CustomerView)
 	type groupStatsWithUsageFiltersRepo interface {
 		GetGroupStatsWithUsageFilters(ctx context.Context, startTime, endTime time.Time, filters usagestats.UsageLogFilters) ([]usagestats.GroupStat, error)
 	}
@@ -395,7 +398,7 @@ func (s *UsageService) GetGroupStatsWithFilters(ctx context.Context, startTime, 
 
 // GetAPIKeyModelStats returns per-model usage stats for a specific API Key.
 func (s *UsageService) GetAPIKeyModelStats(ctx context.Context, apiKeyID int64, startTime, endTime time.Time) ([]usagestats.ModelStat, error) {
-	stats, err := s.usageRepo.GetModelStatsWithFilters(ctx, startTime, endTime, 0, apiKeyID, 0, 0, nil, nil, nil)
+	stats, err := s.usageRepo.GetModelStatsWithFilters(usagestats.WithCustomerBillingView(ctx, true), startTime, endTime, 0, apiKeyID, 0, 0, nil, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("get api key model stats: %w", err)
 	}
@@ -404,7 +407,7 @@ func (s *UsageService) GetAPIKeyModelStats(ctx context.Context, apiKeyID int64, 
 
 // GetAPIKeyDailyUsage returns daily usage stats for a user's API key.
 func (s *UsageService) GetAPIKeyDailyUsage(ctx context.Context, userID, apiKeyID int64, startTime, endTime time.Time) ([]usagestats.APIKeyDailyUsagePoint, error) {
-	trend, err := s.usageRepo.GetUsageTrendWithFilters(ctx, startTime, endTime, "day", userID, apiKeyID, 0, 0, "", nil, nil, nil)
+	trend, err := s.usageRepo.GetUsageTrendWithFilters(usagestats.WithCustomerBillingView(ctx, true), startTime, endTime, "day", userID, apiKeyID, 0, 0, "", nil, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("get api key daily usage: %w", err)
 	}

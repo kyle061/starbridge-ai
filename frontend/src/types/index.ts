@@ -2000,6 +2000,7 @@ export interface UserSpendingRankingItem {
   user_id: number
   email: string
   username: string
+  cost: number // 未乘客户倍率的原始成本
   actual_cost: number
   requests: number
   tokens: number
@@ -2007,6 +2008,7 @@ export interface UserSpendingRankingItem {
 
 export interface UserSpendingRankingResponse {
   ranking: UserSpendingRankingItem[]
+  total_cost: number
   total_actual_cost: number
   total_requests: number
   total_tokens: number

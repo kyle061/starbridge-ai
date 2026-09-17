@@ -337,6 +337,45 @@ describe('admin UsageView native compaction filter', () => {
   })
 })
 
+describe('admin UsageView billing view toggle', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    list.mockReset().mockResolvedValue({ items: [], total: 0, pages: 0 })
+    getStats.mockReset().mockResolvedValue({
+      total_requests: 0, total_input_tokens: 0, total_output_tokens: 0,
+      total_cache_tokens: 0, total_tokens: 0, total_cost: 0, total_actual_cost: 0, average_duration_ms: 0,
+    })
+    getSnapshotV2.mockReset().mockResolvedValue({ trend: [], models: [], groups: [] })
+    getModelStats.mockReset().mockResolvedValue({ models: [] })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('reloads every usage surface with customer billing view after toggling', async () => {
+    const wrapper = mountRouteFilteredUsageView()
+    vi.advanceTimersByTime(120)
+    await flushPromises()
+
+    list.mockClear()
+    getStats.mockClear()
+    getSnapshotV2.mockClear()
+    getModelStats.mockClear()
+
+    const toggle = wrapper.get('[data-testid="usage-billing-view-toggle"]')
+    expect(toggle.attributes('aria-checked')).toBe('false')
+    await toggle.trigger('click')
+    await flushPromises()
+
+    expect(toggle.attributes('aria-checked')).toBe('true')
+    expect(list).toHaveBeenCalledWith(expect.objectContaining({ billing_view: 'customer' }), expect.anything())
+    expect(getStats).toHaveBeenCalledWith(expect.objectContaining({ billing_view: 'customer' }))
+    expect(getSnapshotV2).toHaveBeenCalledWith(expect.objectContaining({ billing_view: 'customer' }))
+    expect(getModelStats).toHaveBeenCalledWith(expect.objectContaining({ billing_view: 'customer' }))
+  })
+})
+
 describe('admin UsageView distribution metric toggles', () => {
   beforeEach(() => {
     vi.useFakeTimers()

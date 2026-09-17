@@ -20,8 +20,8 @@ import type {
  * Get dashboard statistics
  * @returns Dashboard statistics including users, keys, accounts, and token usage
  */
-export async function getStats(): Promise<DashboardStats> {
-  const { data } = await apiClient.get<DashboardStats>('/admin/dashboard/stats')
+export async function getStats(params?: { billing_view?: 'raw' | 'customer' }): Promise<DashboardStats> {
+  const { data } = await apiClient.get<DashboardStats>('/admin/dashboard/stats', { params })
   return data
 }
 
@@ -45,6 +45,7 @@ export async function getRealtimeMetrics(): Promise<{
 }
 
 export interface TrendParams {
+	billing_view?: 'raw' | 'customer'
   start_date?: string
   end_date?: string
   granularity?: 'day' | 'hour'
@@ -78,6 +79,7 @@ export async function getUsageTrend(params?: TrendParams): Promise<TrendResponse
 }
 
 export interface ModelStatsParams {
+	billing_view?: 'raw' | 'customer'
   start_date?: string
   end_date?: string
   user_id?: number
@@ -110,6 +112,7 @@ export async function getModelStats(params?: ModelStatsParams): Promise<ModelSta
 }
 
 export interface GroupStatsParams {
+	billing_view?: 'raw' | 'customer'
   start_date?: string
   end_date?: string
   user_id?: number
@@ -165,6 +168,7 @@ export async function getGroupStats(params?: GroupStatsParams): Promise<GroupSta
 }
 
 export interface UserBreakdownParams {
+	billing_view?: 'raw' | 'customer'
   start_date?: string
   end_date?: string
   group_id?: number
@@ -247,6 +251,7 @@ export interface UserTrendResponse {
 export interface UserSpendingRankingParams
   extends Pick<TrendParams, 'start_date' | 'end_date'> {
   limit?: number
+	billing_view?: 'raw' | 'customer'
 }
 
 /**

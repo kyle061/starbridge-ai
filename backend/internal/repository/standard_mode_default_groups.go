@@ -37,8 +37,8 @@ func ensureStandardRelayDefaultGroups(ctx context.Context, client *dbent.Client)
 	}{
 		{name: service.PlatformOpenAI + "-default", platform: service.PlatformOpenAI, rate: 1.0},
 		{name: service.PlatformDeepseek + "-default", platform: service.PlatformDeepseek, rate: 1.0},
-		// Astra and other premium models use the relay's single configured
-		// multiplier. The existing OpenAI priority-tier pricing remains intact.
+		// The composite group is a routing layer. GPT6 is ultimately executed by
+		// OpenAI; DeepSeek is selected by the handler only for requirements prep.
 		{name: "composite-default", platform: service.PlatformComposite, rate: 1.5},
 	}
 	for _, item := range defaults {
@@ -73,26 +73,28 @@ func ensureStandardRelayDefaultGroups(ctx context.Context, client *dbent.Client)
 }
 
 func standardRelayDefaultRoutes(groupID int64) []standardRelayRoute {
-	return []standardRelayRoute{
-		{
+	routes := make([]standardRelayRoute, 0, 6)
+	for _, model := range []string{"gpt-6", "gpt-6-astra"} {
+		routes = append(routes, standardRelayRoute{
 			groupID:        groupID,
-			publicModel:    "gpt-6-astra",
+			publicModel:    model,
 			matchType:      service.CompositeRouteMatchExact,
 			targetPlatform: service.PlatformOpenAI,
 			upstreamModel:  "gpt-6-astra",
 			priority:       10,
-			notes:          "Primary OpenAI Astra route",
-		},
-		{
+			notes:          "Primary OpenAI GPT6 execution route",
+		}, standardRelayRoute{
 			groupID:        groupID,
-			publicModel:    "gpt-6-astra",
+			publicModel:    model,
 			matchType:      service.CompositeRouteMatchExact,
 			targetPlatform: service.PlatformDeepseek,
 			upstreamModel:  "deepseek-v4-pro",
 			priority:       20,
-			notes:          "DeepSeek fallback when OpenAI is unavailable",
-		},
-		{
+			notes:          "DeepSeek requirements preparation fallback",
+		})
+	}
+	return append(routes,
+		standardRelayRoute{
 			groupID:        groupID,
 			publicModel:    "deepseek-v4-pro",
 			matchType:      service.CompositeRouteMatchExact,
@@ -101,7 +103,7 @@ func standardRelayDefaultRoutes(groupID int64) []standardRelayRoute {
 			priority:       10,
 			notes:          "Primary DeepSeek route",
 		},
-		{
+		standardRelayRoute{
 			groupID:        groupID,
 			publicModel:    "deepseek-v4-pro",
 			matchType:      service.CompositeRouteMatchExact,
@@ -110,7 +112,7 @@ func standardRelayDefaultRoutes(groupID int64) []standardRelayRoute {
 			priority:       20,
 			notes:          "OpenAI fallback when DeepSeek is unavailable",
 		},
-	}
+	)
 }
 
 func createStandardRelayRouteIfNotExists(ctx context.Context, client *dbent.Client, route standardRelayRoute) error {

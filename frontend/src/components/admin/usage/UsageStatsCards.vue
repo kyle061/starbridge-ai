@@ -65,16 +65,16 @@
       <div class="min-w-0 flex-1">
         <p class="text-xs font-medium text-gray-500">{{ t('usage.totalCost') }}</p>
         <p class="text-xl font-bold text-green-600">
-          ${{ (stats?.total_actual_cost || 0).toFixed(4) }}
+          ${{ displayCost.toFixed(4) }}
         </p>
-        <p class="text-xs text-gray-400">
+        <p v-if="billingView === 'raw'" class="text-xs text-gray-400">
           <template v-if="showAccountCost && totalAccountCost != null">
             <span class="text-orange-500">{{ t('usage.accountCost') }} ${{ totalAccountCost.toFixed(4) }}</span>
             <span> · </span>
           </template>
           <span>
-            {{ t('usage.standardCost') }}
-            <span>${{ (stats?.total_actual_cost || 0).toFixed(4) }}</span>
+            {{ t('admin.dashboard.actual') }}
+            <span>${{ (props.stats?.total_actual_cost || 0).toFixed(4) }}</span>
           </span>
         </p>
       </div>
@@ -99,9 +99,11 @@ const props = withDefaults(defineProps<{
   stats: (AdminUsageStatsResponse | UsageStatsResponse) | null
   showAccountCost?: boolean
   strikeStandardCost?: boolean
+  billingView?: 'raw' | 'customer'
 }>(), {
   showAccountCost: true,
   strikeStandardCost: false,
+  billingView: 'customer',
 })
 
 const { t } = useI18n()
@@ -110,7 +112,11 @@ const totalAccountCost = computed(() => {
   const stats = props.stats as (AdminUsageStatsResponse & { total_account_cost?: number }) | null
   return stats?.total_account_cost ?? null
 })
-const showAccountCost = computed(() => props.showAccountCost)
+const billingView = computed(() => props.billingView)
+const showAccountCost = computed(() => props.showAccountCost && billingView.value === 'raw')
+const displayCost = computed(() => billingView.value === 'customer'
+  ? (props.stats?.total_actual_cost || 0)
+  : (props.stats?.total_cost || 0))
 
 const formatDuration = (ms: number) =>
   ms < 1000 ? `${ms.toFixed(0)}ms` : `${(ms / 1000).toFixed(2)}s`

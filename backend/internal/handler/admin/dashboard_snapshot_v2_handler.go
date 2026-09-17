@@ -69,6 +69,7 @@ type dashboardSnapshotV2CacheKey struct {
 	IncludeGroups         bool   `json:"include_groups"`
 	IncludeUsersTrend     bool   `json:"include_users_trend"`
 	UsersTrendLimit       int    `json:"users_trend_limit"`
+	CustomerView          bool   `json:"customer_view"`
 }
 
 func (h *DashboardHandler) GetSnapshotV2(c *gin.Context) {
@@ -116,6 +117,7 @@ func (h *DashboardHandler) GetSnapshotV2(c *gin.Context) {
 		IncludeGroups:         includeGroups,
 		IncludeUsersTrend:     includeUsersTrend,
 		UsersTrendLimit:       usersTrendLimit,
+		CustomerView:          isCustomerBillingView(c),
 	})
 	cacheKey := string(keyRaw)
 
@@ -132,6 +134,7 @@ func (h *DashboardHandler) GetSnapshotV2(c *gin.Context) {
 			includeGroups,
 			includeUsersTrend,
 			usersTrendLimit,
+			isCustomerBillingView(c),
 		)
 	})
 	if err != nil {
@@ -156,7 +159,7 @@ func (h *DashboardHandler) buildSnapshotV2Response(
 	granularity string,
 	filters *dashboardSnapshotV2Filters,
 	includeStats, includeTrend, includeModels, includeGroups, includeUsersTrend bool,
-	usersTrendLimit int,
+	usersTrendLimit int, customerView bool,
 ) (*dashboardSnapshotV2Response, error) {
 	resp := &dashboardSnapshotV2Response{
 		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
@@ -166,7 +169,7 @@ func (h *DashboardHandler) buildSnapshotV2Response(
 	}
 
 	if includeStats {
-		stats, err := h.dashboardService.GetDashboardStats(ctx)
+		stats, err := h.dashboardService.GetDashboardStatsWithBillingView(ctx, customerView)
 		if err != nil {
 			return nil, errors.New("failed to get dashboard statistics")
 		}
@@ -192,11 +195,15 @@ func (h *DashboardHandler) buildSnapshotV2Response(
 			filters.NativeCompactionV2,
 			filters.BillingType,
 			filters.UpstreamModelMismatch,
+			customerView,
 		)
 		if err != nil {
 			return nil, errors.New("failed to get usage trend")
 		}
 		resp.Trend = trend
+		if customerView {
+			resp.Trend = customerTrend(resp.Trend)
+		}
 	}
 
 	if includeModels {
@@ -214,11 +221,15 @@ func (h *DashboardHandler) buildSnapshotV2Response(
 			filters.NativeCompactionV2,
 			filters.BillingType,
 			filters.UpstreamModelMismatch,
+			customerView,
 		)
 		if err != nil {
 			return nil, errors.New("failed to get model statistics")
 		}
 		resp.Models = models
+		if customerView {
+			resp.Models = customerModels(resp.Models)
+		}
 	}
 
 	if includeGroups {
@@ -235,19 +246,26 @@ func (h *DashboardHandler) buildSnapshotV2Response(
 			filters.NativeCompactionV2,
 			filters.BillingType,
 			filters.UpstreamModelMismatch,
+			customerView,
 		)
 		if err != nil {
 			return nil, errors.New("failed to get group statistics")
 		}
 		resp.Groups = groups
+		if customerView {
+			resp.Groups = customerGroups(resp.Groups)
+		}
 	}
 
 	if includeUsersTrend {
-		usersTrend, _, err := h.getUserUsageTrendCached(ctx, startTime, endTime, granularity, usersTrendLimit)
+		usersTrend, _, err := h.getUserUsageTrendCached(ctx, startTime, endTime, granularity, usersTrendLimit, customerView)
 		if err != nil {
 			return nil, errors.New("failed to get user usage trend")
 		}
 		resp.UsersTrend = usersTrend
+		if customerView {
+			resp.UsersTrend = customerUserTrend(resp.UsersTrend)
+		}
 	}
 
 	return resp, nil

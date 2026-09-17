@@ -205,6 +205,7 @@ func (h *UsageHandler) List(c *gin.Context) {
 		StartTime:             startTime,
 		EndTime:               endTime,
 		ExactTotal:            exactTotal,
+		CustomerView:          isCustomerBillingView(c),
 	}
 
 	records, result, err := h.usageService.ListWithFilters(c.Request.Context(), params, filters)
@@ -214,8 +215,13 @@ func (h *UsageHandler) List(c *gin.Context) {
 	}
 
 	out := make([]dto.AdminUsageLog, 0, len(records))
+	customerView := isCustomerBillingView(c)
 	for i := range records {
-		out = append(out, *dto.UsageLogFromServiceAdmin(&records[i]))
+		if customerView {
+			out = append(out, *dto.UsageLogFromServiceAdminCustomer(&records[i]))
+		} else {
+			out = append(out, *dto.UsageLogFromServiceAdmin(&records[i]))
+		}
 	}
 	response.Paginated(c, out, result.Total, page, pageSize)
 }
@@ -363,6 +369,7 @@ func (h *UsageHandler) Stats(c *gin.Context) {
 		UpstreamModelMismatch: upstreamModelMismatch,
 		StartTime:             &startTime,
 		EndTime:               &endTime,
+		CustomerView:          isCustomerBillingView(c),
 	}
 
 	var stats *usagestats.UsageStats
@@ -383,6 +390,9 @@ func (h *UsageHandler) Stats(c *gin.Context) {
 		}
 		stats = s
 		c.Header("X-Usage-Stats-Cache", cacheStatusValue(hit))
+	}
+	if isCustomerBillingView(c) {
+		stats = customerUsageStats(stats)
 	}
 
 	response.Success(c, stats)

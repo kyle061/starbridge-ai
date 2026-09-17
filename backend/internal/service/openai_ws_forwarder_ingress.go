@@ -763,6 +763,17 @@ func (s *OpenAIGatewayService) ProxyResponsesWebSocketFromClient(
 				}
 				return fmt.Errorf("read client websocket request: %w", readErr)
 			}
+			if hooks != nil && hooks.TransformRequest != nil {
+				originalModel := strings.TrimSpace(gjson.GetBytes(nextClientMessage, "model").String())
+				if originalModel == "" {
+					originalModel = hooks.InitialRequestModel
+				}
+				transformed, transformErr := hooks.TransformRequest(turn+1, nextClientMessage, originalModel)
+				if transformErr != nil {
+					return transformErr
+				}
+				nextClientMessage = transformed
+			}
 			nextPayload, parseErr := parseClientPayload(turn+1, nextClientMessage)
 			if parseErr != nil {
 				return parseErr
@@ -1878,6 +1889,17 @@ func (s *OpenAIGatewayService) ProxyResponsesWebSocketFromClient(
 			return fmt.Errorf("read client websocket request: %w", readErr)
 		}
 
+		if hooks != nil && hooks.TransformRequest != nil {
+			originalModel := strings.TrimSpace(gjson.GetBytes(nextClientMessage, "model").String())
+			if originalModel == "" {
+				originalModel = hooks.InitialRequestModel
+			}
+			transformed, transformErr := hooks.TransformRequest(turn+1, nextClientMessage, originalModel)
+			if transformErr != nil {
+				return transformErr
+			}
+			nextClientMessage = transformed
+		}
 		nextPayload, parseErr := parseClientPayload(turn+1, nextClientMessage)
 		if parseErr != nil {
 			return parseErr
