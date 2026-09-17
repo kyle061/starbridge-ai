@@ -43,6 +43,7 @@ const messages: Record<string, string> = {
   'keys.apiKey': 'API Key',
   'keys.allGroups': 'All Groups',
   'keys.allStatus': 'All Status',
+  'keys.ccSwitchNotInstalled': 'CC-Switch is not installed or the protocol handler is not registered.',
   'keys.columnSettings': 'Column Settings',
   'keys.createKey': 'Create API Key',
   'keys.created': 'Created',
@@ -370,7 +371,29 @@ describe('user KeysView column settings', () => {
       const importLink = wrapper.find('textarea[aria-label="keys.ccsImportFallback.linkLabel"]')
       expect(importLink.exists()).toBe(true)
       expect((importLink.element as HTMLTextAreaElement).value).toContain('ccswitch://v1/import?')
+      expect(showError).toHaveBeenCalledWith('CC-Switch is not installed or the protocol handler is not registered.')
       expect(close).toHaveBeenCalledOnce()
+      wrapper.unmount()
+    } finally {
+      open.mockRestore()
+      vi.useRealTimers()
+    }
+  })
+
+  it('still reports a missing CCS installation when the browser loses focus', async () => {
+    vi.useFakeTimers()
+    const openedWindow = { closed: false, close: vi.fn() } as unknown as Window
+    const open = vi.spyOn(window, 'open').mockReturnValue(openedWindow)
+    try {
+      const wrapper = await mountView()
+      await getButtonByText(wrapper, 'Import to CC Switch').trigger('click')
+
+      window.dispatchEvent(new Event('blur'))
+      vi.advanceTimersByTime(1200)
+      await nextTick()
+
+      expect(showError).toHaveBeenCalledWith('CC-Switch is not installed or the protocol handler is not registered.')
+      expect(wrapper.find('textarea[aria-label="keys.ccsImportFallback.linkLabel"]').exists()).toBe(true)
       wrapper.unmount()
     } finally {
       open.mockRestore()

@@ -888,8 +888,6 @@ let prepaidTimer: ReturnType<typeof setInterval> | null = null
 let prepaidController: AbortController | null = null
 let ccsImportTimer: number | null = null
 let ccsImportPollTimer: number | null = null
-let ccsImportBlurHandler: (() => void) | null = null
-let ccsImportVisibilityHandler: (() => void) | null = null
 let ccsImportWindow: Window | null = null
 
 const loadPrepaidAccess = async () => {
@@ -1323,14 +1321,6 @@ const clearCcsImportAttempt = () => {
     window.clearInterval(ccsImportPollTimer)
     ccsImportPollTimer = null
   }
-  if (ccsImportBlurHandler) {
-    window.removeEventListener('blur', ccsImportBlurHandler)
-    ccsImportBlurHandler = null
-  }
-  if (ccsImportVisibilityHandler) {
-    document.removeEventListener('visibilitychange', ccsImportVisibilityHandler)
-    ccsImportVisibilityHandler = null
-  }
   if (ccsImportWindow && !ccsImportWindow.closed) {
     ccsImportWindow.close()
   }
@@ -1371,12 +1361,6 @@ const launchCcsImport = (deeplink: string) => {
   }
 
   try {
-    ccsImportBlurHandler = markLaunchObserved
-    ccsImportVisibilityHandler = () => {
-      if (document.hidden) markLaunchObserved()
-    }
-    window.addEventListener('blur', ccsImportBlurHandler)
-    document.addEventListener('visibilitychange', ccsImportVisibilityHandler)
     openCcsImportLink(deeplink)
 
     ccsImportPollTimer = window.setInterval(() => {
@@ -1386,10 +1370,14 @@ const launchCcsImport = (deeplink: string) => {
     ccsImportTimer = window.setTimeout(() => {
       ccsImportTimer = null
       clearCcsImportAttempt()
-      if (!launchObserved) showCcsImportFallback.value = true
+      if (!launchObserved) {
+        appStore.showError(t('keys.ccSwitchNotInstalled'))
+        showCcsImportFallback.value = true
+      }
     }, 1200)
   } catch (error) {
     clearCcsImportAttempt()
+    appStore.showError(t('keys.ccSwitchNotInstalled'))
     showCcsImportFallback.value = true
   }
 }
