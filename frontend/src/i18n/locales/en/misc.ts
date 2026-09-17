@@ -368,6 +368,12 @@ export default {
       orderType: 'Order Type',
       actions: 'Actions',
       requestRefund: 'Request Refund',
+      export: 'Export billing',
+      allOrderTypes: 'All order types',
+      allPaymentTypes: 'All payment methods',
+      balanceOrder: 'Balance top-up',
+      subscriptionOrder: 'Subscription',
+      paidAt: 'Paid at',
     },
     result: {
       success: 'Payment Successful',

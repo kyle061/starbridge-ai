@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -271,7 +272,7 @@ func (h *PaymentHandler) CreateOrder(c *gin.Context) {
 	if req.IsMobile != nil {
 		mobile = *req.IsMobile
 	}
-	result, err := h.paymentService.CreateOrder(c.Request.Context(), service.CreateOrderRequest{
+	paymentReq := service.CreateOrderRequest{
 		UserID:          subject.UserID,
 		Amount:          req.Amount,
 		PaymentType:     req.PaymentType,
@@ -286,12 +287,14 @@ func (h *PaymentHandler) CreateOrder(c *gin.Context) {
 		OrderType:       req.OrderType,
 		PlanID:          req.PlanID,
 		Locale:          c.GetHeader("Accept-Language"),
-	})
-	if err != nil {
-		response.ErrorFrom(c, err)
-		return
 	}
-	response.Success(c, result)
+	// Payment creation is an externally visible side effect. When the client
+	// retries after a timeout, replay the original gateway response instead of
+	// creating a second order. Older clients without a key keep working while
+	// the coordinator is in observe-only mode.
+	executeUserIdempotentJSON(c, "user.payment.orders.create", req, service.DefaultWriteIdempotencyTTL(), func(ctx context.Context) (any, error) {
+		return h.paymentService.CreateOrder(ctx, paymentReq)
+	})
 }
 
 func applyWeChatPaymentResumeClaims(req *CreateOrderRequest, claims *service.WeChatPaymentResumeClaims) error {

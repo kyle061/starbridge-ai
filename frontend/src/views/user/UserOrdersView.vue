@@ -5,7 +5,12 @@
       <div class="card p-4">
         <div class="flex flex-wrap items-center gap-3">
           <Select v-model="currentFilter" :options="statusFilters" class="w-36" @change="fetchOrders" />
+          <Select v-model="currentOrderType" :options="orderTypeFilters" class="w-36" @change="fetchOrders" />
+          <Select v-model="currentPaymentType" :options="paymentTypeFilters" class="w-40" @change="fetchOrders" />
           <div class="flex flex-1 items-center justify-end gap-2">
+            <button @click="exportOrders" :disabled="loading || exporting" class="btn btn-secondary" :title="t('payment.orders.export')" data-testid="export-orders">
+              <Icon name="download" size="md" :class="exporting ? 'animate-pulse' : ''" />
+            </button>
             <button @click="fetchOrders" :disabled="loading" class="btn btn-secondary" :title="t('common.refresh')">
               <Icon name="refresh" size="md" :class="loading ? 'animate-spin' : ''" />
             </button>
@@ -104,6 +109,9 @@ const actionLoading = ref(false)
 const orders = ref<PaymentOrder[]>([])
 const refundEligibleProviders = ref<Set<string>>(new Set())
 const currentFilter = ref('')
+const currentOrderType = ref('')
+const currentPaymentType = ref('')
+const exporting = ref(false)
 const cancelTargetId = ref<number | null>(null)
 const refundTarget = ref<PaymentOrder | null>(null)
 const refundReason = ref('')
@@ -117,6 +125,20 @@ const statusFilters = computed(() => [
   { value: 'REFUNDED', label: t('payment.status.refunded') },
 ])
 
+const orderTypeFilters = computed(() => [
+  { value: '', label: t('payment.orders.allOrderTypes') },
+  { value: 'balance', label: t('payment.orders.balanceOrder') },
+  { value: 'subscription', label: t('payment.orders.subscriptionOrder') },
+])
+
+const paymentTypeFilters = computed(() => [
+  { value: '', label: t('payment.orders.allPaymentTypes') },
+  ...['alipay', 'wxpay', 'stripe', 'airwallex'].map((value) => ({
+    value,
+    label: t(`payment.methods.${value}`, value),
+  })),
+])
+
 async function fetchOrders() {
   loading.value = true
   try {
@@ -124,6 +146,8 @@ async function fetchOrders() {
       page: pagination.page,
       page_size: pagination.page_size,
       status: currentFilter.value || undefined,
+      order_type: currentOrderType.value || undefined,
+      payment_type: currentPaymentType.value || undefined,
     })
     orders.value = res.data.items || []
     pagination.total = res.data.total || 0
@@ -131,6 +155,70 @@ async function fetchOrders() {
     appStore.showError(extractI18nErrorMessage(err, t, 'payment.errors', t('common.error')))
   } finally {
     loading.value = false
+  }
+}
+
+function csvValue(value: unknown): string {
+  const raw = value == null ? '' : String(value)
+  return /[",\n]/.test(raw) ? `"${raw.replace(/"/g, '""')}"` : raw
+}
+
+async function exportOrders() {
+  if (exporting.value) return
+  exporting.value = true
+  try {
+    const pageSize = 100
+    const allOrders: PaymentOrder[] = []
+    let page = 1
+    let total = 0
+    do {
+      const res = await paymentAPI.getMyOrders({
+        page,
+        page_size: pageSize,
+        status: currentFilter.value || undefined,
+        order_type: currentOrderType.value || undefined,
+        payment_type: currentPaymentType.value || undefined,
+      })
+      const pageOrders = res.data.items || []
+      allOrders.push(...pageOrders)
+      total = res.data.total || allOrders.length
+      page += 1
+      if (pageOrders.length === 0) break
+    } while (allOrders.length < total)
+
+    const headers = [
+      t('payment.orders.orderId'),
+      t('payment.orders.orderNo'),
+      t('payment.orders.payAmount'),
+      t('payment.orders.creditedAmount'),
+      t('payment.orders.paymentMethod'),
+      t('payment.orders.orderType'),
+      t('payment.orders.status'),
+      t('payment.orders.createdAt'),
+      t('payment.orders.paidAt'),
+    ]
+    const rows = allOrders.map((order) => [
+      order.id,
+      order.out_trade_no,
+      order.pay_amount,
+      order.amount,
+      t(`payment.methods.${order.payment_type}`, order.payment_type),
+      t(`payment.orders.${order.order_type}Order`, order.order_type),
+      t(`payment.status.${String(order.status).toLowerCase()}`, order.status),
+      order.created_at,
+      order.paid_at || '',
+    ])
+    const csv = '\uFEFF' + [headers, ...rows].map((row) => row.map(csvValue).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `payment-orders-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(link.href)
+  } catch (err: unknown) {
+    appStore.showError(extractI18nErrorMessage(err, t, 'payment.errors', t('common.error')))
+  } finally {
+    exporting.value = false
   }
 }
 

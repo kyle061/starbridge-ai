@@ -392,6 +392,12 @@ export default {
       orderType: '订单类型',
       actions: '操作',
       requestRefund: '申请退款',
+      export: '导出账单',
+      allOrderTypes: '全部订单类型',
+      allPaymentTypes: '全部支付方式',
+      balanceOrder: '余额充值',
+      subscriptionOrder: '订阅',
+      paidAt: '支付时间',
     },
     result: {
       success: '支付成功',

@@ -45,12 +45,20 @@ export const paymentAPI = {
   },
 
   /** Create a new payment order */
-  createOrder(data: CreateOrderRequest) {
-    return apiClient.post<CreateOrderResult>('/payment/orders', data)
+  createOrder(data: CreateOrderRequest, idempotencyKey?: string) {
+    return apiClient.post<CreateOrderResult>('/payment/orders', data, idempotencyKey
+      ? { headers: { 'Idempotency-Key': idempotencyKey } }
+      : undefined)
   },
 
   /** Get current user's orders */
-  getMyOrders(params?: { page?: number; page_size?: number; status?: string }) {
+  getMyOrders(params?: {
+    page?: number
+    page_size?: number
+    status?: string
+    order_type?: string
+    payment_type?: string
+  }) {
     return apiClient.get<BasePaginationResponse<PaymentOrder>>('/payment/orders/my', { params })
   },
 

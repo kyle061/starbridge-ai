@@ -335,6 +335,13 @@ const previewImage = ref('')
 
 const paymentPhase = ref<'select' | 'paying'>('select')
 
+function newPaymentIdempotencyKey(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `payment-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
 interface CreateOrderOptions {
   openid?: string
   wechatResumeToken?: string
@@ -810,7 +817,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
       payload.wechat_resume_token = options.wechatResumeToken
     }
 
-    const result = await paymentStore.createOrder(payload) as CreateOrderResult & { resume_token?: string }
+    const result = await paymentStore.createOrder(payload, newPaymentIdempotencyKey()) as CreateOrderResult & { resume_token?: string }
     const openWindow = (url: string) => {
       const win = window.open(url, 'paymentPopup', getPaymentPopupFeatures())
       if (!win || win.closed) {
@@ -1029,7 +1036,7 @@ async function attemptMobileQrFallback(err: unknown, context: MobileQrFallbackCo
       isMobile: false,
       isWechatBrowser: false,
     })
-    const result = await paymentStore.createOrder(payload) as CreateOrderResult & { resume_token?: string }
+    const result = await paymentStore.createOrder(payload, newPaymentIdempotencyKey()) as CreateOrderResult & { resume_token?: string }
     const stripeMethod = visibleMethod === 'wxpay' ? 'wechat_pay' : 'alipay'
     const stripeRouteUrl = result.client_secret
       ? router.resolve({

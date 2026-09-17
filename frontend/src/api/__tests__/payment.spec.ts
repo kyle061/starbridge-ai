@@ -37,4 +37,42 @@ describe('payment api', () => {
       resume_token: 'resume-token-123',
     })
   })
+
+  it('sends an idempotency key when creating a payment order', async () => {
+    await paymentAPI.createOrder({
+      amount: 10,
+      payment_type: 'stripe',
+      order_type: 'balance',
+    }, 'payment-attempt-123')
+
+    expect(post).toHaveBeenCalledWith(
+      '/payment/orders',
+      {
+        amount: 10,
+        payment_type: 'stripe',
+        order_type: 'balance',
+      },
+      { headers: { 'Idempotency-Key': 'payment-attempt-123' } },
+    )
+  })
+
+  it('passes order filters through to the user order history endpoint', async () => {
+    await paymentAPI.getMyOrders({
+      page: 2,
+      page_size: 100,
+      status: 'COMPLETED',
+      order_type: 'balance',
+      payment_type: 'stripe',
+    })
+
+    expect(get).toHaveBeenCalledWith('/payment/orders/my', {
+      params: {
+        page: 2,
+        page_size: 100,
+        status: 'COMPLETED',
+        order_type: 'balance',
+        payment_type: 'stripe',
+      },
+    })
+  })
 })

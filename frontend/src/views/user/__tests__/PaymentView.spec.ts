@@ -729,7 +729,7 @@ describe('PaymentView WeChat JSAPI flow', () => {
 
     expect(createOrder).toHaveBeenCalledWith(expect.objectContaining({
       wechat_resume_token: 'resume-token-123',
-    }))
+    }), expect.any(String))
     expect(window.localStorage.getItem(PAYMENT_RECOVERY_STORAGE_KEY)).toBeNull()
   })
 
@@ -772,7 +772,7 @@ describe('PaymentView WeChat JSAPI flow', () => {
       order_type: 'subscription',
       plan_id: 7,
       wechat_resume_token: 'resume-subscription-7',
-    }))
+    }), expect.any(String))
     expect(locationState.href).toContain('/api/v1/auth/oauth/wechat/payment/start?')
     expect(new URL(locationState.href, 'http://localhost').searchParams.get('redirect')).toBe(
       '/purchase?from=wechat&payment_type=wxpay&order_type=subscription&plan_id=7',
@@ -819,12 +819,12 @@ describe('PaymentView WeChat JSAPI flow', () => {
       payment_type: 'wxpay',
       is_mobile: true,
       wechat_resume_token: 'resume-token-h5',
-    }))
+    }), expect.any(String))
     expect(createOrder).toHaveBeenNthCalledWith(2, expect.objectContaining({
       payment_type: 'wxpay',
       is_mobile: false,
       payment_source: 'hosted_redirect',
-    }))
+    }), expect.any(String))
     expect(showWarning).toHaveBeenCalledWith('payment.errors.mobilePaymentFallbackToQr')
     expect(showError).not.toHaveBeenCalled()
     expect(window.localStorage.getItem(PAYMENT_RECOVERY_STORAGE_KEY)).toContain('weixin://wxpay/bizpayurl?pr=fallback-native')
