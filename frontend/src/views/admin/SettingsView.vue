@@ -7816,6 +7816,84 @@
                 <Toggle v-model="form.payment_enabled" />
               </div>
               <template v-if="form.payment_enabled">
+                <!-- Visible checkout methods and their provider source. -->
+                <div
+                  class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-dark-700 dark:bg-dark-800/60"
+                  data-testid="payment-visible-methods"
+                >
+                  <div class="mb-4">
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+                      {{ localText("前台支付方式", "Checkout payment methods") }}
+                    </h3>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      {{
+                        localText(
+                          "选择后，前台充值和订阅结算页会展示对应方式，并按支付来源调用对应服务商。",
+                          "Enabled methods appear on balance and subscription checkout and route through the selected provider.",
+                        )
+                      }}
+                    </p>
+                  </div>
+
+                  <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-dark-600 dark:bg-dark-900">
+                      <div class="flex items-start justify-between gap-3">
+                        <div>
+                          <label class="font-medium text-gray-900 dark:text-white">
+                            {{ t("payment.methods.alipay") }}
+                          </label>
+                          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            {{ t("admin.settings.paymentVisibleMethods.methodHint") }}
+                          </p>
+                        </div>
+                        <Toggle
+                          v-model="form.payment_visible_method_alipay_enabled"
+                          data-testid="payment-visible-method-alipay-enabled"
+                        />
+                      </div>
+                      <div class="mt-4">
+                        <label class="input-label">
+                          {{ t("admin.settings.paymentVisibleMethods.sourceLabel") }}
+                        </label>
+                        <Select
+                          v-model="form.payment_visible_method_alipay_source"
+                          :options="paymentVisibleMethodSourceOptions.alipay"
+                          :disabled="!form.payment_visible_method_alipay_enabled"
+                          data-testid="payment-visible-method-alipay-source"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-dark-600 dark:bg-dark-900">
+                      <div class="flex items-start justify-between gap-3">
+                        <div>
+                          <label class="font-medium text-gray-900 dark:text-white">
+                            {{ t("payment.methods.wxpay") }}
+                          </label>
+                          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            {{ t("admin.settings.paymentVisibleMethods.methodHint") }}
+                          </p>
+                        </div>
+                        <Toggle
+                          v-model="form.payment_visible_method_wxpay_enabled"
+                          data-testid="payment-visible-method-wxpay-enabled"
+                        />
+                      </div>
+                      <div class="mt-4">
+                        <label class="input-label">
+                          {{ t("admin.settings.paymentVisibleMethods.sourceLabel") }}
+                        </label>
+                        <Select
+                          v-model="form.payment_visible_method_wxpay_source"
+                          :options="paymentVisibleMethodSourceOptions.wxpay"
+                          :disabled="!form.payment_visible_method_wxpay_enabled"
+                          data-testid="payment-visible-method-wxpay-source"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Row 1: Product name -->
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div>
@@ -8834,6 +8912,8 @@ import {
   defaultWeChatConnectScopesForMode,
   deriveWeChatConnectStoredMode,
   normalizeDefaultSubscriptionSettings,
+  getPaymentVisibleMethodSourceOptions,
+  normalizePaymentVisibleMethodSource,
   resolveWeChatConnectModeCapabilities,
 } from "@/api/admin/settings";
 import type {
@@ -8844,6 +8924,7 @@ import type {
   DefaultSubscriptionSetting,
   DefaultPlatformQuotasMap,
   OpenAIFastPolicyRule,
+  PaymentVisibleMethodSource,
   WeChatConnectMode,
   WebSearchEmulationConfig,
   WebSearchProviderConfig,
@@ -8920,6 +9001,21 @@ const paymentGuideHref = computed(() =>
 );
 
 const paymentMethodsHref = computed(() => paymentGuideHref.value);
+
+const paymentVisibleMethodSourceOptions = computed<
+  Record<"alipay" | "wxpay", SelectOption[]>
+>(() => {
+  const toSelectOptions = (method: "alipay" | "wxpay"): SelectOption[] =>
+    getPaymentVisibleMethodSourceOptions(method).map((option) => ({
+      value: option.value,
+      label: isZhLocale.value ? option.labelZh : option.labelEn,
+    }));
+
+  return {
+    alipay: toSelectOptions("alipay"),
+    wxpay: toSelectOptions("wxpay"),
+  };
+});
 
 type SettingsTab =
   | "general"
@@ -9578,6 +9674,10 @@ type SettingsForm = Omit<
   openai_advanced_scheduler_weight_upstream_cost: string;
   openai_advanced_scheduler_weight_previous_response: string;
   openai_advanced_scheduler_weight_session_sticky: string;
+  payment_visible_method_alipay_source: PaymentVisibleMethodSource;
+  payment_visible_method_wxpay_source: PaymentVisibleMethodSource;
+  payment_visible_method_alipay_enabled: boolean;
+  payment_visible_method_wxpay_enabled: boolean;
   // 系统全局平台限额 map；form 内始终归一化为全 4 平台对象（模板非空绑定依赖此不变量）
   default_platform_quotas: DefaultPlatformQuotasMap;
   account_scheduling_thresholds: ReturnType<typeof normalizeAccountSchedulingThresholdsMap>;
@@ -9654,6 +9754,10 @@ const form = reactive<SettingsForm>({
   payment_cancel_rate_limit_window_mode: "rolling",
   payment_alipay_force_qrcode: false,
   payment_alipay_mobile_precreate_deep_link: false,
+  payment_visible_method_alipay_source: "",
+  payment_visible_method_wxpay_source: "",
+  payment_visible_method_alipay_enabled: false,
+  payment_visible_method_wxpay_enabled: false,
   table_default_page_size: tablePageSizeDefault,
   table_page_size_options: [10, 20, 50, 100],
   custom_menu_items: [] as Array<{
@@ -10825,6 +10929,54 @@ const codexSyncedVersionLabel = computed(() => {
   });
 });
 
+function normalizePaymentVisibleMethodSettings(): void {
+  form.payment_visible_method_alipay_source =
+    normalizePaymentVisibleMethodSource(
+      "alipay",
+      form.payment_visible_method_alipay_source,
+    );
+  form.payment_visible_method_wxpay_source =
+    normalizePaymentVisibleMethodSource(
+      "wxpay",
+      form.payment_visible_method_wxpay_source,
+    );
+}
+
+function validatePaymentVisibleMethodSettings(): boolean {
+  normalizePaymentVisibleMethodSettings();
+
+  const requiredSources: Array<{
+    enabled: boolean;
+    source: PaymentVisibleMethodSource;
+    title: string;
+  }> = [
+    {
+      enabled: form.payment_visible_method_alipay_enabled,
+      source: form.payment_visible_method_alipay_source,
+      title: t("payment.methods.alipay"),
+    },
+    {
+      enabled: form.payment_visible_method_wxpay_enabled,
+      source: form.payment_visible_method_wxpay_source,
+      title: t("payment.methods.wxpay"),
+    },
+  ];
+
+  const missing = requiredSources.find(
+    (item) => item.enabled && !item.source,
+  );
+  if (missing) {
+    appStore.showError(
+      t("admin.settings.paymentVisibleMethods.sourceRequiredError", {
+        title: missing.title,
+      }),
+    );
+    return false;
+  }
+
+  return true;
+}
+
 async function loadSettings() {
   loading.value = true;
   loadFailed.value = false;
@@ -10838,6 +10990,7 @@ async function loadSettings() {
         (form as Record<string, unknown>)[key] = value;
       }
     }
+    normalizePaymentVisibleMethodSettings();
     syncCaptchaProviderSelection();
     if (!form.claude_oauth_system_prompt_blocks?.trim()) {
       form.claude_oauth_system_prompt_blocks =
@@ -11238,6 +11391,9 @@ async function saveSettings() {
     if (!isValidHttpUrl(form.frontend_url)) form.frontend_url = "";
     if (!isValidHttpUrl(form.doc_url)) form.doc_url = "";
     syncWeChatConnectMode();
+    if (!validatePaymentVisibleMethodSettings()) {
+      return;
+    }
     const wechatStoredMode = deriveWeChatConnectStoredMode(
       form.wechat_connect_open_enabled,
       form.wechat_connect_mp_enabled,
@@ -11506,6 +11662,14 @@ async function saveSettings() {
       payment_alipay_force_qrcode: form.payment_alipay_force_qrcode,
       payment_alipay_mobile_precreate_deep_link:
         form.payment_alipay_mobile_precreate_deep_link,
+      payment_visible_method_alipay_source:
+        form.payment_visible_method_alipay_source,
+      payment_visible_method_wxpay_source:
+        form.payment_visible_method_wxpay_source,
+      payment_visible_method_alipay_enabled:
+        form.payment_visible_method_alipay_enabled,
+      payment_visible_method_wxpay_enabled:
+        form.payment_visible_method_wxpay_enabled,
       openai_low_upstream_rate_priority_enabled:
         form.openai_low_upstream_rate_priority_enabled,
       openai_oauth_scheduling_rate_multiplier:
@@ -11618,6 +11782,7 @@ async function saveSettings() {
         (form as Record<string, unknown>)[key] = value;
       }
     }
+    normalizePaymentVisibleMethodSettings();
     Object.assign(authSourceDefaults, buildAuthSourceDefaultsState(updated));
     form.default_platform_quotas = normalizePlatformQuotasMap(updated.default_platform_quotas);
     form.account_scheduling_thresholds = normalizeAccountSchedulingThresholdsMap(

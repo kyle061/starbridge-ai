@@ -497,8 +497,8 @@ const baseSettingsResponse = {
   payment_cancel_rate_limit_window: 1,
   payment_cancel_rate_limit_unit: "day",
   payment_cancel_rate_limit_window_mode: "rolling",
-  payment_visible_method_alipay_source: "alipay_direct",
-  payment_visible_method_wxpay_source: "invalid-source",
+  payment_visible_method_alipay_source: "easypay_alipay",
+  payment_visible_method_wxpay_source: "easypay_wxpay",
   payment_visible_method_alipay_enabled: true,
   payment_visible_method_wxpay_enabled: true,
   openai_low_upstream_rate_priority_enabled: false,
@@ -799,14 +799,31 @@ describe("admin SettingsView payment visible method controls", () => {
     expect(showSuccess).toHaveBeenCalled();
   });
 
-  it("does not render legacy visible payment method controls", async () => {
+  it("renders and persists visible payment method sources", async () => {
     const wrapper = mountView();
 
     await flushPromises();
     await openPaymentTab(wrapper);
 
-    expect(wrapper.text()).not.toContain("可见方式");
-    expect(wrapper.text()).not.toContain("支付来源");
+    expect(wrapper.get('[data-testid="payment-visible-methods"]').exists()).toBe(true);
+    const alipaySource = wrapper.get('[data-testid="payment-visible-method-alipay-source"]');
+    const wxpaySource = wrapper.get('[data-testid="payment-visible-method-wxpay-source"]');
+    expect((alipaySource.element as HTMLSelectElement).value).toBe("easypay_alipay");
+    expect((wxpaySource.element as HTMLSelectElement).value).toBe("easypay_wxpay");
+
+    await alipaySource.setValue("official_alipay");
+    await wxpaySource.setValue("official_wxpay");
+    await wrapper.find("form").trigger("submit.prevent");
+    await flushPromises();
+
+    expect(updateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payment_visible_method_alipay_source: "official_alipay",
+        payment_visible_method_wxpay_source: "official_wxpay",
+        payment_visible_method_alipay_enabled: true,
+        payment_visible_method_wxpay_enabled: true,
+      }),
+    );
   });
 
   it("shows valid passkey RP configuration and persists the sign-in toggle", async () => {
@@ -1075,20 +1092,19 @@ describe("admin SettingsView payment visible method controls", () => {
     expect(paymentLinks).toHaveLength(0);
   });
 
-  it("does not submit legacy visible payment method settings", async () => {
+  it("rejects an enabled visible method without a source", async () => {
     const wrapper = mountView();
 
     await flushPromises();
     await openPaymentTab(wrapper);
+    await wrapper.get('[data-testid="payment-visible-method-alipay-source"]').setValue("");
     await wrapper.find("form").trigger("submit.prevent");
     await flushPromises();
 
-    expect(updateSettings).toHaveBeenCalledTimes(1);
-    const payload = updateSettings.mock.calls[0]?.[0];
-    expect(payload).not.toHaveProperty("payment_visible_method_alipay_source");
-    expect(payload).not.toHaveProperty("payment_visible_method_wxpay_source");
-    expect(payload).not.toHaveProperty("payment_visible_method_alipay_enabled");
-    expect(payload).not.toHaveProperty("payment_visible_method_wxpay_enabled");
+    expect(updateSettings).not.toHaveBeenCalled();
+    expect(showError).toHaveBeenCalledWith(
+      "payment.methods.alipay 已启用，请先选择支付来源。",
+    );
   });
 
   it("submits the admin recharge affiliate rebate setting", async () => {

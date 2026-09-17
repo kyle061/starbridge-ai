@@ -2108,6 +2108,10 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 			CancelRateLimitMode:           req.PaymentCancelRateLimitMode,
 			AlipayForceQRCode:             req.PaymentAlipayForceQRCode,
 			AlipayMobilePrecreateDeepLink: req.PaymentAlipayMobilePrecreateDeepLink,
+			VisibleMethodAlipaySource:     req.PaymentVisibleMethodAlipaySource,
+			VisibleMethodWxpaySource:      req.PaymentVisibleMethodWxpaySource,
+			VisibleMethodAlipayEnabled:    req.PaymentVisibleMethodAlipayEnabled,
+			VisibleMethodWxpayEnabled:     req.PaymentVisibleMethodWxpayEnabled,
 		}
 		if err := h.paymentConfigService.UpdatePaymentConfig(c.Request.Context(), paymentReq); err != nil {
 			response.ErrorFrom(c, err)
@@ -2452,7 +2456,9 @@ func hasPaymentFields(req UpdateSettingsRequest) bool {
 		req.PaymentHelpText != nil || req.PaymentCancelRateLimitEnabled != nil ||
 		req.PaymentCancelRateLimitMax != nil || req.PaymentCancelRateLimitWindow != nil ||
 		req.PaymentCancelRateLimitUnit != nil || req.PaymentCancelRateLimitMode != nil ||
-		req.PaymentAlipayForceQRCode != nil || req.PaymentAlipayMobilePrecreateDeepLink != nil
+		req.PaymentAlipayForceQRCode != nil || req.PaymentAlipayMobilePrecreateDeepLink != nil ||
+		req.PaymentVisibleMethodAlipaySource != nil || req.PaymentVisibleMethodWxpaySource != nil ||
+		req.PaymentVisibleMethodAlipayEnabled != nil || req.PaymentVisibleMethodWxpayEnabled != nil
 }
 
 // ensureDingTalkSyncAttributes 在保存 settings 后，按 admin 配置的 (attr key, attr name)
