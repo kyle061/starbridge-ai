@@ -26,6 +26,47 @@ describe('UseKeyModal', () => {
     copyToClipboardMock.mockClear()
   })
 
+  it.each([
+    ['openai', 'gpt-6-astra'],
+    ['deepseek', 'deepseek-v4-pro'],
+    ['composite', 'gpt-6-astra']
+  ] as const)('opens %s keys in Codex by default', (platform, model) => {
+    const wrapper = mount(UseKeyModal, {
+      props: { show: true, apiKey: 'sk-codex-default-test', baseUrl: 'https://example.com', platform },
+      global: { stubs: { BaseDialog: { template: '<div><slot /><slot name="footer" /></div>' }, Icon: true } }
+    })
+    expect(wrapper.get('pre code').text()).toContain(`model = "${model}"`)
+    expect(wrapper.get('nav[aria-label="Client"] button').text()).toBe('keys.useKeyModal.cliTabs.codexCli')
+    expect(wrapper.get('nav[aria-label="Client"] button').classes()).toContain('border-primary-500')
+    wrapper.unmount()
+  })
+
+  it('uses HTTP/SSE and GPT6 for the composite Codex provider in both auth modes', async () => {
+    const wrapper = mount(UseKeyModal, {
+      props: { show: true, apiKey: 'sk-relay-test', baseUrl: 'https://example.com/v1/', platform: 'composite' },
+      global: { stubs: { BaseDialog: { template: '<div><slot /><slot name="footer" /></div>' }, Icon: true } }
+    })
+    const inlineConfig = wrapper.get('pre code').text()
+    expect(inlineConfig).toContain('model = "gpt-6-astra"')
+    expect(inlineConfig).toContain('model_provider = "starbridgeai"')
+    expect(inlineConfig).toContain('model_reasoning_effort = "xhigh"')
+    expect(inlineConfig).toContain('base_url = "https://example.com/v1"')
+    expect(inlineConfig).toContain('supports_websockets = false')
+    expect(inlineConfig).toContain('responses_websockets_v2 = false')
+    expect(inlineConfig).toContain('experimental_bearer_token = "sk-relay-test"')
+    expect(inlineConfig).not.toContain('deepseek-v4-pro')
+    expect(wrapper.findAll('pre code')).toHaveLength(1)
+    await wrapper.get('[data-testid="codex-auth-mode-env-key"]').trigger('click')
+    const envConfig = wrapper.findAll('pre code')[1].text()
+    expect(envConfig).toContain('env_key = "STARBRIDGE_API_KEY"')
+    expect(envConfig).toContain('supports_websockets = false')
+    expect(envConfig).not.toContain('experimental_bearer_token')
+    await wrapper.setProps({ platform: 'openai' })
+    expect(wrapper.get('pre code').text()).toContain('supports_websockets = true')
+    expect(wrapper.get('[data-testid="codex-auth-mode-api-key"]').attributes('aria-checked')).toBe('true')
+    wrapper.unmount()
+  })
+
   it('omits the attribution override from every standard Claude Code setup form', async () => {
     const wrapper = mount(UseKeyModal, {
       props: {
@@ -150,7 +191,7 @@ describe('UseKeyModal', () => {
 
     const parsed = JSON.parse(wrapper.find('pre code').text())
     expect(parsed.provider.grok.npm).toBe('@ai-sdk/openai-compatible')
-    expect(parsed.provider.grok.name).toBe('Grok via Sub2API')
+    expect(parsed.provider.grok.name).toBe('Grok via Starbridge AI')
     expect(parsed.provider.grok.options).toEqual({
       baseURL: 'https://example.com/v1',
       apiKey: 'sk-grok-test'
@@ -295,9 +336,9 @@ describe('UseKeyModal', () => {
     await nextTick()
 
     let codeBlocks = wrapper.findAll('pre code').map((code) => code.text())
-    const configToml = codeBlocks.find((content) => content.includes('[model_providers.sub2api]'))
+    const configToml = codeBlocks.find((content) => content.includes('[model_providers.starbridge]'))
     expect(configToml).toBeDefined()
-    expect(configToml).toContain('model_provider = "sub2api"')
+    expect(configToml).toContain('model_provider = "starbridge"')
     expect(configToml).toContain('model = "grok-4.5"')
     expect(configToml).toContain('base_url = "https://example.com/v1"')
     expect(configToml).toContain('experimental_bearer_token = "sk-grok-codex-test"')
@@ -350,13 +391,13 @@ describe('UseKeyModal', () => {
     })
 
     const codeBlocks = wrapper.findAll('pre code').map((code) => code.text())
-    const configToml = codeBlocks.find((content) => content.includes('model_provider = "starbridaeai"'))
+    const configToml = codeBlocks.find((content) => content.includes('model_provider = "starbridgeai"'))
 
     expect(configToml).toBeDefined()
     expect(configToml).toContain('model = "gpt-6-astra"')
-    expect(configToml).toContain('model_provider = "starbridaeai"')
-    expect(configToml).toContain('[model_providers.starbridaeai]')
-    expect(configToml).toContain('name = "starbridaeai"')
+    expect(configToml).toContain('model_provider = "starbridgeai"')
+    expect(configToml).toContain('[model_providers.starbridgeai]')
+    expect(configToml).toContain('name = "Starbridge AI"')
     expect(configToml).not.toContain('zero-inference')
     expect(configToml).not.toContain('Zero Inference')
     expect(configToml).not.toContain('review_model')
@@ -409,7 +450,7 @@ describe('UseKeyModal', () => {
     await nextTick()
 
     const codeBlocks = wrapper.findAll('pre code').map((code) => code.text())
-    const configToml = codeBlocks.find((content) => content.includes('model_provider = "starbridaeai"'))
+    const configToml = codeBlocks.find((content) => content.includes('model_provider = "starbridgeai"'))
 
     expect(envKeyMode.attributes('aria-checked')).toBe('false')
     expect(configToml).toBeDefined()
@@ -425,9 +466,9 @@ describe('UseKeyModal', () => {
     await nextTick()
 
     expect(wrapper.find('[data-testid="codex-api-key-restart-notice"]').exists()).toBe(false)
-    const apiKeyConfig = wrapper.findAll('pre code').map((code) => code.text()).find((content) => content.includes('model_provider = "starbridaeai"'))!
+    const apiKeyConfig = wrapper.findAll('pre code').map((code) => code.text()).find((content) => content.includes('model_provider = "starbridgeai"'))!
     expect(apiKeyConfig).toContain('requires_openai_auth = true')
-    expect(apiKeyConfig).toContain('env_key = "SUB2API_API_KEY"')
+    expect(apiKeyConfig).toContain('env_key = "STARBRIDGE_API_KEY"')
     expect(apiKeyConfig).not.toContain('experimental_bearer_token')
 
     await wrapper.get('[data-testid="codex-auth-mode-api-key"]').trigger('click')
@@ -746,8 +787,8 @@ describe('UseKeyModal', () => {
 
     const initialCodeBlocks = wrapper.findAll('pre code').map((code) => code.text())
     const providerNeedle = platform === 'openai' || platform === 'composite'
-      ? 'model_provider = "starbridaeai"'
-      : 'model_provider = "sub2api"'
+      ? 'model_provider = "starbridgeai"'
+      : 'model_provider = "starbridge"'
     const config = initialCodeBlocks.find((content) => content.includes(providerNeedle))!
     expect(config).toBeDefined()
     expect(initialCodeBlocks).toHaveLength(1)

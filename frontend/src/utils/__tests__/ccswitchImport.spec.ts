@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   GROK_CC_SWITCH_MODEL,
+  DEEPSEEK_CC_SWITCH_CODEX_MODEL,
   OPENAI_CC_SWITCH_CODEX_MODEL,
   buildCcSwitchImportDeeplink
 } from '@/utils/ccswitchImport'
@@ -57,6 +58,16 @@ describe('ccswitchImport utils', () => {
     expect(params.get('endpoint')).toBe(`${baseInput.baseUrl}/v1`)
     expect(params.get('usageBaseUrl')).toBe(baseInput.baseUrl)
     expect(params.get('model')).toBe(OPENAI_CC_SWITCH_CODEX_MODEL)
+  })
+
+  it('imports DeepSeek keys into Codex rather than Claude Code', () => {
+    const params = paramsFromDeeplink(buildCcSwitchImportDeeplink({
+      ...baseInput, platform: 'deepseek', clientType: 'claude'
+    }))
+    expect(params.get('app')).toBe('codex')
+    expect(params.get('model')).toBe(DEEPSEEK_CC_SWITCH_CODEX_MODEL)
+    expect(params.get('endpoint')).toBe(`${baseInput.baseUrl}/v1`)
+    expect(params.get('usageBaseUrl')).toBe(baseInput.baseUrl)
   })
 
   it('avoids duplicate version paths for configured gateway URLs', () => {

@@ -31,6 +31,8 @@ jobs:
           src/components/layout/__tests__/AppSidebar.spec.ts
           src/components/layout/__tests__/TablePageLayout.spec.ts
           src/components/keys/__tests__/EndpointPopover.spec.ts
+          src/components/keys/__tests__/UseKeyModal.spec.ts
+          src/utils/__tests__/ccswitchImport.spec.ts
           src/components/modelPlaza/__tests__/PlazaModelPricingTable.spec.ts
           src/components/admin/usage/__tests__/UsageStatsCards.spec.ts
           src/views/user/__tests__/KeysView.spec.ts
@@ -53,12 +55,12 @@ jobs:
       - run: go test ./internal/service ./internal/repository ./internal/handler/admin -run TestOpenAIDevice
         working-directory: backend
       - run: >-
-          go test ./migrations ./internal/service ./internal/server/routes
-          -run 'TestComposite|TestOpenAIAdvancedSchedulerFallsBackAcrossCompositePlatforms'
+          go test ./migrations ./internal/repository ./internal/service ./internal/handler ./internal/handler/dto ./internal/server/routes
+          -run 'TestComposite|TestStandardRelay|TestStarbridgeDeepSeek|TestClientRequestedGPT6|TestUsageLogFromService_ShowsGPT6|TestOpenAIAdvancedSchedulerFallsBackAcrossCompositePlatforms'
         working-directory: backend
       - run: >-
           go test -tags unit ./internal/service
-          -run 'TestAdminService_PreviewCompositeRoute|TestGatewayService_SelectAccountForModelWithExclusions_FallsBackAcrossCompositePlatforms'
+          -run 'TestCompositeGPT6|TestAdminService_PreviewCompositeRoute|TestGatewayService_SelectAccountForModelWithExclusions_FallsBackAcrossCompositePlatforms'
         working-directory: backend
       - run: go test ./internal/service -run '^TestOpenAIGatewayServiceRecordUsage_'
         working-directory: backend

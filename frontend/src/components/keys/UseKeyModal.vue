@@ -246,6 +246,8 @@ const codexAuthMode = ref<CodexAuthMode>('api-key')
 const defaultClientTab = computed(() => {
   switch (props.platform) {
     case 'openai':
+    case 'deepseek':
+    case 'composite':
       return 'codex'
     case 'grok':
       return 'grok'
@@ -373,11 +375,10 @@ const clientTabs = computed((): TabConfig[] => {
         { id: 'opencode', label: t('keys.useKeyModal.cliTabs.opencode'), icon: TerminalIcon }
       ]
     case 'deepseek':
-    case 'minimax':
     case 'composite':
       return [
-        { id: 'claude', label: t('keys.useKeyModal.cliTabs.claudeCode'), icon: TerminalIcon },
         { id: 'codex', label: t('keys.useKeyModal.cliTabs.codexCli'), icon: TerminalIcon },
+        { id: 'claude', label: t('keys.useKeyModal.cliTabs.claudeCode'), icon: TerminalIcon },
         { id: 'opencode', label: t('keys.useKeyModal.cliTabs.opencode'), icon: TerminalIcon }
       ]
     default:
@@ -405,7 +406,7 @@ const openaiTabs: TabConfig[] = [
 const showShellTabs = computed(() => activeClientTab.value !== 'opencode')
 
 const showCodexAuthMode = computed(() =>
-  props.platform === 'openai' &&
+  (props.platform === 'openai' || props.platform === 'composite') &&
   (activeClientTab.value === 'codex' || activeClientTab.value === 'codex-ws')
 )
 
@@ -619,7 +620,7 @@ const currentFiles = computed((): FileConfig[] => {
       return generateAnthropicFiles(baseRoot, apiKey)
     case 'composite':
       if (activeClientTab.value === 'codex') {
-        return generateRoutedCodexFiles(apiBase, apiKey, 'composite')
+        return generateOpenAIFiles(apiBase, apiKey, false)
       }
       return generateAnthropicFiles(baseRoot, apiKey)
     default:
@@ -782,7 +783,7 @@ ${keyword('$env:')}${variable('GEMINI_MODEL')}${operator('=')}${string(`"${model
   return { path, content, highlighted }
 }
 
-function generateOpenAIFiles(baseUrl: string, apiKey: string): FileConfig[] {
+function generateOpenAIFiles(baseUrl: string, apiKey: string, supportsWebsockets = true): FileConfig[] {
   const isWindows = activeTab.value === 'windows'
   const configDir = isWindows ? '%userprofile%\\.codex' : '~/.codex'
 
@@ -797,11 +798,11 @@ service_tier = "default"
 name = "Starbridge AI"
 base_url = "${escapeTomlBasicString(baseUrl)}"
 wire_api = "responses"
-supports_websockets = true
+supports_websockets = ${supportsWebsockets}
 ${generateCodexProviderAuthConfig(apiKey)}
 
 [features]
-responses_websockets_v2 = true
+responses_websockets_v2 = ${supportsWebsockets}
 goals = true`
 
   const files: FileConfig[] = []

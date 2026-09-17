@@ -2,6 +2,7 @@ import type { GroupPlatform } from '@/types'
 
 export const OPENAI_CC_SWITCH_CODEX_MODEL = 'gpt-6-astra'
 export const GROK_CC_SWITCH_MODEL = 'grok-4.5'
+export const DEEPSEEK_CC_SWITCH_CODEX_MODEL = 'deepseek-v4-pro'
 
 export type CcSwitchClientType = 'claude' | 'gemini'
 
@@ -68,6 +69,13 @@ export function resolveCcSwitchImportConfig(
         app: 'gemini',
         endpoint: normalizedBaseUrl,
         usageBaseUrl
+      }
+    case 'deepseek':
+      return {
+        app: 'codex',
+        endpoint: withV1Endpoint(normalizedBaseUrl),
+        usageBaseUrl,
+        model: DEEPSEEK_CC_SWITCH_CODEX_MODEL
       }
     case 'grok':
       return {
