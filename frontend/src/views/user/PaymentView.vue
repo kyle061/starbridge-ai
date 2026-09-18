@@ -209,6 +209,22 @@
             </template>
           </template>
         </template>
+        <div v-if="contactInfo && paymentPhase === 'select'" data-testid="payment-contact" class="card p-4">
+          <div class="flex flex-wrap items-center gap-2 text-sm">
+            <Icon name="chatBubble" size="sm" class="text-primary-500" />
+            <span class="font-medium text-gray-700 dark:text-gray-300">{{ t('common.contactSupport') }}:</span>
+            <a
+              v-if="contactHref"
+              :href="contactHref"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="[overflow-wrap:anywhere] text-primary-600 hover:underline dark:text-primary-400"
+            >
+              {{ contactInfo }}
+            </a>
+            <span v-else class="[overflow-wrap:anywhere] text-gray-600 dark:text-gray-400">{{ contactInfo }}</span>
+          </div>
+        </div>
         <div v-if="(checkout.help_text || checkout.help_image_url) && paymentPhase === 'select' && !selectedPlan" class="card p-4">
           <div class="flex flex-col items-center gap-3">
             <img v-if="checkout.help_image_url" :src="checkout.help_image_url" alt=""
@@ -262,6 +278,7 @@ import { FeatureFlags, resolveFeatureFlag } from '@/utils/featureFlags'
 import { paymentAPI } from '@/api/payment'
 import { extractApiErrorMessage, extractI18nErrorMessage } from '@/utils/apiError'
 import { isMobileDevice } from '@/utils/device'
+import { sanitizeUrl } from '@/utils/url'
 import type { SubscriptionPlan, CheckoutInfoResponse, CreateOrderResult, OrderType } from '@/types/payment'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import AmountInput from '@/components/payment/AmountInput.vue'
@@ -300,6 +317,13 @@ const appStore = useAppStore()
 
 const user = computed(() => authStore.user)
 const activeSubscriptions = computed(() => subscriptionStore.activeSubscriptions)
+const contactInfo = computed(() => (appStore.cachedPublicSettings?.contact_info || appStore.contactInfo || '').trim())
+const contactHref = computed(() => {
+  const value = contactInfo.value
+  if (!value) return ''
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return `mailto:${value}`
+  return sanitizeUrl(value)
+})
 
 function getDaysRemaining(expiresAt: string): number {
   const diff = new Date(expiresAt).getTime() - Date.now()

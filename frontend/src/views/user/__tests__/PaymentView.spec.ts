@@ -362,6 +362,64 @@ describe('PaymentView help text', () => {
   })
 })
 
+describe('PaymentView contact info', () => {
+  beforeEach(() => {
+    vi.useRealTimers()
+    routeState.path = '/purchase'
+    routeState.query = {}
+    createOrder.mockReset()
+    appStoreState.setPublicSettings(undefined)
+    getCheckoutInfo.mockReset().mockResolvedValue(checkoutInfoFixture())
+    window.localStorage.clear()
+  })
+
+  afterEach(() => {
+    appStoreState.setPublicSettings(undefined)
+  })
+
+  async function mountPayment() {
+    const wrapper = shallowMount(PaymentView, {
+      global: {
+        stubs: {
+          AppLayout: { template: '<div><slot /></div>' },
+          RechargeComingSoon: false,
+          Teleport: true,
+          Transition: false,
+        },
+      },
+    })
+    await flushPromises()
+    return wrapper
+  }
+
+  it('renders configured contact info as a safe link on the recharge page', async () => {
+    appStoreState.setPublicSettings({ contact_info: 'https://support.example.com/contact' })
+
+    const wrapper = await mountPayment()
+
+    const contact = wrapper.get('[data-testid="payment-contact"]')
+    expect(contact.text()).toContain('common.contactSupport')
+    expect(contact.get('a').attributes('href')).toBe('https://support.example.com/contact')
+    expect(contact.text()).toContain('https://support.example.com/contact')
+  })
+
+  it('renders configured contact info during subscription confirmation', async () => {
+    appStoreState.setPublicSettings({ contact_info: 'QQ: 123456789' })
+
+    const wrapper = await mountSubscriptionConfirm()
+
+    const contact = wrapper.get('[data-testid="payment-contact"]')
+    expect(contact.text()).toContain('QQ: 123456789')
+    expect(contact.find('a').exists()).toBe(false)
+  })
+
+  it('does not render a contact card when contact info is empty', async () => {
+    const wrapper = await mountPayment()
+
+    expect(wrapper.find('[data-testid="payment-contact"]').exists()).toBe(false)
+  })
+})
+
 describe('PaymentView subscription plan grid', () => {
   it.each([3, 4, 6])('keeps %i plans on the existing mobile/tablet/desktop grid', async (planCount) => {
     const wrapper = await mountSubscriptionPlanList(planCount)
