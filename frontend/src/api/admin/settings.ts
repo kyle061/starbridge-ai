@@ -288,7 +288,7 @@ export function appendAuthSourceDefaultsToUpdateRequest(
   payload: UpdateSettingsRequest,
   authSourceDefaults: AuthSourceDefaultsState,
 ): UpdateSettingsRequest {
-  const target = payload as Record<string, unknown>;
+  const target = payload as unknown as Record<string, unknown>;
 
   for (const source of AUTH_SOURCE_TYPES) {
     const current = authSourceDefaults[source];
@@ -682,6 +682,7 @@ export interface SystemSettings {
   payment_visible_method_wxpay_source?: string;
   payment_visible_method_alipay_enabled?: boolean;
   payment_visible_method_wxpay_enabled?: boolean;
+  customer_billing_multiplier?: number;
   openai_low_upstream_rate_priority_enabled?: boolean;
   openai_oauth_scheduling_rate_multiplier?: number;
   openai_advanced_scheduler_enabled?: boolean;
@@ -999,6 +1000,7 @@ export interface UpdateSettingsRequest {
   payment_visible_method_wxpay_source?: string;
   payment_visible_method_alipay_enabled?: boolean;
   payment_visible_method_wxpay_enabled?: boolean;
+  customer_billing_multiplier: number;
   openai_low_upstream_rate_priority_enabled?: boolean;
   openai_oauth_scheduling_rate_multiplier?: number;
   openai_advanced_scheduler_enabled?: boolean;

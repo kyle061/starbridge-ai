@@ -45,7 +45,7 @@ func (h *AdminAPIKeyHandler) UpdateLimits(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
-	response.Success(c, dto.APIKeyFromService(key))
+	response.Success(c, dto.APIKeyFromServiceAdmin(key))
 }
 
 // UpdateGroup handles updating an API key's admin-managed fields.
@@ -82,12 +82,12 @@ func (h *AdminAPIKeyHandler) UpdateGroup(c *gin.Context) {
 	}
 
 	resp := struct {
-		APIKey                 *dto.APIKey `json:"api_key"`
+		APIKey                 *dto.AdminAPIKey `json:"api_key"`
 		AutoGrantedGroupAccess bool        `json:"auto_granted_group_access"`
 		GrantedGroupID         *int64      `json:"granted_group_id,omitempty"`
 		GrantedGroupName       string      `json:"granted_group_name,omitempty"`
 	}{
-		APIKey:                 dto.APIKeyFromService(result.APIKey),
+		APIKey:                 dto.APIKeyFromServiceAdmin(result.APIKey),
 		AutoGrantedGroupAccess: result.AutoGrantedGroupAccess,
 		GrantedGroupID:         result.GrantedGroupID,
 		GrantedGroupName:       result.GrantedGroupName,

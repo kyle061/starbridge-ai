@@ -63,6 +63,10 @@ type ContextPricingScheduleInput struct {
 	// Platform 为请求的具体平台（composite 分组传模型所属平台），
 	// 决定渠道定价查找与平台旧规则的适用。
 	Platform string
+	// RateMultiplier is applied to the returned customer-facing schedule.
+	// It is normally 1 for internal/official pricing and is set to the retail
+	// multiplier by the model plaza display path.
+	RateMultiplier float64
 }
 
 var errContextPricingResolverRequired = errors.New("context pricing schedule: resolver is required")
@@ -107,7 +111,7 @@ func (s *BillingService) ResolveContextPricingSchedule(ctx context.Context, reso
 		Ctx:            ctx,
 		Model:          in.Model,
 		Group:          in.Group,
-		RateMultiplier: 1,
+		RateMultiplier: normalizedScheduleRate(in.RateMultiplier),
 		Resolver:       resolver,
 		Resolved:       resolved,
 	}
@@ -132,6 +136,13 @@ func (s *BillingService) ResolveContextPricingSchedule(ctx context.Context, reso
 	applyContextTierLabels(tiers, plan)
 
 	return &ContextPricingSchedule{Basis: ContextPricingBasisWholeRequest, Tiers: tiers, TimePricing: resolvedTimePricingSchedule(resolved)}, nil
+}
+
+func normalizedScheduleRate(rate float64) float64 {
+	if rate <= 0 || math.IsNaN(rate) || math.IsInf(rate, 0) {
+		return 1
+	}
+	return rate
 }
 
 // resolvedTimePricingSchedule 列出计费会生效的分时倍率时段。

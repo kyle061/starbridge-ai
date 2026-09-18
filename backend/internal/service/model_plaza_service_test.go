@@ -470,6 +470,42 @@ func TestListGroups_ImageModelKeepsTierSynthesisWithBilling(t *testing.T) {
 	require.InDelta(t, 0.04, *m.Pricing.Intervals[1].PerRequestPrice, 1e-12)
 }
 
+func TestListGroups_RetailPricingScalesAllCustomerPrices(t *testing.T) {
+	imagePrice := 0.02
+	channels := []Channel{{
+		ID: 1, Name: "ch", Status: StatusActive, GroupIDs: []int64{10},
+		ModelPricing: []ChannelModelPricing{
+			{Platform: PlatformOpenAI, Models: []string{"gpt-5.4"}, BillingMode: BillingModeToken},
+			{Platform: PlatformOpenAI, Models: []string{"gpt-image-2"}, BillingMode: BillingModeImage, PerRequestPrice: testPtrFloat64(0.04)},
+		},
+	}}
+	groups := []Group{{
+		ID: 10, Name: "g", Platform: PlatformOpenAI, RateMultiplier: 1,
+		ImagePrice1K: &imagePrice,
+	}}
+	catalog := newStubPricingServiceFromMap(map[string]*LiteLLMModelPricing{
+		"gpt-5.4": {Mode: "chat", InputCostPerToken: 3e-6, OutputCostPerToken: 15e-6},
+	})
+	svc := newPlazaServiceWithBilling(channels, groups, map[int64]string{10: PlatformOpenAI}, catalog)
+	svc.billingService.cfg.Billing.RetailPricing = config.RetailPricingConfig{
+		Enabled: true, StandardMultiplier: 6, LatestMultiplier: 6,
+	}
+
+	out, err := svc.ListGroups(context.Background())
+	require.NoError(t, err)
+	require.Len(t, out, 1)
+	models := plazaModelsByName(out[0].Models)
+
+	token := models["gpt-5.4"].Pricing
+	require.NotNil(t, token)
+	require.InDelta(t, 18e-6, *token.InputPrice, 1e-15)
+	require.InDelta(t, 90e-6, *token.OutputPrice, 1e-15)
+
+	image := models["gpt-image-2"].Pricing
+	require.NotNil(t, image)
+	require.InDelta(t, 0.24, *image.PerRequestPrice, 1e-12)
+}
+
 func TestListGroups_CatalogMissingStillShowsChannelFlatPricing(t *testing.T) {
 	// 目录查不到的模型：计费按渠道平价（未配置项 $0），广场单档展示渠道平价，官方价为空。
 	channels := []Channel{plazaPricedChannel(1, "ch", []int64{10}, PlatformAnthropic, "unknown-model-xyz")}

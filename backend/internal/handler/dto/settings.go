@@ -234,6 +234,7 @@ type SystemSettings struct {
 	PaymentVisibleMethodWxpaySource   string `json:"payment_visible_method_wxpay_source"`
 	PaymentVisibleMethodAlipayEnabled bool   `json:"payment_visible_method_alipay_enabled"`
 	PaymentVisibleMethodWxpayEnabled  bool   `json:"payment_visible_method_wxpay_enabled"`
+	CustomerBillingMultiplier         float64 `json:"customer_billing_multiplier"`
 
 	// OpenAI account scheduling
 	OpenAILowUpstreamRatePriorityEnabled                   bool    `json:"openai_low_upstream_rate_priority_enabled"`

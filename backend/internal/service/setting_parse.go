@@ -28,6 +28,11 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		if err := s.migrateLegacyBranding(ctx); err != nil {
 			return fmt.Errorf("migrate legacy branding: %w", err)
 		}
+		settings, err := s.GetAllSettings(ctx)
+		if err != nil {
+			return fmt.Errorf("load existing settings: %w", err)
+		}
+		s.refreshCachedSettings(settings)
 		return nil
 	}
 	if !errors.Is(err, ErrSettingNotFound) {
@@ -256,6 +261,7 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		SettingPaymentVisibleMethodWxpaySource:                       "",
 		SettingPaymentVisibleMethodAlipayEnabled:                     "false",
 		SettingPaymentVisibleMethodWxpayEnabled:                      "false",
+		SettingKeyCustomerBillingMultiplier:                           strconv.FormatFloat(CustomerBillingMultiplierDefault, 'f', -1, 64),
 		openAIAdvancedSchedulerSettingKey:                            "false",
 		SettingKeyOpenAIAdvancedSchedulerStickyWeightedEnabled:       "false",
 		SettingKeyOpenAIAdvancedSchedulerSubscriptionPriorityEnabled: "false",
@@ -274,7 +280,15 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		SettingKeyAllowUserViewErrorRequests: "false",
 	}
 
-	return s.settingRepo.SetMultiple(ctx, defaults)
+	if err := s.settingRepo.SetMultiple(ctx, defaults); err != nil {
+		return err
+	}
+	settings, err := s.GetAllSettings(ctx)
+	if err != nil {
+		return fmt.Errorf("load initialized settings: %w", err)
+	}
+	s.refreshCachedSettings(settings)
+	return nil
 }
 
 // migrateLegacyBranding updates only values that still equal the upstream
@@ -1001,6 +1015,7 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 	result.PaymentVisibleMethodWxpaySource = NormalizeVisibleMethodSource("wxpay", settings[SettingPaymentVisibleMethodWxpaySource])
 	result.PaymentVisibleMethodAlipayEnabled = settings[SettingPaymentVisibleMethodAlipayEnabled] == "true"
 	result.PaymentVisibleMethodWxpayEnabled = settings[SettingPaymentVisibleMethodWxpayEnabled] == "true"
+	result.CustomerBillingMultiplier = parsePositiveCustomerBillingMultiplier(settings[SettingKeyCustomerBillingMultiplier])
 	result.OpenAILowUpstreamRatePriorityEnabled = settings[SettingKeyOpenAILowUpstreamRatePriorityEnabled] == "true"
 	result.OpenAIOAuthSchedulingRateMultiplier = parseOpenAIOAuthSchedulingRateMultiplier(settings[SettingKeyOpenAIOAuthSchedulingRateMultiplier])
 	result.OpenAIAdvancedSchedulerEnabled = settings[openAIAdvancedSchedulerSettingKey] == "true"
@@ -1223,6 +1238,14 @@ func parseOpenAIOAuthSchedulingRateMultiplier(raw string) float64 {
 	value, err := strconv.ParseFloat(strings.TrimSpace(raw), 64)
 	if err != nil || value < 0 || math.IsNaN(value) || math.IsInf(value, 0) {
 		return defaultOpenAIOAuthSchedulingRateMultiplier
+	}
+	return value
+}
+
+func parsePositiveCustomerBillingMultiplier(raw string) float64 {
+	value, err := strconv.ParseFloat(strings.TrimSpace(raw), 64)
+	if err != nil || value <= 0 || math.IsNaN(value) || math.IsInf(value, 0) {
+		return CustomerBillingMultiplierDefault
 	}
 	return value
 }

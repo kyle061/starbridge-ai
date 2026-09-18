@@ -271,6 +271,7 @@ type UpdateSettingsRequest struct {
 	PaymentVisibleMethodWxpaySource   *string `json:"payment_visible_method_wxpay_source"`
 	PaymentVisibleMethodAlipayEnabled *bool   `json:"payment_visible_method_alipay_enabled"`
 	PaymentVisibleMethodWxpayEnabled  *bool   `json:"payment_visible_method_wxpay_enabled"`
+	CustomerBillingMultiplier         *float64 `json:"customer_billing_multiplier"`
 
 	// OpenAI account scheduling
 	OpenAILowUpstreamRatePriorityEnabled               *bool    `json:"openai_low_upstream_rate_priority_enabled"`
@@ -1811,6 +1812,12 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 			}
 			return previousSettings.PaymentVisibleMethodWxpayEnabled
 		}(),
+		CustomerBillingMultiplier: func() float64 {
+			if req.CustomerBillingMultiplier != nil {
+				return *req.CustomerBillingMultiplier
+			}
+			return previousSettings.CustomerBillingMultiplier
+		}(),
 		OpenAILowUpstreamRatePriorityEnabled: func() bool {
 			if req.OpenAILowUpstreamRatePriorityEnabled != nil {
 				return *req.OpenAILowUpstreamRatePriorityEnabled
@@ -2332,6 +2339,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		PaymentVisibleMethodWxpaySource:                        updatedSettings.PaymentVisibleMethodWxpaySource,
 		PaymentVisibleMethodAlipayEnabled:                      updatedSettings.PaymentVisibleMethodAlipayEnabled,
 		PaymentVisibleMethodWxpayEnabled:                       updatedSettings.PaymentVisibleMethodWxpayEnabled,
+		CustomerBillingMultiplier:                              updatedSettings.CustomerBillingMultiplier,
 		OpenAILowUpstreamRatePriorityEnabled:                   updatedSettings.OpenAILowUpstreamRatePriorityEnabled,
 		OpenAIOAuthSchedulingRateMultiplier:                    updatedSettings.OpenAIOAuthSchedulingRateMultiplier,
 		OpenAIAdvancedSchedulerEnabled:                         updatedSettings.OpenAIAdvancedSchedulerEnabled,

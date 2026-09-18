@@ -235,11 +235,16 @@ func (s *ModelPlazaService) ListGroups(ctx context.Context) ([]PlazaGroup, error
 // token 模型取计费阶梯表（单价与档位均由真实计费函数得出），
 // 图片/按次模型（或阶梯表不可用时）沿用渠道定价与分组图片档位价。
 func (s *ModelPlazaService) fillDisplayPricing(ctx context.Context, m *PlazaModel, g *Group) {
+	retailRate, retailEnabled := 1.0, false
+	if s.billingService != nil {
+		retailRate, retailEnabled = retailModelRate(s.billingService.cfg, m.Name)
+	}
 	if s.billingService != nil && s.resolver != nil {
 		sched, err := s.billingService.ResolveContextPricingSchedule(ctx, s.resolver, ContextPricingScheduleInput{
-			Model:    m.Name,
-			Group:    g,
-			Platform: m.Platform,
+			Model:          m.Name,
+			Group:          g,
+			Platform:       m.Platform,
+			RateMultiplier: retailRate,
 		})
 		if err == nil && sched != nil && len(sched.Tiers) > 0 {
 			m.Pricing = withDefaultMaxReasoningEffortMultiplier(plazaPricingFromSchedule(m.Pricing, sched), m.Name)
@@ -251,6 +256,9 @@ func (s *ModelPlazaService) fillDisplayPricing(ctx context.Context, m *PlazaMode
 		}
 	}
 	m.Pricing = withDefaultMaxReasoningEffortMultiplier(plazaImageDisplayPricing(m.Pricing, g), m.Name)
+	if retailEnabled {
+		m.Pricing = scalePlazaPricing(m.Pricing, retailRate)
+	}
 }
 
 func withDefaultMaxReasoningEffortMultiplier(pricing *ChannelModelPricing, model string) *ChannelModelPricing {
@@ -286,6 +294,41 @@ func plazaPricingFromSchedule(raw *ChannelModelPricing, sched *ContextPricingSch
 		out.Intervals = plazaIntervalsFromTiers(sched.Tiers)
 	}
 	return out
+}
+
+// scalePlazaPricing applies the customer-facing retail multiplier to every
+// numeric price in a pricing card.  The multiplier is applied only to the
+// display copy; upstream cost accounting continues to use the unscaled
+// TotalCost and applies the retail policy once to ActualCost.
+func scalePlazaPricing(raw *ChannelModelPricing, multiplier float64) *ChannelModelPricing {
+	if raw == nil || multiplier == 1 {
+		return raw
+	}
+	out := raw.Clone()
+	scale := func(value *float64) *float64 {
+		if value == nil {
+			return nil
+		}
+		v := *value * multiplier
+		return &v
+	}
+	out.InputPrice = scale(out.InputPrice)
+	out.OutputPrice = scale(out.OutputPrice)
+	out.CacheWritePrice = scale(out.CacheWritePrice)
+	out.CacheWrite1hPrice = scale(out.CacheWrite1hPrice)
+	out.CacheReadPrice = scale(out.CacheReadPrice)
+	out.ImageInputPrice = scale(out.ImageInputPrice)
+	out.ImageOutputPrice = scale(out.ImageOutputPrice)
+	out.PerRequestPrice = scale(out.PerRequestPrice)
+	for i := range out.Intervals {
+		out.Intervals[i].InputPrice = scale(out.Intervals[i].InputPrice)
+		out.Intervals[i].OutputPrice = scale(out.Intervals[i].OutputPrice)
+		out.Intervals[i].CacheWritePrice = scale(out.Intervals[i].CacheWritePrice)
+		out.Intervals[i].CacheWrite1hPrice = scale(out.Intervals[i].CacheWrite1hPrice)
+		out.Intervals[i].CacheReadPrice = scale(out.Intervals[i].CacheReadPrice)
+		out.Intervals[i].PerRequestPrice = scale(out.Intervals[i].PerRequestPrice)
+	}
+	return &out
 }
 
 func plazaIntervalsFromTiers(tiers []ContextPricingTier) []PricingInterval {

@@ -265,6 +265,9 @@ type SystemSettings struct {
 	PaymentVisibleMethodWxpaySource   string
 	PaymentVisibleMethodAlipayEnabled bool
 	PaymentVisibleMethodWxpayEnabled  bool
+	// CustomerBillingMultiplier controls the single retail multiplier applied to
+	// all customer-facing model usage. It is intentionally an admin-only setting.
+	CustomerBillingMultiplier float64
 
 	// OpenAI 账号调度
 	OpenAILowUpstreamRatePriorityEnabled                   bool

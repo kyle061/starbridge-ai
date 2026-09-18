@@ -1,23 +1,24 @@
 # 全站计费和渠道监控
 
-默认所有模型按基础价的 **5 倍**扣费。
-用户侧用量、余额扣除和额度消耗均按 5 倍客户口径计算；管理端仍可查看原始上游成本与真实 Token 用量。
+默认所有模型按基础价的 **6 倍**扣费。
+用户侧用量、余额扣除和额度消耗均按 6 倍客户口径计算；管理端仍可查看原始上游成本与真实 Token 用量。
 余额、Key 用量和用户用量共用同一笔实际费用；组合线路不会叠加父分组和成员分组倍率。
 历史记录保留当时的实际扣款，不追溯涨价。
 
-需要调整时，只改服务配置文件的这一处，然后重启 Starbridge：
+管理员可在系统设置中修改“全站模型计费倍率”；保存后立即生效，设置键为
+`customer_billing_multiplier`。服务配置中的默认值如下：
 
 ```yaml
 billing:
   retail_pricing:
     enabled: true
-    standard_multiplier: 5
-    latest_multiplier: 5
+    standard_multiplier: 6
+    latest_multiplier: 6
     latest_model_prefixes: [gpt-6, deepseek-v4]
 ```
 
 某平台推出下一代后，在 `latest_model_prefixes` 中替换该平台的旧一代，扣费和模型广场自动采用相同倍率。
-即使后续替换 `latest_model_prefixes`，当前普通模型和最新模型仍统一按 5 倍扣费；不要累计保留历代型号。
+即使后续替换 `latest_model_prefixes`，当前普通模型和最新模型仍统一按 6 倍扣费；不要累计保留历代型号。
 列表匹配完整型号或后接 `-` 的变体，支持 `openai/gpt-6-astra` 这样的前缀。
 开启全站规则后，分组倍率、用户专属倍率及高峰倍率由全站规则覆盖。
 基础价仍使用现有模型价卡，包含已配置的缓存、长上下文及渠道分时定价。

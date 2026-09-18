@@ -69,13 +69,26 @@ func UserFromServiceAdmin(u *service.User) *AdminUser {
 	if base == nil {
 		return nil
 	}
-	return &AdminUser{
+	out := &AdminUser{
 		User:                 *base,
 		Notes:                u.Notes,
 		LastUsedAt:           u.LastUsedAt,
 		GroupRates:           u.GroupRates,
 		RestrictPublicGroups: u.RestrictPublicGroups,
 	}
+	if len(u.APIKeys) > 0 {
+		out.APIKeys = make([]AdminAPIKey, 0, len(u.APIKeys))
+		for i := range u.APIKeys {
+			out.APIKeys = append(out.APIKeys, *APIKeyFromServiceAdmin(&u.APIKeys[i]))
+		}
+	}
+	if len(u.Subscriptions) > 0 {
+		out.Subscriptions = make([]AdminUserSubscription, 0, len(u.Subscriptions))
+		for i := range u.Subscriptions {
+			out.Subscriptions = append(out.Subscriptions, *UserSubscriptionFromServiceAdmin(&u.Subscriptions[i]))
+		}
+	}
+	return out
 }
 
 func APIKeyFromService(k *service.APIKey) *APIKey {
@@ -126,6 +139,17 @@ func APIKeyFromService(k *service.APIKey) *APIKey {
 	return out
 }
 
+func APIKeyFromServiceAdmin(k *service.APIKey) *AdminAPIKey {
+	if k == nil {
+		return nil
+	}
+	base := APIKeyFromService(k)
+	if base == nil {
+		return nil
+	}
+	return &AdminAPIKey{APIKey: *base, Group: GroupFromServiceAdmin(k.Group)}
+}
+
 func GroupFromServiceShallow(g *service.Group) *Group {
 	if g == nil {
 		return nil
@@ -149,6 +173,17 @@ func GroupFromServiceAdmin(g *service.Group) *AdminGroup {
 	}
 	out := &AdminGroup{
 		Group:                       groupFromServiceBase(g),
+		RateMultiplier:              g.RateMultiplier,
+		ImageRateIndependent:        g.ImageRateIndependent,
+		ImageRateMultiplier:         g.ImageRateMultiplier,
+		BatchImageDiscountMultiplier: g.BatchImageDiscountMultiplier,
+		BatchImageHoldMultiplier:    g.BatchImageHoldMultiplier,
+		VideoRateIndependent:        g.VideoRateIndependent,
+		VideoRateMultiplier:         g.VideoRateMultiplier,
+		PeakRateEnabled:             g.PeakRateEnabled,
+		PeakStart:                   g.PeakStart,
+		PeakEnd:                     g.PeakEnd,
+		PeakRateMultiplier:          g.PeakRateMultiplier,
 		ForceOpenAIFast:             g.ForceOpenAIFast,
 		FreeOpenAIFast:              g.FreeOpenAIFast,
 		ProfitControlEnabled:        g.ProfitControlEnabled,
@@ -797,6 +832,10 @@ func UsageLogFromServiceAdmin(l *service.UsageLog) *AdminUsageLog {
 	usageLog.UpstreamEndpoint = l.UpstreamEndpoint
 	return &AdminUsageLog{
 		UsageLog:                usageLog,
+		RateMultiplier:           l.RateMultiplier,
+		APIKey:                   APIKeyFromServiceAdmin(l.APIKey),
+		Group:                    GroupFromServiceAdmin(l.Group),
+		Subscription:             UserSubscriptionFromServiceAdmin(l.Subscription),
 		UpstreamModel:           l.UpstreamModel,
 		UpstreamReasoningEffort: adminUpstreamReasoningEffort(l),
 		UpstreamResponseModel:   l.UpstreamResponseModel,
@@ -921,6 +960,7 @@ func UserSubscriptionFromServiceAdmin(sub *service.UserSubscription) *AdminUserS
 	}
 	return &AdminUserSubscription{
 		UserSubscription: userSubscriptionFromServiceBase(sub),
+		Group:             GroupFromServiceAdmin(sub.Group),
 		AssignedBy:       sub.AssignedBy,
 		AssignedAt:       sub.AssignedAt,
 		Notes:            sub.Notes,

@@ -42,6 +42,10 @@ type User struct {
 // 注意：普通用户接口不得返回 notes 等管理员备注信息。
 type AdminUser struct {
 	User
+	// Admin 端需要看到带内部倍率字段的 API key / subscription；普通用户
+	// DTO 中的同名字段保持脱敏版本。
+	APIKeys       []AdminAPIKey           `json:"api_keys,omitempty"`
+	Subscriptions []AdminUserSubscription `json:"subscriptions,omitempty"`
 
 	Notes      string     `json:"notes"`
 	LastUsedAt *time.Time `json:"last_used_at"`
@@ -90,12 +94,18 @@ type APIKey struct {
 	Group *Group `json:"group,omitempty"`
 }
 
+// AdminAPIKey 是管理员接口使用的 API key DTO，组信息保留内部计费倍率。
+type AdminAPIKey struct {
+	APIKey
+	Group *AdminGroup `json:"group,omitempty"`
+}
+
 type Group struct {
 	ID             int64   `json:"id"`
 	Name           string  `json:"name"`
 	Description    string  `json:"description"`
 	Platform       string  `json:"platform"`
-	RateMultiplier float64 `json:"rate_multiplier"`
+	RateMultiplier float64 `json:"-"`
 	IsExclusive    bool    `json:"is_exclusive"`
 	Status         string  `json:"status"`
 
@@ -108,17 +118,17 @@ type Group struct {
 	// 图片生成计费配置（仅 antigravity 平台使用）
 	AllowImageGeneration         bool    `json:"allow_image_generation"`
 	AllowBatchImageGeneration    bool    `json:"allow_batch_image_generation"`
-	ImageRateIndependent         bool    `json:"image_rate_independent"`
-	ImageRateMultiplier          float64 `json:"image_rate_multiplier"`
-	BatchImageDiscountMultiplier float64 `json:"batch_image_discount_multiplier"`
-	BatchImageHoldMultiplier     float64 `json:"batch_image_hold_multiplier"`
-	VideoRateIndependent         bool    `json:"video_rate_independent"`
-	VideoRateMultiplier          float64 `json:"video_rate_multiplier"`
+	ImageRateIndependent         bool    `json:"-"`
+	ImageRateMultiplier          float64 `json:"-"`
+	BatchImageDiscountMultiplier float64 `json:"-"`
+	BatchImageHoldMultiplier     float64 `json:"-"`
+	VideoRateIndependent         bool    `json:"-"`
+	VideoRateMultiplier          float64 `json:"-"`
 	// 高峰时段倍率配置
-	PeakRateEnabled    bool     `json:"peak_rate_enabled"`
-	PeakStart          string   `json:"peak_start"`
-	PeakEnd            string   `json:"peak_end"`
-	PeakRateMultiplier float64  `json:"peak_rate_multiplier"`
+	PeakRateEnabled    bool     `json:"-"`
+	PeakStart          string   `json:"-"`
+	PeakEnd            string   `json:"-"`
+	PeakRateMultiplier float64  `json:"-"`
 	ImagePrice1K       *float64 `json:"image_price_1k"`
 	ImagePrice2K       *float64 `json:"image_price_2k"`
 	ImagePrice4K       *float64 `json:"image_price_4k"`
@@ -166,6 +176,17 @@ type Group struct {
 // 注意：普通用户接口不得返回 model_routing/account_count/account_groups 等内部信息。
 type AdminGroup struct {
 	Group
+	RateMultiplier              float64 `json:"rate_multiplier"`
+	ImageRateIndependent        bool    `json:"image_rate_independent"`
+	ImageRateMultiplier         float64 `json:"image_rate_multiplier"`
+	BatchImageDiscountMultiplier float64 `json:"batch_image_discount_multiplier"`
+	BatchImageHoldMultiplier    float64 `json:"batch_image_hold_multiplier"`
+	VideoRateIndependent        bool    `json:"video_rate_independent"`
+	VideoRateMultiplier         float64 `json:"video_rate_multiplier"`
+	PeakRateEnabled             bool    `json:"peak_rate_enabled"`
+	PeakStart                   string  `json:"peak_start"`
+	PeakEnd                     string  `json:"peak_end"`
+	PeakRateMultiplier          float64 `json:"peak_rate_multiplier"`
 	// ForceOpenAIFast 是管理端请求策略，用户侧分组 DTO 无需暴露。
 	ForceOpenAIFast bool `json:"force_openai_fast"`
 	// FreeOpenAIFast 是管理端计费策略，用户侧分组 DTO 无需暴露。
@@ -619,7 +640,7 @@ type UsageLog struct {
 	CacheReadCost             float64 `json:"cache_read_cost"`
 	TotalCost                 float64 `json:"total_cost"`
 	ActualCost                float64 `json:"actual_cost"`
-	RateMultiplier            float64 `json:"rate_multiplier"`
+	RateMultiplier            float64 `json:"-"`
 	LongContextBillingApplied bool    `json:"long_context_billing_applied"`
 
 	BillingType  int8   `json:"billing_type"`
@@ -670,6 +691,10 @@ type UsageLog struct {
 // AdminUsageLog 是管理员接口使用的 usage log DTO（包含管理员字段）。
 type AdminUsageLog struct {
 	UsageLog
+	RateMultiplier float64 `json:"rate_multiplier"`
+	APIKey         *AdminAPIKey `json:"api_key,omitempty"`
+	Group          *AdminGroup `json:"group,omitempty"`
+	Subscription   *AdminUserSubscription `json:"subscription,omitempty"`
 
 	// UpstreamModel is the actual model sent to the upstream provider after mapping.
 	// Omitted when no mapping was applied (requested model was used as-is).
@@ -774,6 +799,7 @@ type UserSubscription struct {
 // 注意：普通用户接口不得返回 assigned_by/assigned_at/notes/assigned_by_user 等管理员字段。
 type AdminUserSubscription struct {
 	UserSubscription
+	Group *AdminGroup `json:"group,omitempty"`
 
 	AssignedBy *int64    `json:"assigned_by"`
 	AssignedAt time.Time `json:"assigned_at"`

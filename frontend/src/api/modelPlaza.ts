@@ -1,7 +1,7 @@
 /**
  * Model Plaza API（公开端点，可匿名访问）
  * 以分组为中心的模型价目：分组信息 + 模型渠道定价 + LiteLLM 官方参考价。
- * 带 token 请求时后端会额外返回专属分组与用户专属倍率。
+ * 带 token 请求时后端会额外返回用户有权限查看的专属分组；内部计费倍率不下发。
  */
 
 import { apiClient } from './client'
@@ -27,34 +27,14 @@ export interface PlazaOfficialPricing {
  */
 export type PlazaLongContextBasis = 'whole_request' | 'marginal'
 
-/** 分时倍率时段：配置时区当天 [start_time, end_time) 内整单实付乘 multiplier。 */
-export interface PlazaTimePricingPeriod {
-  start_time: string
-  end_time: string
-  multiplier: number
-}
-
-/** 计费会生效的分时倍率（仅倍率 ≠ 1 的时段，已按开始时间升序）。 */
-export interface PlazaTimePricing {
-  /** IANA 时区名，如 Asia/Shanghai。 */
-  timezone: string
-  /** true 时时段仅周一至周五生效，周末整天按标准价计费。 */
-  weekdays_only?: boolean
-  periods: PlazaTimePricingPeriod[]
-}
-
 export interface PlazaModel {
-  /** 全站统一计费倍率；存在时覆盖分组、专属和图片倍率。 */
-  billing_rate_multiplier?: number
   name: string
   platform: string
-  /** 实收口径的展示定价：档位可提供绝对单价或相对基础价倍率；均为标准时段价。 */
+  /** 实收口径的展示定价：后端已应用客户计费策略，前端不再重复计算。 */
   pricing: UserSupportedModelPricing | null
   official_pricing: PlazaOfficialPricing | null
   /** 仅多档模型返回。 */
   long_context_basis?: PlazaLongContextBasis
-  /** 仅配置了分时倍率的模型返回。 */
-  time_pricing?: PlazaTimePricing
 }
 
 export interface ModelPlazaGroup {
@@ -64,17 +44,7 @@ export interface ModelPlazaGroup {
   platform: string
   /** 'standard' | 'subscription' */
   subscription_type: string
-  rate_multiplier: number
-  /** 登录且管理员为该用户配了专属倍率时返回；生效倍率 = user_rate ?? rate_multiplier。 */
-  user_rate_multiplier?: number
-  peak_rate_enabled: boolean
-  peak_start: string
-  peak_end: string
-  peak_rate_multiplier: number
   is_exclusive: boolean
-  /** 生图独立倍率：true 时图片计费模型的实付倍率取 image_rate_multiplier，不取分组/专属倍率。 */
-  image_rate_independent: boolean
-  image_rate_multiplier: number
   /** 分组是否启用长上下文阶梯计费；false 时实付列只展示最低档，官方阶梯仅供参考。 */
   long_context_pricing_enabled: boolean
   models: PlazaModel[]

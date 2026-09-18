@@ -498,6 +498,10 @@ func (s *SettingService) buildSystemSettingsUpdates(ctx context.Context, setting
 	updates[SettingPaymentVisibleMethodWxpaySource] = settings.PaymentVisibleMethodWxpaySource
 	updates[SettingPaymentVisibleMethodAlipayEnabled] = strconv.FormatBool(settings.PaymentVisibleMethodAlipayEnabled)
 	updates[SettingPaymentVisibleMethodWxpayEnabled] = strconv.FormatBool(settings.PaymentVisibleMethodWxpayEnabled)
+	if settings.CustomerBillingMultiplier <= 0 || math.IsNaN(settings.CustomerBillingMultiplier) || math.IsInf(settings.CustomerBillingMultiplier, 0) {
+		return nil, fmt.Errorf("%s must be a finite positive number", SettingKeyCustomerBillingMultiplier)
+	}
+	updates[SettingKeyCustomerBillingMultiplier] = strconv.FormatFloat(settings.CustomerBillingMultiplier, 'f', -1, 64)
 	updates[SettingKeyOpenAILowUpstreamRatePriorityEnabled] = strconv.FormatBool(settings.OpenAILowUpstreamRatePriorityEnabled)
 	updates[SettingKeyOpenAIOAuthSchedulingRateMultiplier] = strconv.FormatFloat(settings.OpenAIOAuthSchedulingRateMultiplier, 'f', -1, 64)
 	updates[openAIAdvancedSchedulerSettingKey] = strconv.FormatBool(settings.OpenAIAdvancedSchedulerEnabled)
@@ -788,6 +792,10 @@ func (s *SettingService) refreshCachedSettings(settings *SystemSettings) {
 	}
 	if s.cfg != nil {
 		s.cfg.SetForwardedClientIPSettings(settings.APIKeyACLTrustForwardedIP, settings.ForwardedClientIPHeaders)
+		if settings.CustomerBillingMultiplier > 0 && !math.IsNaN(settings.CustomerBillingMultiplier) && !math.IsInf(settings.CustomerBillingMultiplier, 0) {
+			s.cfg.Billing.RetailPricing.StandardMultiplier = settings.CustomerBillingMultiplier
+			s.cfg.Billing.RetailPricing.LatestMultiplier = settings.CustomerBillingMultiplier
+		}
 	}
 	// codex_cli_only 加固策略缓存：设置更新后强制下次重载（涉及 4 个键 + JSON 解析，直接置过期）。
 	s.codexRestrictionPolicySF.Forget("codex_restriction_policy")

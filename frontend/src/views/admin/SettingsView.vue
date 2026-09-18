@@ -7894,6 +7894,23 @@
                   </div>
                 </div>
 
+                <div class="rounded-lg border border-primary-200 bg-primary-50/50 p-4 dark:border-primary-900/50 dark:bg-primary-950/20">
+                  <label class="input-label">
+                    {{ localText("全站模型计费倍率", "Global customer billing multiplier") }}
+                  </label>
+                  <input
+                    v-model.number="form.customer_billing_multiplier"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    class="input max-w-xs"
+                    data-testid="customer-billing-multiplier"
+                  />
+                  <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {{ localText("所有普通用户模型请求统一按此倍率计费；用户端不会显示倍率。默认 6 倍。", "All customer model requests use this multiplier; the multiplier is hidden from users. Default: 6x.") }}
+                  </p>
+                </div>
+
                 <!-- Row 1: Product name -->
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div>
@@ -9663,6 +9680,7 @@ type SettingsForm = Omit<
   payment_visible_method_wxpay_source: PaymentVisibleMethodSource;
   payment_visible_method_alipay_enabled: boolean;
   payment_visible_method_wxpay_enabled: boolean;
+  customer_billing_multiplier: number;
   // 系统全局平台限额 map；form 内始终归一化为全 4 平台对象（模板非空绑定依赖此不变量）
   default_platform_quotas: DefaultPlatformQuotasMap;
   account_scheduling_thresholds: ReturnType<typeof normalizeAccountSchedulingThresholdsMap>;
@@ -9714,6 +9732,7 @@ const form = reactive<SettingsForm>({
   backend_mode_enabled: false,
   hide_ccs_import_button: false,
   payment_enabled: false,
+  customer_billing_multiplier: 6,
   risk_control_enabled: false,
   cyber_session_block_enabled: false,
   cyber_session_block_ttl_seconds: 3600,
@@ -11655,6 +11674,8 @@ async function saveSettings() {
         form.payment_visible_method_alipay_enabled,
       payment_visible_method_wxpay_enabled:
         form.payment_visible_method_wxpay_enabled,
+      customer_billing_multiplier:
+        Number(form.customer_billing_multiplier) || 6,
       openai_low_upstream_rate_priority_enabled:
         form.openai_low_upstream_rate_priority_enabled,
       openai_oauth_scheduling_rate_multiplier:

@@ -34,6 +34,7 @@ const (
 	AffiliateRebateDurationDaysMax      = 3650  // ~10 年
 	AffiliateRebatePerInviteeCapDefault = 0.0   // 0 = 无上限
 	AdminRechargeRebateEnabledDefault   = false // 管理员充值默认不产生返利
+	CustomerBillingMultiplierDefault    = 6.0  // 普通用户统一客户计费倍率
 )
 
 // Platform constants
@@ -640,6 +641,8 @@ const (
 	SettingKeyAllowUngroupedKeyScheduling = "allow_ungrouped_key_scheduling"
 	// SettingKeyOpenAILowUpstreamRatePriorityEnabled 旧调度是否按上游 token 倍率优先。
 	SettingKeyOpenAILowUpstreamRatePriorityEnabled = "openai_low_upstream_rate_priority_enabled"
+	// SettingKeyCustomerBillingMultiplier 普通用户所有模型统一使用的客户计费倍率。
+	SettingKeyCustomerBillingMultiplier = "customer_billing_multiplier"
 	// SettingKeyOpenAIOAuthSchedulingRateMultiplier OAuth 账号参与成本调度时使用的参考倍率。
 	SettingKeyOpenAIOAuthSchedulingRateMultiplier = "openai_oauth_scheduling_rate_multiplier"
 	// SettingKeyOpenAIAdvancedSchedulerStickyWeightedEnabled OpenAI 高级调度下是否启用粘性加权。
