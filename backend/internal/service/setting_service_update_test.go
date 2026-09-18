@@ -599,7 +599,7 @@ func TestSettingService_InitializeDefaultSettingsRefreshesCustomerBillingMultipl
 	}}
 	cfg := &config.Config{}
 	cfg.Billing.RetailPricing = config.RetailPricingConfig{
-		Enabled:             true,
+		Enabled:             false,
 		StandardMultiplier:  1,
 		LatestMultiplier:    1.5,
 		LatestModelPrefixes: []string{"gpt-6"},
@@ -607,8 +607,13 @@ func TestSettingService_InitializeDefaultSettingsRefreshesCustomerBillingMultipl
 	svc := NewSettingService(repo, cfg)
 
 	require.NoError(t, svc.InitializeDefaultSettings(context.Background()))
+	require.True(t, cfg.Billing.RetailPricing.Enabled)
 	require.Equal(t, 6.0, cfg.Billing.RetailPricing.StandardMultiplier)
 	require.Equal(t, 6.0, cfg.Billing.RetailPricing.LatestMultiplier)
+
+	cost := &CostBreakdown{TotalCost: 0.026308}
+	applyRetailCost(cfg, "gpt-5.6-luna", cost)
+	require.InDelta(t, 0.157848, cost.ActualCost, 1e-12)
 }
 
 func TestSettingService_UpdateSettings_APIKeyACLTrustForwardedIPRefreshesConfig(t *testing.T) {

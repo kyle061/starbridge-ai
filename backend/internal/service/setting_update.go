@@ -703,6 +703,7 @@ func (s *SettingService) refreshCachedSettings(settings *SystemSettings) {
 		// an admin update. Without this sync, a restart silently falls back to
 		// the static config-file multiplier while the admin panel still shows
 		// the database value.
+		s.cfg.Billing.RetailPricing.Enabled = true
 		s.cfg.Billing.RetailPricing.StandardMultiplier = settings.CustomerBillingMultiplier
 		s.cfg.Billing.RetailPricing.LatestMultiplier = settings.CustomerBillingMultiplier
 	}
