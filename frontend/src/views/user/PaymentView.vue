@@ -84,6 +84,9 @@
                   </p>
                 </div>
               </div>
+              <p class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+                {{ t('payment.feeWaiverHint') }}
+              </p>
               <button :class="['btn w-full py-3 text-base font-medium', paymentButtonClass]" :disabled="!canSubmit || submitting" @click="handleSubmitRecharge">
                 <span v-if="submitting" class="flex items-center justify-center gap-2">
                   <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
@@ -172,6 +175,9 @@
                   </div>
                 </div>
               </div>
+              <p class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+                {{ t('payment.feeWaiverHint') }}
+              </p>
               <button :class="['btn w-full py-3 text-base font-medium', paymentButtonClass]" :disabled="!canSubmitSubscription || submitting" @click="confirmSubscribe">
                 <span v-if="submitting" class="flex items-center justify-center gap-2">
                   <span class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>

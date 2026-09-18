@@ -320,6 +320,7 @@ export default {
     enterAmount: '输入金额',
     paymentMethod: '支付方式',
     fee: '手续费',
+    feeWaiverHint: '如需免手续费，请联系客服处理。',
     actualPay: '实付金额',
     createOrder: '确认支付',
     methods: {

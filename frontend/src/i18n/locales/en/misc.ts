@@ -296,6 +296,7 @@ export default {
     enterAmount: 'Enter amount',
     paymentMethod: 'Payment Method',
     fee: 'Fee',
+    feeWaiverHint: 'For a fee waiver, please contact customer service.',
     actualPay: 'Actual Payment',
     createOrder: 'Confirm Payment',
     methods: {
