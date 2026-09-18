@@ -34,6 +34,9 @@ func calculateCreditedBalance(paymentAmount, multiplier float64) float64 {
 }
 
 func calculateGatewayRefundAmount(orderAmount, payAmount, refundAmount float64, currency string) float64 {
+	// Payment refunds are based on the amount actually paid at the gateway.
+	// Model billing multipliers are unrelated to payment orders and must never
+	// increase the gateway refund amount.
 	if orderAmount <= 0 || payAmount <= 0 || refundAmount <= 0 {
 		return 0
 	}

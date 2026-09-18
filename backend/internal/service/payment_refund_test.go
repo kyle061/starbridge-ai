@@ -282,6 +282,13 @@ func TestCalculateGatewayRefundAmountUsesCurrencyPrecision(t *testing.T) {
 	require.InDelta(t, 52, calculateGatewayRefundAmount(100, 103, 50, "JPY"), 1e-12)
 }
 
+func TestCalculateGatewayRefundAmountIgnoresModelBillingMultiplier(t *testing.T) {
+	// The user receives 100 credits but paid 50 at the gateway. A 5x model
+	// billing multiplier must not change either a full or partial refund.
+	require.InDelta(t, 50, calculateGatewayRefundAmount(100, 50, 100, "CNY"), 1e-12)
+	require.InDelta(t, 25, calculateGatewayRefundAmount(100, 50, 50, "CNY"), 1e-12)
+}
+
 func TestFormatGatewayRefundAmountUsesOrderCurrency(t *testing.T) {
 	order := &dbent.PaymentOrder{
 		ProviderSnapshot: map[string]any{
