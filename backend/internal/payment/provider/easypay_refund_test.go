@@ -25,6 +25,8 @@ func TestNormalizeEasyPayAPIBase(t *testing.T) {
 		{input: "https://zpayz.cn/submit.php", want: "https://zpayz.cn"},
 		{input: "https://zpayz.cn/api.php", want: "https://zpayz.cn"},
 		{input: "https://zpayz.cn/api.php?act=refund", want: "https://zpayz.cn"},
+		{input: "https://www.ezfp.cn/user/userinfo.php?mod=api", want: "https://www.ezfp.cn"},
+		{input: "https://www.ezfp.cn/user/userinfo.php", want: "https://www.ezfp.cn"},
 	}
 
 	for _, tt := range tests {

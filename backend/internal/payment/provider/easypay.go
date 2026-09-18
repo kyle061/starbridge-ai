@@ -131,6 +131,11 @@ func trimEasyPayEndpointPath(path string) string {
 	for _, endpoint := range []string{
 		"/api/pay/submit", "/api/pay/create", "/api/pay/query", "/api/pay/refund",
 		"/api/pay/refundquery", "/submit.php", "/mapi.php", "/api.php",
+		// Merchants commonly copy the API information page URL from the
+		// provider console instead of copying the displayed root URL. Treat
+		// that page as metadata and still call the protocol endpoints from
+		// the provider origin.
+		"/user/userinfo.php",
 	} {
 		if strings.HasSuffix(lower, endpoint) {
 			return strings.TrimRight(path[:len(path)-len(endpoint)], "/")

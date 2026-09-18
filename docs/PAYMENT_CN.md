@@ -118,7 +118,7 @@ Starbridge AI 内置支付系统，支持用户自助充值，无需部署独立
 - **ezfp RSA 协议**：填写商户私钥和服务商公钥
 - **传统 MD5 协议**：填写商户密钥（Key），适用于提供 `submit.php` / `mapi.php` / `api.php` 的易支付站点
 
-API 基础地址填写服务商根地址，例如 `https://www.ezfp.cn` 或你实际使用的易支付地址；不要填写具体接口路径。系统会按协议自动调用：
+API 基础地址填写服务商根地址，例如 `https://www.ezfp.cn` 或你实际使用的易支付地址；如果直接复制了 `https://www.ezfp.cn/user/userinfo.php?mod=api` 这类 API 信息页地址，系统也会自动转换为根地址。不要填写具体接口路径。系统会按协议自动调用：
 
 - 页面跳转支付：`POST/GET /api/pay/submit`
 - 统一下单：`POST /api/pay/create`

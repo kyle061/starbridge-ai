@@ -111,7 +111,7 @@ EasyPay-compatible protocols:
 - **ezfp RSA** — configure the merchant private key and provider public key
 - **Classic MD5** — configure the merchant Key for gateways exposing `submit.php`, `mapi.php`, and `api.php`
 
-Enter the provider root URL, for example `https://www.ezfp.cn` or your actual EasyPay address; do not enter a specific endpoint path. The integration calls:
+Enter the provider root URL, for example `https://www.ezfp.cn` or your actual EasyPay address. If you paste an API info page such as `https://www.ezfp.cn/user/userinfo.php?mod=api`, it is normalized to the provider root automatically. Do not enter a specific endpoint path. The integration calls:
 
 - Hosted payment: `POST/GET /api/pay/submit`
 - Create payment: `POST /api/pay/create`

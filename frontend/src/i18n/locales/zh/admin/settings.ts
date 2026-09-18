@@ -775,7 +775,7 @@ export default {
         validationEasyPayCustomMethodPrefixReserved: '易支付自定义支付方式不能以 alipay 或 wxpay 开头',
         validationEasyPayCustomMethodDuplicate: '易支付自定义支付方式不能重复',
         field_apiBase: 'API 基础地址',
-        field_ezfpApiBaseHint: '易支付请填写服务商根地址，例如 https://www.ezfp.cn，不要填写 /api/pay/create 等具体接口路径。',
+        field_ezfpApiBaseHint: '易支付可填写服务商根地址，例如 https://www.ezfp.cn；如果复制了 https://www.ezfp.cn/user/userinfo.php?mod=api 这类 API 信息页地址，系统也会自动转换为根地址。不要填写 /api/pay/create 等具体接口路径。',
         field_notifyUrl: '异步通知地址',
         field_returnUrl: '同步跳转地址',
         callbackBaseUrl: '回调基础地址',
