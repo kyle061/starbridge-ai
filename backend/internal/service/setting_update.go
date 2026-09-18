@@ -695,6 +695,17 @@ func (s *SettingService) refreshCachedSettings(settings *SystemSettings) {
 	if settings == nil {
 		return
 	}
+	if s.cfg != nil && settings.CustomerBillingMultiplier > 0 &&
+		!math.IsNaN(settings.CustomerBillingMultiplier) &&
+		!math.IsInf(settings.CustomerBillingMultiplier, 0) {
+		// CustomerBillingMultiplier is persisted in the database and must be
+		// applied to the runtime pricing policy during startup as well as after
+		// an admin update. Without this sync, a restart silently falls back to
+		// the static config-file multiplier while the admin panel still shows
+		// the database value.
+		s.cfg.Billing.RetailPricing.StandardMultiplier = settings.CustomerBillingMultiplier
+		s.cfg.Billing.RetailPricing.LatestMultiplier = settings.CustomerBillingMultiplier
+	}
 
 	// 先使 inflight singleflight 失效，再刷新缓存，缩小旧值覆盖新值的竞态窗口
 	versionBoundsSF.Forget("version_bounds")
@@ -792,10 +803,6 @@ func (s *SettingService) refreshCachedSettings(settings *SystemSettings) {
 	}
 	if s.cfg != nil {
 		s.cfg.SetForwardedClientIPSettings(settings.APIKeyACLTrustForwardedIP, settings.ForwardedClientIPHeaders)
-		if settings.CustomerBillingMultiplier > 0 && !math.IsNaN(settings.CustomerBillingMultiplier) && !math.IsInf(settings.CustomerBillingMultiplier, 0) {
-			s.cfg.Billing.RetailPricing.StandardMultiplier = settings.CustomerBillingMultiplier
-			s.cfg.Billing.RetailPricing.LatestMultiplier = settings.CustomerBillingMultiplier
-		}
 	}
 	// codex_cli_only 加固策略缓存：设置更新后强制下次重载（涉及 4 个键 + JSON 解析，直接置过期）。
 	s.codexRestrictionPolicySF.Forget("codex_restriction_policy")

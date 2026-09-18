@@ -592,6 +592,25 @@ func TestSettingService_InitializeDefaultSettingsMigratesOnlyLegacyBranding(t *t
 	require.JSONEq(t, `[{"id":"terms","title":"Starbridge AI 服务条款","content_md":""},{"id":"custom","title":"自定义条款","content_md":"正文"}]`, repo.values[SettingKeyLoginAgreementDocuments])
 }
 
+func TestSettingService_InitializeDefaultSettingsRefreshesCustomerBillingMultiplier(t *testing.T) {
+	repo := &forwardedIPMigrationRepoStub{values: map[string]string{
+		SettingKeyRegistrationEnabled:       "true",
+		SettingKeyCustomerBillingMultiplier: "6",
+	}}
+	cfg := &config.Config{}
+	cfg.Billing.RetailPricing = config.RetailPricingConfig{
+		Enabled:             true,
+		StandardMultiplier:  1,
+		LatestMultiplier:    1.5,
+		LatestModelPrefixes: []string{"gpt-6"},
+	}
+	svc := NewSettingService(repo, cfg)
+
+	require.NoError(t, svc.InitializeDefaultSettings(context.Background()))
+	require.Equal(t, 6.0, cfg.Billing.RetailPricing.StandardMultiplier)
+	require.Equal(t, 6.0, cfg.Billing.RetailPricing.LatestMultiplier)
+}
+
 func TestSettingService_UpdateSettings_APIKeyACLTrustForwardedIPRefreshesConfig(t *testing.T) {
 	repo := &settingUpdateRepoStub{}
 	cfg := &config.Config{}
