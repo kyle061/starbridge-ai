@@ -4310,6 +4310,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useAppStore } from "@/stores/app";
+import { useDialog } from "@/composables/useDialog";
 import { useAuthStore } from "@/stores/auth";
 import { useOnboardingStore } from "@/stores/onboarding";
 import { adminAPI } from "@/api/admin";
@@ -4483,6 +4484,7 @@ const groupPricingToAPI = (
 
 const { t } = useI18n();
 const appStore = useAppStore();
+const { confirm } = useDialog();
 const authStore = useAuthStore();
 const onboardingStore = useOnboardingStore();
 
@@ -6615,7 +6617,7 @@ const saveCompositeRoute = async () => {
 
 const deleteCompositeRoute = async (route: CompositeModelRoute) => {
   if (!compositeRoutesGroup.value) return;
-  if (!window.confirm(t("admin.groups.compositeRoutes.deleteConfirm"))) return;
+  if (!(await confirm(t("admin.groups.compositeRoutes.deleteConfirm")))) return;
   try {
     await adminAPI.groups.deleteCompositeRoute(
       compositeRoutesGroup.value.id,

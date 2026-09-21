@@ -20,6 +20,8 @@ export default {
     tryAgain: 'Please try again',
     update: 'Update',
     confirm: 'Confirm',
+    confirmTitle: 'Confirm action',
+    promptTitle: 'Input required',
     reset: 'Reset',
     search: 'Search',
     filter: 'Filter',

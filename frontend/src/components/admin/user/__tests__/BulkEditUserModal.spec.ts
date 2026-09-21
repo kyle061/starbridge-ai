@@ -8,6 +8,7 @@ const { batchUpdateLimits, showSuccess, showError } = vi.hoisted(() => ({
   showSuccess: vi.fn(),
   showError: vi.fn()
 }))
+const { dialogConfirm } = vi.hoisted(() => ({ dialogConfirm: vi.fn() }))
 
 vi.mock('@/api/admin', () => ({
   adminAPI: {
@@ -22,6 +23,10 @@ vi.mock('@/stores/app', () => ({
     showSuccess,
     showError
   })
+}))
+
+vi.mock('@/composables/useDialog', () => ({
+  useDialog: () => ({ confirm: dialogConfirm, prompt: vi.fn() })
 }))
 
 vi.mock('vue-i18n', () => ({
@@ -52,6 +57,8 @@ describe('BulkEditUserModal', () => {
     batchUpdateLimits.mockReset()
     showSuccess.mockReset()
     showError.mockReset()
+    dialogConfirm.mockReset()
+    dialogConfirm.mockResolvedValue(true)
     batchUpdateLimits.mockResolvedValue({ affected: 2 })
   })
 
@@ -82,7 +89,6 @@ describe('BulkEditUserModal', () => {
   })
 
   it('submits only the enabled RPM field and preserves zero as unlimited', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const wrapper = mountModal()
 
     await wrapper.get('[data-test="enable-rpm-limit"]').trigger('click')
@@ -96,14 +102,15 @@ describe('BulkEditUserModal', () => {
       all: false,
       rpm_limit: 0
     })
-    expect(confirm).toHaveBeenCalledWith(
-      expect.stringContaining('admin.users.bulkLimits.rpmUnlimitedValue')
+    expect(dialogConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('admin.users.bulkLimits.rpmUnlimitedValue')
+      })
     )
     expect(wrapper.emitted('success')).toEqual([[2]])
   })
 
   it('omits disabled fields from the request', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     const wrapper = mountModal()
 
     await wrapper.get('[data-test="enable-concurrency"]').trigger('click')
@@ -119,7 +126,7 @@ describe('BulkEditUserModal', () => {
   })
 
   it('does not call the API when overwrite confirmation is cancelled', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    dialogConfirm.mockResolvedValue(false)
     const wrapper = mountModal()
 
     await wrapper.get('[data-test="enable-concurrency"]').trigger('click')

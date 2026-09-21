@@ -8903,6 +8903,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { useDialog } from "@/composables/useDialog";
 import { adminAPI } from "@/api";
 import {
   appendAuthSourceDefaultsToUpdateRequest,
@@ -8989,6 +8990,7 @@ import {
 
 const { t, locale } = useI18n();
 const appStore = useAppStore();
+const { confirm } = useDialog();
 // 关闭 step-up 开关是敏感操作：后端返回 STEP_UP_REQUIRED 时弹 TOTP 码重试
 const settingsStepUp = useStepUp();
 const adminSettingsStore = useAdminSettingsStore();
@@ -10273,7 +10275,7 @@ function quotaPercentage(provider: WebSearchProviderConfig): number {
 async function resetWebSearchUsage(idx: number) {
   const provider = webSearchConfig.providers[idx];
   if (!provider) return;
-  if (!confirm(t("admin.settings.webSearchEmulation.resetUsageConfirm")))
+  if (!(await confirm(t("admin.settings.webSearchEmulation.resetUsageConfirm"))))
     return;
   try {
     await adminAPI.settings.resetWebSearchUsage({
@@ -11980,12 +11982,12 @@ async function createAdminApiKey() {
 }
 
 async function regenerateAdminApiKey() {
-  if (!confirm(t("admin.settings.adminApiKey.regenerateConfirm"))) return;
+  if (!(await confirm(t("admin.settings.adminApiKey.regenerateConfirm")))) return;
   await createAdminApiKey();
 }
 
 async function deleteAdminApiKey() {
-  if (!confirm(t("admin.settings.adminApiKey.deleteConfirm"))) return;
+  if (!(await confirm(t("admin.settings.adminApiKey.deleteConfirm")))) return;
   adminApiKeyOperating.value = true;
   try {
     await adminAPI.settings.deleteAdminApiKey();

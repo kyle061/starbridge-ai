@@ -20,6 +20,8 @@ export default {
     tryAgain: '请重试',
     update: '更新',
     confirm: '确认',
+    confirmTitle: '确认操作',
+    promptTitle: '请输入',
     reset: '重置',
     search: '搜索',
     filter: '筛选',

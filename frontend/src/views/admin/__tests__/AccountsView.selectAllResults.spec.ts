@@ -22,6 +22,7 @@ const {
   getAllGroups: vi.fn(),
   showError: vi.fn()
 }))
+const { dialogConfirm } = vi.hoisted(() => ({ dialogConfirm: vi.fn() }))
 
 vi.mock('@/api/admin', () => ({
   adminAPI: {
@@ -50,6 +51,10 @@ vi.mock('@/stores/app', () => ({
     showSuccess: vi.fn(),
     showInfo: vi.fn()
   })
+}))
+
+vi.mock('@/composables/useDialog', () => ({
+  useDialog: () => ({ confirm: dialogConfirm, prompt: vi.fn() })
 }))
 
 vi.mock('@/stores/auth', () => ({
@@ -151,6 +156,8 @@ describe('admin AccountsView select all filtered results', () => {
     getAllProxies.mockReset()
     getAllGroups.mockReset()
     showError.mockReset()
+    dialogConfirm.mockReset()
+    dialogConfirm.mockResolvedValue(true)
 
     listWithEtag.mockResolvedValue({
       notModified: true,
@@ -174,7 +181,6 @@ describe('admin AccountsView select all filtered results', () => {
   ])('$name after a batch token refresh and table reload', async ({ result, expectedIds }) => {
     listAccounts.mockResolvedValue({ items: makeAccounts(3), total: 3, page: 1, page_size: 20, pages: 1 })
     batchRefresh.mockResolvedValue(result)
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     const wrapper = mountView()
     await flushPromises()
     await wrapper.get('[data-test="select-page"]').trigger('click')

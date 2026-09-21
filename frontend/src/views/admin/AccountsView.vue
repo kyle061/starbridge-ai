@@ -516,6 +516,7 @@ import { useTableLoader } from '@/composables/useTableLoader'
 import { useSwipeSelect, type SwipeSelectVirtualContext } from '@/composables/useSwipeSelect'
 import { useTableSelection } from '@/composables/useTableSelection'
 import { useStepUp, isStepUpBlocked, isStepUpCancelled, stepUpBlockReason } from '@/composables/useStepUp'
+import { useDialog } from '@/composables/useDialog'
 import TotpStepUpDialog from '@/components/auth/TotpStepUpDialog.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TablePageLayout from '@/components/layout/TablePageLayout.vue'
@@ -556,6 +557,7 @@ import type { Account, AccountListItem, AccountPlatform, AccountSchedulerGroupSc
 
 const { t } = useI18n()
 const appStore = useAppStore()
+const { confirm } = useDialog()
 const authStore = useAuthStore()
 
 const proxies = ref<AccountProxy[]>([])
@@ -1874,7 +1876,7 @@ const toggleSelectAllVisible = (event: Event) => {
 }
 const handleBulkDelete = async () => {
   const accountIds = [...selIds.value]
-  if (!confirm(t('admin.accounts.bulkActions.confirmDelete', { count: accountIds.length }))) return
+  if (!(await confirm(t('admin.accounts.bulkActions.confirmDelete', { count: accountIds.length })))) return
   try {
     const result = await adminAPI.accounts.batchDelete(accountIds)
     if (result.failed > 0) {
@@ -1894,7 +1896,7 @@ const handleBulkDelete = async () => {
   }
 }
 const handleBulkResetStatus = async () => {
-  if (!confirm(t('common.confirm'))) return
+  if (!(await confirm(t('common.confirm')))) return
   try {
     const result = await adminAPI.accounts.batchClearError(selIds.value)
     if (result.failed > 0) {
@@ -1910,7 +1912,7 @@ const handleBulkResetStatus = async () => {
   }
 }
 const handleBulkRefreshToken = async () => {
-  if (!confirm(t('common.confirm'))) return
+  if (!(await confirm(t('common.confirm')))) return
   const accountIds = [...selIds.value]
   try {
     const result = await adminAPI.accounts.batchRefresh(accountIds)

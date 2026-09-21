@@ -412,10 +412,12 @@ import type {
   ImageStorageConfig,
 } from '@/api/admin/backup'
 import { useStepUp, isStepUpBlocked, isStepUpCancelled, stepUpBlockReason } from '@/composables/useStepUp'
+import { useDialog } from '@/composables/useDialog'
 import TotpStepUpDialog from '@/components/auth/TotpStepUpDialog.vue'
 
 const { t } = useI18n()
 const appStore = useAppStore()
+const { confirm, prompt } = useDialog()
 const backupStepUp = useStepUp()
 
 // 敏感操作被 2FA 门控拦截时的统一提示。
@@ -790,8 +792,11 @@ function closeDownloadParts() {
 }
 
 async function restoreBackup(id: string) {
-  if (!window.confirm(t('admin.backup.actions.restoreConfirm'))) return
-  const password = window.prompt(t('admin.backup.actions.restorePasswordPrompt'))
+  if (!(await confirm(t('admin.backup.actions.restoreConfirm')))) return
+  const password = await prompt({
+    message: t('admin.backup.actions.restorePasswordPrompt'),
+    inputType: 'password'
+  })
   if (!password) return
   restoringId.value = id
   try {
@@ -812,7 +817,7 @@ async function restoreBackup(id: string) {
 }
 
 async function removeBackup(id: string) {
-  if (!window.confirm(t('admin.backup.actions.deleteConfirm'))) return
+  if (!(await confirm(t('admin.backup.actions.deleteConfirm')))) return
   try {
     await adminAPI.backup.deleteBackup(id)
     appStore.showSuccess(t('admin.backup.actions.deleted'))

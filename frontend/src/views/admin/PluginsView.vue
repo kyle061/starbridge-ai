@@ -341,6 +341,7 @@ import {
   type PluginUISession,
 } from "@/api/admin";
 import { useAppStore } from "@/stores";
+import { useDialog } from "@/composables/useDialog";
 import AppLayout from "@/components/layout/AppLayout.vue";
 import BaseDialog from "@/components/common/BaseDialog.vue";
 import Icon from "@/components/icons/Icon.vue";
@@ -365,6 +366,7 @@ interface PluginBridgeMessage {
 
 const { t } = useI18n();
 const appStore = useAppStore();
+const { confirm } = useDialog();
 const pluginStepUp = useStepUp();
 const plugins = ref<PluginInstallation[]>([]);
 const loading = ref(false);
@@ -457,7 +459,7 @@ function setRollout(id: number, event: Event): void {
 async function enablePlugin(plugin: PluginInstallation): Promise<void> {
   let acceptUntested = false;
   if (!plugin.compatibility.tested) {
-    acceptUntested = window.confirm(t("admin.plugins.confirmUntested"));
+    acceptUntested = await confirm(t("admin.plugins.confirmUntested"));
     if (!acceptUntested) return;
   }
   busyID.value = plugin.id;
@@ -479,7 +481,7 @@ async function enablePlugin(plugin: PluginInstallation): Promise<void> {
 }
 
 async function disablePlugin(plugin: PluginInstallation): Promise<void> {
-  if (!window.confirm(t("admin.plugins.confirmDisable"))) return;
+  if (!(await confirm(t("admin.plugins.confirmDisable")))) return;
   busyID.value = plugin.id;
   try {
     await pluginStepUp.run(() => adminAPI.plugins.disable(plugin.id));
@@ -493,7 +495,7 @@ async function disablePlugin(plugin: PluginInstallation): Promise<void> {
 }
 
 async function uninstallPlugin(plugin: PluginInstallation): Promise<void> {
-  if (!window.confirm(t("admin.plugins.confirmUninstall"))) return;
+  if (!(await confirm(t("admin.plugins.confirmUninstall")))) return;
   busyID.value = plugin.id;
   try {
     await pluginStepUp.run(() => adminAPI.plugins.remove(plugin.id));

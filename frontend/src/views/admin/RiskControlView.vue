@@ -1121,6 +1121,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useDialog } from '@/composables/useDialog'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/icons/Icon.vue'
@@ -1197,6 +1198,7 @@ const riskThresholdCategories = Object.keys(riskThresholdDefaults)
 
 const { t } = useI18n()
 const appStore = useAppStore()
+const { confirm } = useDialog()
 const defaultBlockMessage = () => t('admin.riskControl.defaultBlockMessage')
 
 const loading = ref(true)
@@ -1926,7 +1928,7 @@ async function deleteFlaggedHash() {
 
 async function clearFlaggedHashes() {
   if (hashActionLoading.value) return
-  const confirmed = window.confirm(t('admin.riskControl.clearFlaggedHashesConfirm'))
+  const confirmed = await confirm(t('admin.riskControl.clearFlaggedHashesConfirm'))
   if (!confirmed) return
   hashActionLoading.value = true
   try {
