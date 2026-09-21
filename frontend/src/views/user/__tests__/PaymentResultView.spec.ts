@@ -55,7 +55,7 @@ import PaymentResultView from '../PaymentResultView.vue'
 import { PAYMENT_RECOVERY_STORAGE_KEY } from '@/components/payment/paymentFlow'
 import { formatPaymentAmount } from '@/components/payment/currency'
 
-const orderFactory = (status: string) => ({
+const orderFactory = (status: string, orderType = 'balance') => ({
   id: 42,
   user_id: 9,
   amount: 88,
@@ -64,7 +64,7 @@ const orderFactory = (status: string) => ({
   payment_type: 'alipay',
   out_trade_no: 'sub2_20260420abcd1234',
   status,
-  order_type: 'balance',
+  order_type: orderType,
   created_at: '2026-04-20T12:00:00Z',
   expires_at: '2026-04-20T12:30:00Z',
   refund_amount: 0,
@@ -204,6 +204,41 @@ describe('PaymentResultView', () => {
     expect(wrapper.text()).toContain('103.00')
     expect(wrapper.text()).toContain('100.00')
     expect(window.localStorage.getItem(PAYMENT_RECOVERY_STORAGE_KEY)).toBeNull()
+  })
+
+  it('shows the next-step guide for a successful subscription payment', async () => {
+    routeState.query = {
+      resume_token: 'resume-subscription',
+    }
+    resolveOrderPublicByResumeToken.mockResolvedValue({
+      data: orderFactory('COMPLETED', 'subscription'),
+    })
+
+    const wrapper = mount(PaymentResultView, {
+      global: {
+        stubs: {
+          OrderStatusBadge: true,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('payment.result.subscriptionNextTitle')
+    expect(wrapper.text()).toContain('payment.result.subscriptionNextStep1')
+    expect(wrapper.text()).toContain('payment.result.subscriptionNextStep2')
+    expect(wrapper.text()).toContain('payment.result.subscriptionNextStep3')
+
+    const createKeyButton = wrapper.findAll('button').find((button) => button.text() === 'payment.result.createApiKey')
+    const viewSubscriptionButton = wrapper.findAll('button').find((button) => button.text() === 'payment.result.viewSubscription')
+    expect(createKeyButton).toBeDefined()
+    expect(viewSubscriptionButton).toBeDefined()
+
+    await createKeyButton!.trigger('click')
+    expect(routerPush).toHaveBeenCalledWith('/keys')
+
+    await viewSubscriptionButton!.trigger('click')
+    expect(routerPush).toHaveBeenCalledWith('/subscriptions')
   })
 
   it('waits for completed fulfillment before refreshing the user balance', async () => {

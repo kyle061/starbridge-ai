@@ -87,6 +87,19 @@
           </div>
         </div>
         <!-- Actions -->
+        <div v-if="isSuccess && isSubscriptionOrder" class="rounded-xl border border-primary-200 bg-primary-50 p-5 dark:border-primary-900/60 dark:bg-primary-950/20">
+          <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ t('payment.result.subscriptionNextTitle') }}</h3>
+          <p class="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">{{ t('payment.result.subscriptionNextDescription') }}</p>
+          <ol class="mt-3 space-y-2 text-sm text-gray-700 dark:text-gray-200">
+            <li class="flex gap-2"><span class="font-semibold text-primary-600 dark:text-primary-400">1.</span><span>{{ t('payment.result.subscriptionNextStep1') }}</span></li>
+            <li class="flex gap-2"><span class="font-semibold text-primary-600 dark:text-primary-400">2.</span><span>{{ t('payment.result.subscriptionNextStep2') }}</span></li>
+            <li class="flex gap-2"><span class="font-semibold text-primary-600 dark:text-primary-400">3.</span><span>{{ t('payment.result.subscriptionNextStep3') }}</span></li>
+          </ol>
+          <div class="mt-5 grid gap-3 sm:grid-cols-2">
+            <button class="btn btn-primary w-full" @click="router.push('/keys')">{{ t('payment.result.createApiKey') }}</button>
+            <button class="btn btn-secondary w-full" @click="router.push('/subscriptions')">{{ t('payment.result.viewSubscription') }}</button>
+          </div>
+        </div>
         <div v-if="isSuccess && order && 'order_type' in order && order.order_type === 'balance'" class="space-y-3 text-center">
           <p class="text-sm text-gray-600 dark:text-gray-300">{{ t('keys.prepaidPaymentSuccess') }}</p>
           <button class="btn btn-primary w-full" @click="router.push('/keys')">{{ t('keys.viewMyKeys') }}</button>
@@ -181,9 +194,13 @@ const isPending = computed(() => {
   return isPendingStatus(order.value?.status)
 })
 
+const isSubscriptionOrder = computed(() => {
+  return !!order.value && 'order_type' in order.value && order.value.order_type === 'subscription'
+})
+
 const statusTitle = computed(() => {
   if (isSuccess.value) {
-    return t('payment.result.success')
+    return isSubscriptionOrder.value ? t('payment.result.subscriptionSuccess') : t('payment.result.success')
   }
   if (isPending.value) {
     return t('payment.result.processing')

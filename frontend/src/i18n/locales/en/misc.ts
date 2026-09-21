@@ -382,6 +382,13 @@ export default {
     result: {
       success: 'Payment Successful',
       subscriptionSuccess: 'Subscription Successful',
+      subscriptionNextTitle: 'Next: Create an API key to start using your subscription',
+      subscriptionNextDescription: 'Your subscription is active, but an API key is not created automatically. Complete these steps to start using the service:',
+      subscriptionNextStep1: 'Open the API Keys page and create an API key.',
+      subscriptionNextStep2: 'Choose the subscription group included with this purchase.',
+      subscriptionNextStep3: 'Copy the API key and endpoint into a client that supports the OpenAI-compatible API.',
+      createApiKey: 'Create API Key',
+      viewSubscription: 'View My Subscription',
       processing: 'Payment Processing',
       processingHint: 'Payment confirmation is still pending. This page will refresh automatically.',
       failed: 'Payment Failed',

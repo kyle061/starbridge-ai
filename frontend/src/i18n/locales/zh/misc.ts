@@ -406,6 +406,13 @@ export default {
     result: {
       success: '支付成功',
       subscriptionSuccess: '订阅成功',
+      subscriptionNextTitle: '下一步：创建 API Key 后开始使用',
+      subscriptionNextDescription: '订阅已经生效，但系统不会自动创建 API Key。请完成下面的步骤后开始调用服务：',
+      subscriptionNextStep1: '进入 API Keys 页面，点击创建 API Key。',
+      subscriptionNextStep2: '选择本次购买对应的订阅分组。',
+      subscriptionNextStep3: '复制生成的 API Key 和接口地址，配置到支持 OpenAI 兼容接口的客户端。',
+      createApiKey: '去创建 API Key',
+      viewSubscription: '查看我的订阅',
       processing: '支付处理中',
       processingHint: '支付结果仍在确认中，页面会自动刷新。',
       failed: '支付失败',
