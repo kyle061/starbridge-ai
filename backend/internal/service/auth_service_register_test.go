@@ -765,6 +765,30 @@ func TestAuthService_GenerateToken_UsesMinutesWhenConfigured(t *testing.T) {
 	require.WithinDuration(t, claims.IssuedAt.Time.Add(90*time.Minute), claims.ExpiresAt.Time, 2*time.Second)
 }
 
+func TestAuthService_GenerateTokenPairWithRememberMeUsesThirtyDayLifetime(t *testing.T) {
+	service := newAuthService(&userRepoStub{}, nil, nil, nil)
+	service.refreshTokenCache = &refreshTokenCacheStub{}
+	service.cfg.JWT.ExpireHour = 24
+	service.cfg.JWT.AccessTokenExpireMinutes = 0
+
+	user := &User{
+		ID:           3,
+		Email:        "remember@test.com",
+		Role:         RoleUser,
+		Status:       StatusActive,
+		TokenVersion: 1,
+	}
+
+	pair, err := service.GenerateTokenPairWithRememberMe(context.Background(), user, "", true)
+	require.NoError(t, err)
+	require.Equal(t, 30*24*60*60, pair.ExpiresIn)
+
+	claims, err := service.ValidateToken(pair.AccessToken)
+	require.NoError(t, err)
+	require.NotNil(t, claims)
+	require.WithinDuration(t, claims.IssuedAt.Time.Add(30*24*time.Hour), claims.ExpiresAt.Time, 2*time.Second)
+}
+
 func TestAuthService_Register_AssignsDefaultSubscriptions(t *testing.T) {
 	repo := &userRepoStub{nextID: 42}
 	assigner := &defaultSubscriptionAssignerStub{}

@@ -16,6 +16,7 @@ type RefreshTokenData struct {
 	TokenVersion int64     `json:"token_version"`          // 用于检测密码更改后的Token失效
 	FamilyID     string    `json:"family_id"`              // Token家族ID，用于防重放攻击
 	BindingHash  string    `json:"binding_hash,omitempty"` // 会话指纹哈希（IP+UA），会话绑定开启时校验
+	RememberMe   bool      `json:"remember_me,omitempty"`   // 登录时是否选择保持登录30天
 	CreatedAt    time.Time `json:"created_at"`
 	ExpiresAt    time.Time `json:"expires_at"`
 }

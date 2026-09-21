@@ -78,6 +78,20 @@
           </div>
         </div>
 
+        <!-- Session duration -->
+        <label class="flex cursor-pointer items-start gap-2 text-sm text-gray-600 dark:text-dark-300">
+          <input
+            v-model="formData.rememberMe"
+            type="checkbox"
+            :disabled="authActionDisabled"
+            class="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-dark-600 dark:bg-dark-800"
+          />
+          <span>
+            <span class="font-medium text-gray-700 dark:text-dark-200">{{ t('auth.rememberMe') }}</span>
+            <span class="ml-1 text-xs text-gray-500 dark:text-dark-400">{{ t('auth.rememberMeHint') }}</span>
+          </span>
+        </label>
+
         <!-- Turnstile Widget -->
         <div v-if="captchaEnabled">
           <TurnstileWidget
@@ -329,7 +343,8 @@ const totpModalRef = ref<InstanceType<typeof TotpLoginModal> | null>(null)
 
 const formData = reactive({
   email: '',
-  password: ''
+  password: '',
+  rememberMe: false
 })
 
 const errors = reactive({
@@ -583,6 +598,7 @@ async function handleLogin(): Promise<void> {
     const response = await authStore.login({
       email: formData.email,
       password: formData.password,
+      remember_me: formData.rememberMe,
       turnstile_token:
         turnstileEnabled.value || aliyunCaptchaEnabled.value ? turnstileToken.value : undefined,
       tencent_captcha_ticket: tencentCaptchaEnabled.value ? turnstileToken.value : undefined,

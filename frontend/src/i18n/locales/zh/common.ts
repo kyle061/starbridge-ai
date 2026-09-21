@@ -234,6 +234,7 @@ export default {
     processing: '处理中...',
     continue: '继续',
     rememberMe: '记住我',
+    rememberMeHint: '保持登录 30 天',
     dontHaveAccount: '还没有账户？',
     alreadyHaveAccount: '已有账户？',
     registrationDisabled: '注册功能暂时关闭，请联系管理员。',

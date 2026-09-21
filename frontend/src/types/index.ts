@@ -117,6 +117,7 @@ export interface AdminUser extends User {
 export interface LoginRequest {
   email: string
   password: string
+  remember_me?: boolean
   turnstile_token?: string
   tencent_captcha_ticket?: string
   tencent_captcha_randstr?: string

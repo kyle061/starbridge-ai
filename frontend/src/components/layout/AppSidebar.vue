@@ -27,7 +27,7 @@
           {{ siteName }}
         </router-link>
         <!-- Version Badge -->
-        <VersionBadge :version="siteVersion" />
+        <VersionBadge v-if="isAdmin" :version="siteVersion" />
       </div>
       <button class="btn-ghost btn-icon ml-auto shrink-0 lg:hidden" :aria-label="t('common.close')" @click="closeMobile">
         <Icon name="x" size="md" />

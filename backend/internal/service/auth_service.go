@@ -53,6 +53,11 @@ var (
 // maxTokenLength 限制 token 大小，避免超长 header 触发解析时的异常内存分配。
 const maxTokenLength = 8192
 
+// rememberMeSessionTTL is the maximum lifetime for a login that explicitly
+// opts into the "remember me" behavior. Regular logins use the configured
+// access-token lifetime (24 hours by default).
+const rememberMeSessionTTL = 30 * 24 * time.Hour
+
 // refreshTokenPrefix is the prefix for refresh tokens to distinguish them from access tokens.
 const refreshTokenPrefix = "rt_"
 
@@ -1416,16 +1421,28 @@ func (s *AuthService) GenerateToken(ctx context.Context, user *User) (string, er
 	return s.generateAccessToken(user, sessionID, sessionBindingHashFromContext(ctx))
 }
 
+// GenerateTokenWithRememberMe generates a standalone access token using the
+// same session lifetime rules as a password login. It is used only by the
+// legacy no-refresh-token fallback path.
+func (s *AuthService) GenerateTokenWithRememberMe(ctx context.Context, user *User, rememberMe bool) (string, error) {
+	sessionID, err := randomHexString(8)
+	if err != nil {
+		return "", fmt.Errorf("generate session id: %w", err)
+	}
+	return s.generateAccessTokenWithTTL(user, sessionID, sessionBindingHashFromContext(ctx), s.loginSessionTTL(rememberMe))
+}
+
 // generateAccessToken 生成带会话 ID 与绑定指纹的 access token。
 func (s *AuthService) generateAccessToken(user *User, sessionID, bindingHash string) (string, error) {
+	return s.generateAccessTokenWithTTL(user, sessionID, bindingHash, s.loginSessionTTL(false))
+}
+
+func (s *AuthService) generateAccessTokenWithTTL(user *User, sessionID, bindingHash string, ttl time.Duration) (string, error) {
 	now := time.Now()
-	var expiresAt time.Time
-	if s.cfg.JWT.AccessTokenExpireMinutes > 0 {
-		expiresAt = now.Add(time.Duration(s.cfg.JWT.AccessTokenExpireMinutes) * time.Minute)
-	} else {
-		// 向后兼容：使用旧的expire_hour配置
-		expiresAt = now.Add(time.Duration(s.cfg.JWT.ExpireHour) * time.Hour)
+	if ttl <= 0 {
+		ttl = time.Second
 	}
+	expiresAt := now.Add(ttl)
 
 	claims := &JWTClaims{
 		UserID:       user.ID,
@@ -1448,6 +1465,19 @@ func (s *AuthService) generateAccessToken(user *User, sessionID, bindingHash str
 	}
 
 	return tokenString, nil
+}
+
+// loginSessionTTL returns the absolute lifetime of a login session. Keeping
+// the refresh token on the same lifetime prevents a regular 24-hour login from
+// being silently extended by background token refreshes.
+func (s *AuthService) loginSessionTTL(rememberMe bool) time.Duration {
+	if rememberMe {
+		return rememberMeSessionTTL
+	}
+	if s.cfg.JWT.AccessTokenExpireMinutes > 0 {
+		return time.Duration(s.cfg.JWT.AccessTokenExpireMinutes) * time.Minute
+	}
+	return time.Duration(s.cfg.JWT.ExpireHour) * time.Hour
 }
 
 // GetAccessTokenExpiresIn 返回Access Token的有效期（秒）
@@ -1687,6 +1717,16 @@ type TokenPairWithUser struct {
 // GenerateTokenPair 生成Access Token和Refresh Token对
 // familyID: 可选的Token家族ID，用于Token轮转时保持家族关系
 func (s *AuthService) GenerateTokenPair(ctx context.Context, user *User, familyID string) (*TokenPair, error) {
+	return s.GenerateTokenPairWithRememberMe(ctx, user, familyID, false)
+}
+
+// GenerateTokenPairWithRememberMe generates a token pair with either the
+// regular configured lifetime or the explicit 30-day remember-me lifetime.
+func (s *AuthService) GenerateTokenPairWithRememberMe(ctx context.Context, user *User, familyID string, rememberMe bool) (*TokenPair, error) {
+	return s.generateTokenPair(ctx, user, familyID, rememberMe, time.Time{})
+}
+
+func (s *AuthService) generateTokenPair(ctx context.Context, user *User, familyID string, rememberMe bool, sessionExpiresAt time.Time) (*TokenPair, error) {
 	// 检查 refreshTokenCache 是否可用
 	if s.refreshTokenCache == nil {
 		return nil, errors.New("refresh token cache not configured")
@@ -1702,14 +1742,26 @@ func (s *AuthService) GenerateTokenPair(ctx context.Context, user *User, familyI
 		familyID = hex.EncodeToString(familyBytes)
 	}
 
+	// Keep rotated access tokens capped by the original absolute session expiry.
+	ttl := s.loginSessionTTL(rememberMe)
+	if !sessionExpiresAt.IsZero() {
+		remaining := time.Until(sessionExpiresAt)
+		if remaining < ttl {
+			ttl = remaining
+		}
+	}
+	if ttl <= 0 {
+		return nil, ErrRefreshTokenExpired
+	}
+
 	// 生成Access Token（携带会话ID与绑定指纹）
-	accessToken, err := s.generateAccessToken(user, familyID, sessionBindingHashFromContext(ctx))
+	accessToken, err := s.generateAccessTokenWithTTL(user, familyID, sessionBindingHashFromContext(ctx), ttl)
 	if err != nil {
 		return nil, fmt.Errorf("generate access token: %w", err)
 	}
 
 	// 生成Refresh Token
-	refreshToken, err := s.generateRefreshToken(ctx, user, familyID)
+	refreshToken, err := s.generateRefreshToken(ctx, user, familyID, rememberMe, sessionExpiresAt)
 	if err != nil {
 		return nil, fmt.Errorf("generate refresh token: %w", err)
 	}
@@ -1717,12 +1769,19 @@ func (s *AuthService) GenerateTokenPair(ctx context.Context, user *User, familyI
 	return &TokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		ExpiresIn:    s.GetAccessTokenExpiresIn(),
+		ExpiresIn:    maxIntTokenTTL(1, int(ttl/time.Second)),
 	}, nil
 }
 
+func maxIntTokenTTL(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 // generateRefreshToken 生成并存储Refresh Token
-func (s *AuthService) generateRefreshToken(ctx context.Context, user *User, familyID string) (string, error) {
+func (s *AuthService) generateRefreshToken(ctx context.Context, user *User, familyID string, rememberMe bool, sessionExpiresAt time.Time) (string, error) {
 	// 生成随机Token
 	tokenBytes := make([]byte, 32)
 	if _, err := rand.Read(tokenBytes); err != nil {
@@ -1743,15 +1802,22 @@ func (s *AuthService) generateRefreshToken(ctx context.Context, user *User, fami
 	}
 
 	now := time.Now()
-	ttl := time.Duration(s.cfg.JWT.RefreshTokenExpireDays) * 24 * time.Hour
+	if sessionExpiresAt.IsZero() {
+		sessionExpiresAt = now.Add(s.loginSessionTTL(rememberMe))
+	}
+	ttl := time.Until(sessionExpiresAt)
+	if ttl <= 0 {
+		return "", ErrRefreshTokenExpired
+	}
 
 	data := &RefreshTokenData{
 		UserID:       user.ID,
 		TokenVersion: resolvedTokenVersion(user),
 		FamilyID:     familyID,
 		BindingHash:  sessionBindingHashFromContext(ctx),
+		RememberMe:   rememberMe,
 		CreatedAt:    now,
-		ExpiresAt:    now.Add(ttl),
+		ExpiresAt:    sessionExpiresAt,
 	}
 
 	// 存储Token数据
@@ -1851,7 +1917,7 @@ func (s *AuthService) RefreshTokenPair(ctx context.Context, refreshToken string)
 	}
 
 	// 生成新的Token对，保持同一个家族ID
-	pair, err := s.GenerateTokenPair(ctx, user, data.FamilyID)
+	pair, err := s.generateTokenPair(ctx, user, data.FamilyID, data.RememberMe, data.ExpiresAt)
 	if err != nil {
 		return nil, err
 	}

@@ -234,6 +234,7 @@ export default {
     processing: 'Processing...',
     continue: 'Continue',
     rememberMe: 'Remember me',
+    rememberMeHint: 'Stay signed in for 30 days',
     dontHaveAccount: "Don't have an account?",
     alreadyHaveAccount: 'Already have an account?',
     registrationDisabled: 'Registration is currently disabled. Please contact the administrator.',

@@ -77,6 +77,7 @@ type SendVerifyCodeResponse struct {
 type LoginRequest struct {
 	Email                 string `json:"email" binding:"required,email"`
 	Password              string `json:"password" binding:"required"`
+	RememberMe            bool   `json:"remember_me"`
 	TurnstileToken        string `json:"turnstile_token"`
 	TencentCaptchaTicket  string `json:"tencent_captcha_ticket"`
 	TencentCaptchaRandstr string `json:"tencent_captcha_randstr"`
@@ -112,20 +113,28 @@ func ensureLoginUserActive(user *service.User) error {
 // respondWithTokenPair 生成 Token 对并返回认证响应
 // 如果 Token 对生成失败，回退到只返回 Access Token（向后兼容）
 func (h *AuthHandler) respondWithTokenPair(c *gin.Context, user *service.User) {
-	respondWithTokenPair(c, h.authService, user)
+	h.respondWithTokenPairWithRememberMe(c, user, false)
 }
 
 func respondWithTokenPair(c *gin.Context, authService *service.AuthService, user *service.User) {
+	respondWithTokenPairWithRememberMe(c, authService, user, false)
+}
+
+func (h *AuthHandler) respondWithTokenPairWithRememberMe(c *gin.Context, user *service.User, rememberMe bool) {
+	respondWithTokenPairWithRememberMe(c, h.authService, user, rememberMe)
+}
+
+func respondWithTokenPairWithRememberMe(c *gin.Context, authService *service.AuthService, user *service.User, rememberMe bool) {
 	if err := ensureLoginUserActive(user); err != nil {
 		response.ErrorFrom(c, err)
 		return
 	}
 
-	tokenPair, err := authService.GenerateTokenPair(c.Request.Context(), user, "")
+	tokenPair, err := authService.GenerateTokenPairWithRememberMe(c.Request.Context(), user, "", rememberMe)
 	if err != nil {
 		slog.Error("failed to generate token pair", "error", err, "user_id", user.ID)
 		// 回退到只返回Access Token
-		token, tokenErr := authService.GenerateToken(c.Request.Context(), user)
+		token, tokenErr := authService.GenerateTokenWithRememberMe(c.Request.Context(), user, rememberMe)
 		if tokenErr != nil {
 			response.InternalError(c, "Failed to generate token")
 			return
@@ -264,7 +273,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// Check if TOTP 2FA is enabled for this user
 	if h.totpService != nil && h.settingSvc.IsTotpEnabled(c.Request.Context()) && user.TotpEnabled {
 		// Create a temporary login session for 2FA
-		tempToken, err := h.totpService.CreateLoginSession(c.Request.Context(), user.ID, user.Email)
+		tempToken, err := h.totpService.CreateLoginSessionWithRememberMe(c.Request.Context(), user.ID, user.Email, req.RememberMe)
 		if err != nil {
 			response.InternalError(c, "Failed to create 2FA session")
 			return
@@ -280,7 +289,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	h.authService.RecordSuccessfulLogin(c.Request.Context(), user.ID)
 
-	h.respondWithTokenPair(c, user)
+	h.respondWithTokenPairWithRememberMe(c, user, req.RememberMe)
 }
 
 // TotpLoginResponse represents the response when 2FA is required
@@ -416,7 +425,7 @@ func (h *AuthHandler) Login2FA(c *gin.Context) {
 		h.authService.RecordSuccessfulLogin(c.Request.Context(), user.ID)
 	}
 
-	h.respondWithTokenPair(c, user)
+	h.respondWithTokenPairWithRememberMe(c, user, session.RememberMe)
 }
 
 // GetCurrentUser handles getting current authenticated user

@@ -91,3 +91,9 @@ func TestAuthRequestsBindTencentCaptchaProof(t *testing.T) {
 		})
 	}
 }
+
+func TestLoginRequestBindsRememberMe(t *testing.T) {
+	var req LoginRequest
+	require.NoError(t, json.Unmarshal([]byte(`{"email":"user@example.com","password":"secret-123","remember_me":true}`), &req))
+	require.True(t, req.RememberMe)
+}

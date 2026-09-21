@@ -2,8 +2,9 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import LoginView from '@/views/auth/LoginView.vue'
 
-const { getPublicSettingsMock, pushMock } = vi.hoisted(() => ({
+const { getPublicSettingsMock, loginMock, pushMock } = vi.hoisted(() => ({
   getPublicSettingsMock: vi.fn(),
+  loginMock: vi.fn(),
   pushMock: vi.fn()
 }))
 
@@ -50,7 +51,7 @@ vi.mock('vue-i18n', () => ({
 
 vi.mock('@/stores', () => ({
   useAuthStore: () => ({
-    login: vi.fn(),
+    login: loginMock,
     loginWithPasskey: vi.fn(),
     login2FA: vi.fn()
   }),
@@ -93,6 +94,7 @@ function mountLogin() {
 describe('LoginView registration entry', () => {
   beforeEach(() => {
     getPublicSettingsMock.mockReset()
+    loginMock.mockReset()
     pushMock.mockReset()
     getPublicSettingsMock.mockResolvedValue(publicSettings)
   })
@@ -114,5 +116,23 @@ describe('LoginView registration entry', () => {
     await flushPromises()
 
     expect(wrapper.text()).not.toContain('auth.signUp')
+  })
+
+  it('sends the 30-day remember-me choice with password login', async () => {
+    loginMock.mockResolvedValue({})
+
+    const wrapper = mountLogin()
+    await flushPromises()
+    await wrapper.get('#email').setValue('user@example.com')
+    await wrapper.get('#password').setValue('secret-123')
+    await wrapper.get('input[type="checkbox"]').setValue(true)
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(loginMock).toHaveBeenCalledWith(expect.objectContaining({
+      email: 'user@example.com',
+      password: 'secret-123',
+      remember_me: true
+    }))
   })
 })

@@ -65,6 +65,7 @@ type TotpLoginSession struct {
 	UserID           int64
 	Email            string
 	TokenExpiry      time.Time
+	RememberMe       bool `json:"remember_me,omitempty"`
 	PendingOAuthBind *PendingOAuthBindLoginSession `json:"pending_oauth_bind,omitempty"`
 }
 
@@ -422,7 +423,13 @@ func (s *TotpService) HasStepUpGrant(ctx context.Context, userID int64, sessionK
 
 // CreateLoginSession creates a temporary login session for 2FA
 func (s *TotpService) CreateLoginSession(ctx context.Context, userID int64, email string) (string, error) {
-	return s.createLoginSession(ctx, userID, email, nil)
+	return s.createLoginSession(ctx, userID, email, false, nil)
+}
+
+// CreateLoginSessionWithRememberMe carries the login duration choice through
+// the temporary TOTP session until the final token pair is issued.
+func (s *TotpService) CreateLoginSessionWithRememberMe(ctx context.Context, userID int64, email string, rememberMe bool) (string, error) {
+	return s.createLoginSession(ctx, userID, email, rememberMe, nil)
 }
 
 // CreatePendingOAuthBindLoginSession creates a temporary 2FA session that will
@@ -434,7 +441,7 @@ func (s *TotpService) CreatePendingOAuthBindLoginSession(
 	pendingSessionToken string,
 	browserSessionKey string,
 ) (string, error) {
-	return s.createLoginSession(ctx, userID, email, &PendingOAuthBindLoginSession{
+	return s.createLoginSession(ctx, userID, email, false, &PendingOAuthBindLoginSession{
 		PendingSessionToken: pendingSessionToken,
 		BrowserSessionKey:   browserSessionKey,
 	})
@@ -444,6 +451,7 @@ func (s *TotpService) createLoginSession(
 	ctx context.Context,
 	userID int64,
 	email string,
+	rememberMe bool,
 	pendingOAuthBind *PendingOAuthBindLoginSession,
 ) (string, error) {
 	// Generate a random temp token
@@ -456,6 +464,7 @@ func (s *TotpService) createLoginSession(
 		UserID:           userID,
 		Email:            email,
 		TokenExpiry:      time.Now().Add(totpLoginTTL),
+		RememberMe:       rememberMe,
 		PendingOAuthBind: pendingOAuthBind,
 	}
 
