@@ -15,6 +15,7 @@ export default {
     register: 'Sign Up Free',
     getStarted: 'Get Started',
     goToDashboard: 'Go to Dashboard',
+    contactWeChat: 'WeChat Contact',
     // User-focused value proposition
     heroSubtitle: 'One Key, All AI Models',
     seoTitle: 'Starbridge AI Multi-model AI API Gateway',
@@ -50,6 +51,24 @@ export default {
     solutions: {
       title: 'We Solve These Problems',
       subtitle: 'Three simple steps to stress-free AI access'
+    },
+    workflow: {
+      title: 'Get started in three steps',
+      subtitle: 'Sign in, create a key, then copy the configuration into your client. All keys share your account balance.',
+      steps: {
+        account: {
+          title: 'Sign in',
+          description: 'Sign in or create a Starbridge AI account, then open your dashboard.'
+        },
+        key: {
+          title: 'Create an API key',
+          description: 'Create a key on the API Keys page and choose an available group.'
+        },
+        connect: {
+          title: 'Copy and connect',
+          description: 'Use “Use Key” to copy the endpoint and configuration, or import into Codex or CC-Switch.'
+        }
+      }
     },
     features: {
       unifiedGateway: 'One-Click Access',

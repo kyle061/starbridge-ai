@@ -154,6 +154,20 @@ export default {
     requestCount: '{count} requests',
     usageUnavailable: 'Usage unavailable. Refresh to retry.',
     gatewayUsageHint: 'Configure your client with this site URL and an API key from this page. Use “Use Key” to copy the client configuration. Only model calls through this gateway count toward the key; upstream credentials are not automatically linked to a user key. Token counts include input, output, and cache tokens.',
+    workflow: {
+      endpoint: {
+        title: 'Confirm the endpoint',
+        description: 'Use this site’s API endpoint above.'
+      },
+      key: {
+        title: 'Copy your key',
+        description: 'Create or copy an API key from this page.'
+      },
+      client: {
+        title: 'Import into your client',
+        description: 'Use “Use Key” to configure Codex or another compatible client.'
+      }
+    },
     quota: 'Quota',
     lastUsedAt: 'Last Used',
     lastUsedIP: 'Last Used IP',

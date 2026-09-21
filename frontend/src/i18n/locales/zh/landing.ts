@@ -15,6 +15,7 @@ export default {
     register: '免费注册',
     getStarted: '立即开始',
     goToDashboard: '进入控制台',
+    contactWeChat: '微信联系',
     // 新增：面向用户的价值主张
     heroSubtitle: '一个密钥，畅用多个 AI 模型',
     seoTitle: 'Starbridge AI 多模型 AI API 中转站',
@@ -50,6 +51,24 @@ export default {
     solutions: {
       title: '我们帮你解决',
       subtitle: '简单三步，开始省心使用 AI'
+    },
+    workflow: {
+      title: '三步开始使用',
+      subtitle: '登录、创建密钥，然后把配置复制到你的客户端。所有密钥共用账户余额，额度清晰可控。',
+      steps: {
+        account: {
+          title: '登录账户',
+          description: '登录或注册星桥 AI 账户，进入个人控制台。'
+        },
+        key: {
+          title: '创建 API Key',
+          description: '在 API Keys 页面创建密钥并选择可用分组。'
+        },
+        connect: {
+          title: '复制配置并连接',
+          description: '点击「使用密钥」复制端点和配置，也可导入 Codex 或 CC-Switch。'
+        }
+      }
     },
     features: {
       unifiedGateway: '一键接入',

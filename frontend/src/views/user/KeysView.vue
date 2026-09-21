@@ -39,6 +39,29 @@
           <p class="text-xs leading-5 text-gray-500 dark:text-gray-400">
             {{ t('keys.gatewayUsageHint') }}
           </p>
+          <div class="grid gap-3 rounded-xl border border-gray-200/70 bg-gray-50/80 p-4 dark:border-dark-700 dark:bg-dark-800/60 sm:grid-cols-3">
+            <div class="flex gap-3">
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">1</span>
+              <div>
+                <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ t('keys.workflow.endpoint.title') }}</p>
+                <p class="mt-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ t('keys.workflow.endpoint.description') }}</p>
+              </div>
+            </div>
+            <div class="flex gap-3">
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">2</span>
+              <div>
+                <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ t('keys.workflow.key.title') }}</p>
+                <p class="mt-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ t('keys.workflow.key.description') }}</p>
+              </div>
+            </div>
+            <div class="flex gap-3">
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">3</span>
+              <div>
+                <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ t('keys.workflow.client.title') }}</p>
+                <p class="mt-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ t('keys.workflow.client.description') }}</p>
+              </div>
+            </div>
+          </div>
           <div v-if="selectedIds.length" class="flex flex-wrap items-center gap-3 text-sm">
             <span class="text-gray-600 dark:text-gray-300">
               {{ t('keys.bulkEdit.selectedCount', { count: selectedIds.length }) }}

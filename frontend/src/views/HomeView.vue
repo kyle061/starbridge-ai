@@ -339,6 +339,53 @@
           </div>
         </div>
 
+        <!-- Getting started workflow -->
+        <section class="mb-16" aria-labelledby="home-workflow-title">
+          <div class="mx-auto mb-8 max-w-2xl text-center">
+            <h2 id="home-workflow-title" class="text-2xl font-bold text-gray-900 dark:text-white">
+              {{ t('home.workflow.title') }}
+            </h2>
+            <p class="mt-3 text-sm leading-6 text-gray-600 dark:text-dark-400">
+              {{ t('home.workflow.subtitle') }}
+            </p>
+          </div>
+          <div class="grid gap-4 md:grid-cols-3">
+            <router-link
+              :to="workflowLoginPath"
+              class="group rounded-2xl border border-gray-200/60 bg-white/70 p-5 shadow-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-lg hover:shadow-primary-500/10 dark:border-dark-700/60 dark:bg-dark-800/70 dark:hover:border-primary-700"
+            >
+              <div class="mb-4 flex items-center justify-between">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">1</span>
+                <Icon name="user" size="md" class="text-blue-500" />
+              </div>
+              <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ t('home.workflow.steps.account.title') }}</h3>
+              <p class="mt-2 text-sm leading-6 text-gray-600 dark:text-dark-400">{{ t('home.workflow.steps.account.description') }}</p>
+            </router-link>
+            <router-link
+              :to="workflowKeysPath"
+              class="group rounded-2xl border border-gray-200/60 bg-white/70 p-5 shadow-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-lg hover:shadow-primary-500/10 dark:border-dark-700/60 dark:bg-dark-800/70 dark:hover:border-primary-700"
+            >
+              <div class="mb-4 flex items-center justify-between">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 text-sm font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">2</span>
+                <Icon name="key" size="md" class="text-primary-500" />
+              </div>
+              <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ t('home.workflow.steps.key.title') }}</h3>
+              <p class="mt-2 text-sm leading-6 text-gray-600 dark:text-dark-400">{{ t('home.workflow.steps.key.description') }}</p>
+            </router-link>
+            <router-link
+              :to="workflowKeysPath"
+              class="group rounded-2xl border border-gray-200/60 bg-white/70 p-5 shadow-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-lg hover:shadow-primary-500/10 dark:border-dark-700/60 dark:bg-dark-800/70 dark:hover:border-primary-700"
+            >
+              <div class="mb-4 flex items-center justify-between">
+                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-sm font-bold text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">3</span>
+                <Icon name="terminal" size="md" class="text-purple-500" />
+              </div>
+              <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ t('home.workflow.steps.connect.title') }}</h3>
+              <p class="mt-2 text-sm leading-6 text-gray-600 dark:text-dark-400">{{ t('home.workflow.steps.connect.description') }}</p>
+            </router-link>
+          </div>
+        </section>
+
         <!-- Features Grid -->
         <div class="mb-12 grid gap-6 md:grid-cols-3">
           <!-- Feature 1: Unified Gateway -->
@@ -606,6 +653,8 @@ const primaryActionLabel = computed(() => {
   if (isAuthenticated.value) return t('home.goToDashboard')
   return registrationEnabled.value ? t('home.register') : t('home.getStarted')
 })
+const workflowLoginPath = computed(() => (isAuthenticated.value ? dashboardPath.value : '/login'))
+const workflowKeysPath = computed(() => (isAuthenticated.value ? '/keys' : '/login'))
 const userInitial = computed(() => {
   const user = authStore.user
   if (!user || !user.email) return ''
@@ -652,11 +701,16 @@ onMounted(() => {
 .terminal-container {
   position: relative;
   display: inline-block;
+  width: 100%;
+  max-width: 420px;
+  min-width: 0;
 }
 
 /* Terminal Window */
 .terminal-window {
-  width: 420px;
+  width: min(420px, 100%);
+  max-width: 100%;
+  min-width: 0;
   background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
   border-radius: 14px;
   box-shadow:
@@ -714,6 +768,7 @@ onMounted(() => {
 /* Terminal Body */
 .terminal-body {
   padding: 20px 24px;
+  min-width: 0;
   font-family: ui-monospace, 'Fira Code', monospace;
   font-size: 14px;
   line-height: 2;
@@ -724,6 +779,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+  min-width: 0;
   opacity: 0;
   animation: line-appear 0.5s ease forwards;
 }
@@ -764,6 +820,7 @@ onMounted(() => {
 }
 .code-url {
   color: #14b8a6;
+  overflow-wrap: anywhere;
 }
 .code-comment {
   color: #64748b;
@@ -807,5 +864,25 @@ onMounted(() => {
     0 0 0 1px rgba(20, 184, 166, 0.2),
     0 0 40px rgba(20, 184, 166, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 640px) {
+  .terminal-window {
+    transform: none;
+  }
+
+  .terminal-window:hover {
+    transform: translateY(-2px);
+  }
+
+  .terminal-header {
+    padding: 10px 12px;
+  }
+
+  .terminal-body {
+    padding: 16px;
+    font-size: 12px;
+    line-height: 1.8;
+  }
 }
 </style>

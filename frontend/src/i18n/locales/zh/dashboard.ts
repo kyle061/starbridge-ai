@@ -154,6 +154,20 @@ export default {
     requestCount: '{count} 次请求',
     usageUnavailable: '用量暂不可用，请点击刷新重试',
     gatewayUsageHint: '客户端需同时使用本站地址和本页的 API 密钥。点击「使用密钥」复制对应配置；只有经过本网关的模型调用才会计入该密钥用量，上游账号凭证不会自动关联到用户密钥。Token 数包含输入、输出和缓存。',
+    workflow: {
+      endpoint: {
+        title: '确认端点',
+        description: '使用上方本站 API 地址。'
+      },
+      key: {
+        title: '复制密钥',
+        description: '创建或复制本页的 API Key。'
+      },
+      client: {
+        title: '导入客户端',
+        description: '点击「使用密钥」导入 Codex 或其他兼容客户端。'
+      }
+    },
     quota: '额度',
     lastUsedAt: '上次使用时间',
     lastUsedIP: '最近使用 IP',
