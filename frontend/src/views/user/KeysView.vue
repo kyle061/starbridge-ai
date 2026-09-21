@@ -174,11 +174,14 @@
                 :title="t('keys.clickToChangeGroup')"
               >
                 <GroupBadge
-                  :show-rate="false"
+                  :show-rate="true"
                   v-if="row.group"
                   :name="row.group.name"
                   :platform="row.group.platform"
                   :subscription-type="row.group.subscription_type"
+                  :rate-multiplier="row.group.rate_multiplier"
+                  :user-rate-multiplier="userGroupRates[row.group.id]"
+                  :always-show-rate="true"
                 />
                 <span v-else class="text-sm text-gray-400 dark:text-dark-500">{{
                   t('keys.noGroup')
@@ -268,6 +271,47 @@
             </div>
           </template>
 
+          <template #cell-rate_limit="{ row }">
+            <div class="w-full max-w-[18rem] min-w-0 space-y-2 text-left">
+              <div
+                v-for="rateWindow in rateLimitWindows"
+                :key="rateWindow.key"
+                class="min-w-0 space-y-1"
+              >
+                <div class="flex min-w-0 items-center justify-between gap-2 text-xs">
+                  <span class="shrink-0 text-gray-500 dark:text-gray-400">{{ t(rateWindow.labelKey) }}</span>
+                  <span
+                    class="truncate text-right font-medium tabular-nums"
+                    :class="rateLimitTextClass(row, rateWindow)"
+                  >
+                    {{ formatRateLimitValue(row, rateWindow) }}
+                  </span>
+                </div>
+                <div
+                  v-if="rateLimitAmount(row, rateWindow) > 0"
+                  class="h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-dark-600"
+                  role="progressbar"
+                  :aria-valuenow="rateLimitPercent(row, rateWindow)"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  :aria-label="t(rateWindow.labelKey)"
+                >
+                  <div
+                    class="h-full rounded-full transition-all"
+                    :class="rateLimitBarClass(row, rateWindow)"
+                    :style="{ width: `${rateLimitPercent(row, rateWindow)}%` }"
+                  />
+                </div>
+                <div
+                  v-if="rateLimitResetAt(row, rateWindow)"
+                  class="truncate text-[11px] text-gray-400 dark:text-gray-500"
+                >
+                  {{ t('keys.rateLimitResetAt', { time: formatDateTime(rateLimitResetAt(row, rateWindow)!) }) }}
+                </div>
+              </div>
+            </div>
+          </template>
+
           <template #cell-expires_at="{ value }">
             <span v-if="value" :class="[
               'text-sm',
@@ -312,7 +356,7 @@
           </template>
 
           <template #cell-actions="{ row }">
-            <div class="flex items-center gap-1">
+            <div class="flex flex-wrap items-center gap-1">
               <!-- Use Key Button -->
               <button
                 @click="openUseKeyModal(row)"
@@ -418,11 +462,14 @@
           >
             <template #selected="{ option }">
               <GroupBadge
-                  :show-rate="false"
+                :show-rate="true"
                 v-if="option"
                 :name="(option as unknown as GroupOption).label"
                 :platform="(option as unknown as GroupOption).platform"
                 :subscription-type="(option as unknown as GroupOption).subscriptionType"
+                :rate-multiplier="(option as unknown as GroupOption).rateMultiplier"
+                :user-rate-multiplier="(option as unknown as GroupOption).userRateMultiplier"
+                :always-show-rate="true"
               />
               <span v-else class="text-gray-400">{{ t('keys.selectGroup') }}</span>
             </template>
@@ -432,6 +479,8 @@
                 :platform="(option as unknown as GroupOption).platform"
                 :subscription-type="(option as unknown as GroupOption).subscriptionType"
                 :description="(option as unknown as GroupOption).description"
+                :rate-multiplier="(option as unknown as GroupOption).rateMultiplier"
+                :user-rate-multiplier="(option as unknown as GroupOption).userRateMultiplier"
                 :selected="selected"
               />
             </template>
@@ -619,6 +668,8 @@
               :platform="option.platform"
               :subscription-type="option.subscriptionType"
               :description="option.description"
+              :rate-multiplier="option.rateMultiplier"
+              :user-rate-multiplier="option.userRateMultiplier"
               :selected="
                 selectedKeyForGroup?.group_id === option.value ||
                 (!selectedKeyForGroup?.group_id && option.value === null)
@@ -677,7 +728,23 @@ interface GroupOption {
   description: string | null
   subscriptionType: SubscriptionType
   platform: GroupPlatform
+  rateMultiplier: number
+  userRateMultiplier: number | null
 }
+
+interface RateLimitWindow {
+  key: '5h' | '1d' | '7d'
+  limitKey: 'rate_limit_5h' | 'rate_limit_1d' | 'rate_limit_7d'
+  usageKey: 'usage_5h' | 'usage_1d' | 'usage_7d'
+  resetKey: 'reset_5h_at' | 'reset_1d_at' | 'reset_7d_at'
+  labelKey: string
+}
+
+const rateLimitWindows: RateLimitWindow[] = [
+  { key: '5h', limitKey: 'rate_limit_5h', usageKey: 'usage_5h', resetKey: 'reset_5h_at', labelKey: 'keys.rateLimit5hShort' },
+  { key: '1d', limitKey: 'rate_limit_1d', usageKey: 'usage_1d', resetKey: 'reset_1d_at', labelKey: 'keys.rateLimit1dShort' },
+  { key: '7d', limitKey: 'rate_limit_7d', usageKey: 'usage_7d', resetKey: 'reset_7d_at', labelKey: 'keys.rateLimit7dShort' }
+]
 
 const appStore = useAppStore()
 const onboardingStore = useOnboardingStore()
@@ -690,6 +757,7 @@ const allColumns = computed<Column[]>(() => [
   { key: 'group', label: t('keys.group'), sortable: false },
   { key: 'current_concurrency', label: t('keys.currentConcurrency'), sortable: true },
   { key: 'usage', label: t('keys.usage'), sortable: false },
+  { key: 'rate_limit', label: t('keys.rateLimitColumn'), sortable: false },
   { key: 'expires_at', label: t('keys.expiresAt'), sortable: true },
   { key: 'status', label: t('common.status'), sortable: true },
   { key: 'last_used_at', label: t('keys.lastUsedAt'), sortable: true },
@@ -699,13 +767,14 @@ const allColumns = computed<Column[]>(() => [
 ])
 
 const ALWAYS_VISIBLE_COLUMNS = new Set(['name', 'actions'])
-const DEFAULT_HIDDEN_COLUMNS = ['id', 'last_used_at', 'last_used_ip']
+const DEFAULT_HIDDEN_COLUMNS = ['id', 'rate_limit', 'last_used_at', 'last_used_ip']
 const HIDDEN_COLUMNS_KEY = 'api-key-hidden-columns'
 const COLUMN_SETTINGS_VERSION_KEY = 'api-key-column-settings-version'
-const COLUMN_SETTINGS_VERSION = 3
+const COLUMN_SETTINGS_VERSION = 4
 const VERSION_NEW_HIDDEN_COLUMNS: Record<number, string[]> = {
   2: ['last_used_ip'],
-  3: ['id']
+  3: ['id'],
+  4: ['rate_limit']
 }
 
 const toggleableColumns = computed(() =>
@@ -793,6 +862,7 @@ const handleBulkUpdated = (succeededIds: number[]) => {
 }
 
 const groups = ref<Group[]>([])
+const userGroupRates = ref<Record<number, number>>({})
 const loading = ref(false)
 const submitting = ref(false)
 const usageStats = ref<Record<string, BatchApiKeyUsageStats>>({})
@@ -802,6 +872,32 @@ const usageLoadFailed = ref(false)
 const formatUsageCost = (amount: number): string => {
   if (amount > 0 && amount < 0.00000001) return '<$0.00000001'
   return `$${amount.toFixed(amount > 0 && amount < 0.0001 ? 8 : 4)}`
+}
+
+const rateLimitAmount = (row: ApiKey, window: RateLimitWindow) => Number(row[window.limitKey] ?? 0)
+const rateLimitUsage = (row: ApiKey, window: RateLimitWindow) => Number(row[window.usageKey] ?? 0)
+const rateLimitResetAt = (row: ApiKey, window: RateLimitWindow) => row[window.resetKey] || null
+const rateLimitPercent = (row: ApiKey, window: RateLimitWindow) => {
+  const limit = rateLimitAmount(row, window)
+  if (limit <= 0) return 0
+  return Math.min(Math.max((rateLimitUsage(row, window) / limit) * 100, 0), 100)
+}
+const formatRateLimitValue = (row: ApiKey, window: RateLimitWindow) => {
+  const limit = rateLimitAmount(row, window)
+  if (limit <= 0) return t('keys.rateLimitUnlimited')
+  return `${formatUsageCost(rateLimitUsage(row, window))} / ${formatUsageCost(limit)}`
+}
+const rateLimitTextClass = (row: ApiKey, window: RateLimitWindow) => {
+  const percent = rateLimitPercent(row, window)
+  return percent >= 100
+    ? 'text-red-600 dark:text-red-400'
+    : percent >= 80
+      ? 'text-yellow-600 dark:text-yellow-400'
+      : 'text-gray-700 dark:text-gray-200'
+}
+const rateLimitBarClass = (row: ApiKey, window: RateLimitWindow) => {
+  const percent = rateLimitPercent(row, window)
+  return percent >= 100 ? 'bg-red-500' : percent >= 80 ? 'bg-yellow-500' : 'bg-primary-500'
 }
 
 const pagination = ref({
@@ -930,7 +1026,9 @@ const groupOptions = computed(() =>
     label: group.name,
     description: group.description,
     subscriptionType: group.subscription_type,
-    platform: group.platform
+    platform: group.platform,
+    rateMultiplier: group.rate_multiplier,
+    userRateMultiplier: userGroupRates.value[group.id] ?? null
   }))
 )
 
@@ -1047,6 +1145,13 @@ const loadGroups = async () => {
     groups.value = await userGroupsAPI.getAvailable()
   } catch (error) {
     console.error('Failed to load groups:', error)
+  }
+  try {
+    userGroupRates.value = await userGroupsAPI.getUserGroupRates()
+  } catch (error) {
+    // Rate visibility is supplemental; a rates endpoint failure must not hide
+    // the available group list or prevent key creation.
+    console.error('Failed to load user group rates:', error)
   }
 }
 

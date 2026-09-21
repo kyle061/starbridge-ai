@@ -54,6 +54,11 @@ const messages: Record<string, string> = {
   'keys.lastUsedAt': 'Last Used',
   'keys.lastUsedIP': 'Last Used IP',
   'keys.rateLimitColumn': 'Rate Limit',
+  'keys.rateLimit5hShort': '5 hours',
+  'keys.rateLimit1dShort': '1 day',
+  'keys.rateLimit7dShort': '7 days',
+  'keys.rateLimitUnlimited': 'Unlimited',
+  'keys.rateLimitResetAt': 'Resets {time}',
   'keys.searchPlaceholder': 'Search name or key...',
   'keys.status.active': 'Active',
   'keys.status.expired': 'Expired',
@@ -184,6 +189,12 @@ const DataTableStub = {
         </div>
         <slot name="cell-name" :value="row.name" :row="row" />
         <div data-test="key-usage"><slot name="cell-usage" :row="row" /></div>
+        <div
+          v-if="columns.some((col) => col.key === 'rate_limit')"
+          data-test="key-rate-limit"
+        >
+          <slot name="cell-rate_limit" :row="row" />
+        </div>
         <slot name="cell-actions" :row="row" />
         <div data-test="current-concurrency">
           <slot name="cell-current_concurrency" :value="row.current_concurrency" :row="row" />
@@ -488,6 +499,41 @@ describe('user KeysView column settings', () => {
     expect(visibleColumnKeys(wrapper)).not.toContain('id')
   })
 
+  it('shows rate limit progress and warning colors when the column is enabled', async () => {
+    listKeys.mockResolvedValueOnce({
+      items: [{
+        ...createApiKey(),
+        rate_limit_5h: 10,
+        usage_5h: 8,
+        rate_limit_1d: 20,
+        usage_1d: 20,
+        rate_limit_7d: 0,
+        usage_7d: 0,
+        reset_5h_at: '2030-01-01T01:00:00Z'
+      }],
+      total: 1,
+      page: 1,
+      page_size: 20,
+      pages: 1,
+    })
+    const wrapper = await mountView()
+
+    await wrapper.get('button[title="Column Settings"]').trigger('click')
+    await getButtonByText(wrapper, 'Rate Limit').trigger('click')
+    await nextTick()
+
+    const limit = wrapper.get('[data-test="key-rate-limit"]')
+    expect(limit.text()).toContain('5 hours')
+    expect(limit.text()).toContain('$8.0000 / $10.0000')
+    expect(limit.text()).toContain('Resets')
+    expect(limit.text()).toContain('Unlimited')
+    expect(limit.find('[role="progressbar"]').attributes('aria-valuenow')).toBe('80')
+    expect(limit.find('[role="progressbar"] > div').classes()).toContain('bg-yellow-500')
+    expect(limit.findAll('[role="progressbar"]')[1].attributes('aria-valuenow')).toBe('100')
+    expect(limit.findAll('[role="progressbar"]')[1].find('div').classes()).toContain('bg-red-500')
+    wrapper.unmount()
+  })
+
   it('opens bulk editing with only selected visible keys', async () => {
     const wrapper = await mountView()
     const table = wrapper.findComponent({ name: 'DataTable' })
@@ -557,9 +603,9 @@ describe('user KeysView column settings', () => {
 
     expect(visibleColumnKeys(wrapper)).toContain('last_used_at')
     expect(localStorage.getItem('api-key-hidden-columns')).toBe(
-      JSON.stringify(['id', 'last_used_ip'])
+      JSON.stringify(['id', 'rate_limit', 'last_used_ip'])
     )
-    expect(localStorage.getItem('api-key-column-settings-version')).toBe('3')
+    expect(localStorage.getItem('api-key-column-settings-version')).toBe('4')
   })
 
   it('shows the API key ID column when toggled', async () => {
@@ -609,9 +655,9 @@ describe('user KeysView column settings', () => {
       'actions',
     ])
     expect(localStorage.getItem('api-key-hidden-columns')).toBe(
-      JSON.stringify(['group', 'created_at', 'last_used_ip', 'id'])
+      JSON.stringify(['group', 'created_at', 'last_used_ip', 'id', 'rate_limit'])
     )
-    expect(localStorage.getItem('api-key-column-settings-version')).toBe('3')
+    expect(localStorage.getItem('api-key-column-settings-version')).toBe('4')
   })
 
   it('does not include always-visible columns in the toggleable menu', async () => {
@@ -624,7 +670,7 @@ describe('user KeysView column settings', () => {
     expect(columnMenuText).toContain('API Key')
     expect(columnMenuText).toContain('ID')
     expect(columnMenuText).toContain('Current Concurrency')
-    expect(columnMenuText).not.toContain('Rate Limit')
+    expect(columnMenuText).toContain('Rate Limit')
     expect(columnMenuText).toContain('Last Used IP')
     expect(columnMenuText).not.toContain('Name')
     expect(columnMenuText).not.toContain('Actions')
