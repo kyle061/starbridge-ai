@@ -23,12 +23,7 @@
           <div class="rounded-xl bg-primary-100 p-3 text-primary-600">
             <Icon name="chat" size="lg" />
           </div>
-          <div>
-            <h3 class="font-semibold text-primary-800 dark:text-primary-200">
-              {{ t('common.contactSupport') }}
-            </h3>
-            <p class="text-sm font-medium">{{ contactInfo }}</p>
-          </div>
+          <SupportContact :contact="contactInfo" show-value />
         </div>
       </div>
 
@@ -50,8 +45,8 @@
 </template>
 
 <script setup lang="ts">
+import SupportContact from '@/components/common/SupportContact.vue'
 import { computed, onMounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { Icon } from '@/components/icons'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import ProfileBalanceNotifyCard from '@/components/user/profile/ProfileBalanceNotifyCard.vue'
@@ -63,7 +58,6 @@ import { isWeChatWebOAuthEnabled } from '@/api/auth'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 
-const { t } = useI18n()
 const appStore = useAppStore()
 const authStore = useAuthStore()
 const user = computed(() => authStore.user)

@@ -154,7 +154,14 @@ export default {
     requestCount: '{count} 次请求',
     usageUnavailable: '用量暂不可用，请点击刷新重试',
     gatewayUsageHint: '客户端需同时使用本站地址和本页的 API 密钥。点击「使用密钥」复制对应配置；只有经过本网关的模型调用才会计入该密钥用量，上游账号凭证不会自动关联到用户密钥。Token 数包含输入、输出和缓存。',
+    noMatchingKeys: '没有匹配的密钥',
+    tryOtherFilters: '尝试其他关键词，或清除分组和状态筛选。',
+    clearFilters: '清除筛选',
     workflow: {
+      title: '如何连接客户端',
+      show: '展开指南',
+      hide: '收起指南',
+
       endpoint: {
         title: '确认端点',
         description: '使用上方本站 API 地址。'

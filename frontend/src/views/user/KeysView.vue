@@ -36,32 +36,21 @@
             :api-base-url="effectiveApiBaseUrl"
             :custom-endpoints="publicSettings?.custom_endpoints || []"
           />
-          <p class="text-xs leading-5 text-gray-500 dark:text-gray-400">
-            {{ t('keys.gatewayUsageHint') }}
-          </p>
-          <div class="grid gap-3 rounded-xl border border-gray-200/70 bg-gray-50/80 p-4 dark:border-dark-700 dark:bg-dark-800/60 sm:grid-cols-3">
-            <div class="flex gap-3">
-              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">1</span>
-              <div>
-                <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ t('keys.workflow.endpoint.title') }}</p>
-                <p class="mt-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ t('keys.workflow.endpoint.description') }}</p>
+          <section class="rounded-xl border border-gray-200 dark:border-dark-700">
+            <button type="button" class="flex min-h-11 w-full items-center justify-between gap-3 px-4 text-left text-sm font-medium text-gray-700 dark:text-gray-200" :aria-expanded="guideExpanded" aria-controls="keys-connection-guide" data-test="keys-guide-toggle" @click="guideExpanded = !guideExpanded">
+              <span>{{ t('keys.workflow.title') }}</span>
+              <span class="shrink-0 text-xs text-primary-600 dark:text-primary-400">{{ t(guideExpanded ? 'keys.workflow.hide' : 'keys.workflow.show') }}</span>
+            </button>
+            <div v-if="guideExpanded" id="keys-connection-guide" class="border-t border-gray-200 p-4 dark:border-dark-700">
+              <div class="grid gap-4 sm:grid-cols-3">
+                <div v-for="(step, index) in ['endpoint', 'key', 'client']" :key="step" class="flex gap-3">
+                  <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">{{ index + 1 }}</span>
+                  <div><p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ t(`keys.workflow.${step}.title`) }}</p><p class="mt-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ t(`keys.workflow.${step}.description`) }}</p></div>
+                </div>
               </div>
+              <p class="mt-3 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ t('keys.gatewayUsageHint') }}</p>
             </div>
-            <div class="flex gap-3">
-              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">2</span>
-              <div>
-                <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ t('keys.workflow.key.title') }}</p>
-                <p class="mt-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ t('keys.workflow.key.description') }}</p>
-              </div>
-            </div>
-            <div class="flex gap-3">
-              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">3</span>
-              <div>
-                <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ t('keys.workflow.client.title') }}</p>
-                <p class="mt-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ t('keys.workflow.client.description') }}</p>
-              </div>
-            </div>
-          </div>
+          </section>
           <div v-if="selectedIds.length" class="flex flex-wrap items-center gap-3 text-sm">
             <span class="text-gray-600 dark:text-gray-300">
               {{ t('keys.bulkEdit.selectedCount', { count: selectedIds.length }) }}
@@ -156,7 +145,7 @@
               </code>
               <button
                 @click="copyToClipboard(value, row.id)"
-                class="rounded-lg p-1 transition-colors hover:bg-gray-100 dark:hover:bg-dark-700"
+                class="flex min-h-11 min-w-11 items-center justify-center rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-dark-700"
                 :class="
                   copiedKeyId === row.id
                     ? 'text-green-500'
@@ -383,7 +372,7 @@
               <!-- Use Key Button -->
               <button
                 @click="openUseKeyModal(row)"
-                class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/20 dark:hover:text-green-400"
+                class="flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-primary-50 px-3 py-2 font-medium text-primary-700 transition-colors hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-300 dark:hover:bg-primary-900/50"
               >
                 <Icon name="terminal" size="sm" />
                 <span class="text-xs">{{ t('keys.useKey') }}</span>
@@ -392,7 +381,7 @@
               <button
                 v-if="!publicSettings?.hide_ccs_import_button"
                 @click="importToCcswitch(row)"
-                class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
+                class="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400"
               >
                 <Icon name="upload" size="sm" />
                 <span class="text-xs">{{ t('keys.importToCcSwitch') }}</span>
@@ -401,7 +390,7 @@
               <button
                 @click="toggleKeyStatus(row)"
                 :class="[
-                  'flex flex-col items-center gap-0.5 rounded-lg p-1.5 transition-colors',
+                  'flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-lg p-1.5 transition-colors',
                   row.status === 'active'
                     ? 'text-gray-500 hover:bg-yellow-50 hover:text-yellow-600 dark:hover:bg-yellow-900/20 dark:hover:text-yellow-400'
                     : 'text-gray-500 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/20 dark:hover:text-green-400'
@@ -414,7 +403,7 @@
               <!-- Edit Button -->
               <button
                 @click="editKey(row)"
-                class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary-600 dark:hover:bg-dark-700 dark:hover:text-primary-400"
+                class="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary-600 dark:hover:bg-dark-700 dark:hover:text-primary-400"
               >
                 <Icon name="edit" size="sm" />
                 <span class="text-xs">{{ t('common.edit') }}</span>
@@ -422,7 +411,7 @@
               <!-- Delete Button -->
               <button
                 @click="confirmDelete(row)"
-                class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                class="flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
               >
                 <Icon name="trash" size="sm" />
                 <span class="text-xs">{{ t('common.delete') }}</span>
@@ -432,10 +421,11 @@
 
           <template #empty>
             <EmptyState
-              :title="t('keys.noKeysYet')"
-              :description="t('keys.createFirstKey')"
-              :action-text="t('keys.createKey')"
-              @action="showCreateModal = true"
+              :title="t(hasActiveFilters ? 'keys.noMatchingKeys' : 'keys.noKeysYet')"
+              :description="t(hasActiveFilters ? 'keys.tryOtherFilters' : 'keys.createFirstKey')"
+              :action-text="hasActiveFilters ? t('keys.clearFilters') : canCreateKey ? t('keys.createKey') : ''"
+              :action-icon="!hasActiveFilters"
+              @action="hasActiveFilters ? clearFilters() : canCreateKey && (showCreateModal = true)"
             />
           </template>
         </DataTable>
@@ -938,6 +928,15 @@ const sortState = ref({
 const filterSearch = ref('')
 const filterStatus = ref('')
 const filterGroupId = ref<string | number>('')
+const hasActiveFilters = computed(() => !!filterSearch.value || !!filterStatus.value || filterGroupId.value !== '')
+const guideExpanded = ref(false)
+let guideInitialized = false
+function clearFilters() {
+  filterSearch.value = ''
+  filterStatus.value = ''
+  filterGroupId.value = ''
+  onFilterChange()
+}
 
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
@@ -1132,6 +1131,10 @@ const loadApiKeys = async () => {
     })
     if (signal.aborted) return
     apiKeys.value = response.items
+    if (!guideInitialized && !hasActiveFilters.value) {
+      guideExpanded.value = response.total === 0
+      guideInitialized = true
+    }
     handleSelectionChange(selectedIds.value)
     pagination.value.total = response.total
     pagination.value.pages = response.pages

@@ -789,13 +789,13 @@ function generateOpenAIFiles(baseUrl: string, apiKey: string, supportsWebsockets
 
   // Keep setup independent of a separately downloaded model catalog.
   const configContent = `model = "gpt-6-astra"
-model_provider = "starbridgeai"
+model_provider = "starbridaeai"
 model_reasoning_effort = "xhigh"
 personality = "pragmatic"
 service_tier = "default"
 
-[model_providers.starbridgeai]
-name = "Starbridge AI"
+[model_providers.starbridaeai]
+name = "starbridaeai"
 base_url = "${escapeTomlBasicString(baseUrl)}"
 wire_api = "responses"
 supports_websockets = ${supportsWebsockets}
@@ -1092,9 +1092,9 @@ function generateRoutedCodexFiles(
     composite: 'Composite'
   }
   const label = labels[platform]
-  const providerId = platform === 'openai' || platform === 'composite' ? 'starbridgeai' : 'starbridge'
-  const providerName = platform === 'openai' || platform === 'composite' ? 'Starbridge AI' : `Starbridge AI ${label}`
-  const isOpenAICodexProvider = providerId === 'starbridgeai'
+  const providerId = platform === 'openai' || platform === 'composite' ? 'starbridaeai' : 'starbridge'
+  const providerName = platform === 'openai' || platform === 'composite' ? 'starbridaeai' : `Starbridge AI ${label}`
+  const isOpenAICodexProvider = providerId === 'starbridaeai'
   const providerOptions = isOpenAICodexProvider
     ? 'requires_openai_auth = true\nsupports_websockets = true\n\n[features]\nresponses_websockets_v2 = true\ngoals = true'
     : 'requires_openai_auth = false\nsupports_websockets = false'

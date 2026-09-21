@@ -15,11 +15,45 @@ export default {
     register: '免费注册',
     getStarted: '立即开始',
     goToDashboard: '进入控制台',
-    contactWeChat: '微信联系',
+    navigation: '主导航',
+    openMenu: '打开菜单',
+    modelPricing: '模型与价格',
+    channelStatus: '查看渠道状态',
+    quickStart: '接入指南',
+    heroEyebrow: '多模型 API 服务',
+    overview: '接入、用量与状态',
+    balanceNote: '所有密钥共用账户余额 · 客户端价格已包含计费倍率',
+    connection: {
+      title: '从这里连接你的客户端',
+      endpoint: 'API 服务地址',
+      copyEndpoint: '复制 API 服务地址',
+      description: '在密钥页选择「使用密钥」，获取对应客户端的完整配置和接口地址。',
+      action: '获取密钥与配置'
+    },
+    faq: {
+      title: '开始前，你可能想了解',
+      subtitle: '先了解额度和接入方式，配置一次即可开始使用。',
+      balance: {
+        question: '账户余额和 API Key 额度是什么关系？',
+        answer: '所有 API Key 共用账户的可用余额，创建密钥不会增加余额，也不需要再次分配余额。可用余额耗尽后，新请求会停止；调用明细可在使用记录中查看。'
+      },
+      pricing: {
+        question: '页面上的价格还需要乘以倍率吗？',
+        answer: '用户页面展示的是已包含计费倍率的价格，不需要重复相乘。不同模型的价格与倍率可能不同，实际费用以调用记录为准；输入、输出与缓存按对应价格统计。'
+      },
+      groups: {
+        question: '套餐、分组和渠道监控分别有什么用？',
+        answer: '套餐说明可购买的额度、有效期或模型权限，以套餐详情为准。分组决定密钥可使用的模型范围和计费规则，常规接入使用默认可用分组。渠道监控展示检测结果、延迟与检测时间，帮助判断当前服务状态。'
+      },
+      client: {
+        question: '怎样接入 Codex？必须安装 CC-Switch 吗？',
+        answer: '在 API Keys 页面点击「使用密钥」，选择客户端后复制完整配置，配置中已填入本站地址与该密钥。CC-Switch 是可选的导入工具，也可以直接复制配置；未安装时不会弹出安装失败提示。'
+      }
+    },
     // 新增：面向用户的价值主张
     heroSubtitle: '一个密钥，畅用多个 AI 模型',
     seoTitle: 'Starbridge AI 多模型 AI API 中转站',
-    heroDescription: '星桥 AI，一站式连接 OpenAI、Claude、Gemini 与自定义模型服务。统一接口、独立密钥，用量清晰可控。',
+    heroDescription: '通过统一入口接入 OpenAI、DeepSeek、Claude 等模型。在密钥页复制客户端配置，在使用记录中查看每次调用与费用。可用模型以账户权限为准。',
     tags: {
       subscriptionToApi: '多模型中转',
       stickySession: '会话保持',
@@ -71,12 +105,12 @@ export default {
       }
     },
     features: {
-      unifiedGateway: '一键接入',
-      unifiedGatewayDesc: '获取一个 API 密钥，即可调用所有已接入的 AI 模型，无需分别申请。',
-      multiAccount: '稳定可靠',
-      multiAccountDesc: '智能调度多个上游账号，自动切换和负载均衡，告别频繁报错。',
-      balanceQuota: '用多少付多少',
-      balanceQuotaDesc: '按实际使用量计费，支持设置配额上限，团队用量一目了然。'
+      unifiedGateway: '一处配置，多种客户端',
+      unifiedGatewayDesc: '为 Codex、Claude Code 与兼容客户端生成对应配置，地址与密钥一起复制。',
+      multiAccount: '渠道状态随时可查',
+      multiAccountDesc: '查看渠道可用情况、模型响应延迟与检测时间，遇到问题先定位服务状态。',
+      balanceQuota: '每次调用，费用有据',
+      balanceQuotaDesc: '统一账户余额，查看请求、Token 和实付费用；可用余额耗尽后停止新请求。'
     },
     // 优势对比
     comparison: {

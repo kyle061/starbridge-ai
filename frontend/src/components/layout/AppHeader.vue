@@ -168,25 +168,7 @@
                   {{ t('nav.apiKeys') }}
                 </router-link>
 
-                <template v-if="contactInfo">
-                  <a
-                    v-if="contactHref"
-                    :href="contactHref"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    @click="closeDropdown"
-                    class="dropdown-item"
-                  >
-                    <Icon name="chatBubble" size="sm" />
-                    <span>{{ t('common.contactSupport') }}</span>
-                    <span class="ml-auto max-w-32 truncate text-xs text-gray-500 dark:text-dark-400">{{ contactInfo }}</span>
-                  </a>
-                  <div v-else class="dropdown-item cursor-default">
-                    <Icon name="chatBubble" size="sm" />
-                    <span>{{ t('common.contactSupport') }}</span>
-                    <span class="ml-auto max-w-32 truncate text-xs text-gray-500 dark:text-dark-400">{{ contactInfo }}</span>
-                  </div>
-                </template>
+                <div v-if="contactInfo" class="px-4 py-1"><SupportContact :contact="contactInfo" show-value /></div>
               </div>
 
               <div v-if="showOnboardingButton" class="border-t border-gray-100 py-1 dark:border-dark-700">
@@ -230,6 +212,7 @@
 </template>
 
 <script setup lang="ts">
+import SupportContact from '@/components/common/SupportContact.vue'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -256,12 +239,6 @@ const user = computed(() => authStore.user)
 const dropdownOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 const contactInfo = computed(() => (appStore.cachedPublicSettings?.contact_info || appStore.contactInfo || '').trim())
-const contactHref = computed(() => {
-  const value = contactInfo.value
-  if (!value) return ''
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return `mailto:${value}`
-  return sanitizeUrl(value)
-})
 const docUrl = computed(() => sanitizeUrl(appStore.docUrl))
 const modelPlazaEnabled = computed(() => isFeatureFlagEnabled(FeatureFlags.modelPlaza))
 const avatarUrl = computed(() => user.value?.avatar_url?.trim() || '')

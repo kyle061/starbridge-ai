@@ -410,16 +410,7 @@
             rel="noopener noreferrer"
             class="text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-dark-400 dark:hover:text-white"
           >{{ t('home.docs') }}</a>
-          <a
-            v-if="contactHref"
-            :href="contactHref"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-dark-400 dark:hover:text-white"
-          >{{ t('common.contactSupport') }}</a>
-          <span v-else-if="contactInfo" class="max-w-full text-sm text-gray-500 [overflow-wrap:anywhere] dark:text-dark-400">
-            {{ t('common.contactSupport') }}: {{ contactInfo }}
-          </span>
+          <SupportContact :contact="contactInfo" />
         </div>
       </div>
     </footer>
@@ -427,6 +418,7 @@
 </template>
 
 <script setup lang="ts">
+import SupportContact from '@/components/common/SupportContact.vue'
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores'
@@ -448,12 +440,6 @@ const siteName = computed(() => appStore.cachedPublicSettings?.site_name || appS
 const siteLogo = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.site_logo || appStore.siteLogo || '', { allowRelative: true, allowDataUrl: true }))
 const docUrl = computed(() => sanitizeUrl(appStore.cachedPublicSettings?.doc_url || appStore.docUrl || ''))
 const contactInfo = computed(() => (appStore.cachedPublicSettings?.contact_info || appStore.contactInfo || '').trim())
-const contactHref = computed(() => {
-  const value = contactInfo.value
-  if (!value) return ''
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return `mailto:${value}`
-  return sanitizeUrl(value)
-})
 
 // ==================== Theme (same as HomeView) ====================
 

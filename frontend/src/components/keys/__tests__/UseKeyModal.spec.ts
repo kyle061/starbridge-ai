@@ -48,7 +48,7 @@ describe('UseKeyModal', () => {
     })
     const inlineConfig = wrapper.get('pre code').text()
     expect(inlineConfig).toContain('model = "gpt-6-astra"')
-    expect(inlineConfig).toContain('model_provider = "starbridgeai"')
+    expect(inlineConfig).toContain('model_provider = "starbridaeai"')
     expect(inlineConfig).toContain('model_reasoning_effort = "xhigh"')
     expect(inlineConfig).toContain('base_url = "https://example.com/v1"')
     expect(inlineConfig).toContain('supports_websockets = false')
@@ -391,13 +391,13 @@ describe('UseKeyModal', () => {
     })
 
     const codeBlocks = wrapper.findAll('pre code').map((code) => code.text())
-    const configToml = codeBlocks.find((content) => content.includes('model_provider = "starbridgeai"'))
+    const configToml = codeBlocks.find((content) => content.includes('model_provider = "starbridaeai"'))
 
     expect(configToml).toBeDefined()
     expect(configToml).toContain('model = "gpt-6-astra"')
-    expect(configToml).toContain('model_provider = "starbridgeai"')
-    expect(configToml).toContain('[model_providers.starbridgeai]')
-    expect(configToml).toContain('name = "Starbridge AI"')
+    expect(configToml).toContain('model_provider = "starbridaeai"')
+    expect(configToml).toContain('[model_providers.starbridaeai]')
+    expect(configToml).toContain('name = "starbridaeai"')
     expect(configToml).not.toContain('zero-inference')
     expect(configToml).not.toContain('Zero Inference')
     expect(configToml).not.toContain('review_model')
@@ -450,7 +450,7 @@ describe('UseKeyModal', () => {
     await nextTick()
 
     const codeBlocks = wrapper.findAll('pre code').map((code) => code.text())
-    const configToml = codeBlocks.find((content) => content.includes('model_provider = "starbridgeai"'))
+    const configToml = codeBlocks.find((content) => content.includes('model_provider = "starbridaeai"'))
 
     expect(envKeyMode.attributes('aria-checked')).toBe('false')
     expect(configToml).toBeDefined()
@@ -466,7 +466,7 @@ describe('UseKeyModal', () => {
     await nextTick()
 
     expect(wrapper.find('[data-testid="codex-api-key-restart-notice"]').exists()).toBe(false)
-    const apiKeyConfig = wrapper.findAll('pre code').map((code) => code.text()).find((content) => content.includes('model_provider = "starbridgeai"'))!
+    const apiKeyConfig = wrapper.findAll('pre code').map((code) => code.text()).find((content) => content.includes('model_provider = "starbridaeai"'))!
     expect(apiKeyConfig).toContain('requires_openai_auth = true')
     expect(apiKeyConfig).toContain('env_key = "STARBRIDGE_API_KEY"')
     expect(apiKeyConfig).not.toContain('experimental_bearer_token')
@@ -787,7 +787,7 @@ describe('UseKeyModal', () => {
 
     const initialCodeBlocks = wrapper.findAll('pre code').map((code) => code.text())
     const providerNeedle = platform === 'openai' || platform === 'composite'
-      ? 'model_provider = "starbridgeai"'
+      ? 'model_provider = "starbridaeai"'
       : 'model_provider = "starbridge"'
     const config = initialCodeBlocks.find((content) => content.includes(providerNeedle))!
     expect(config).toBeDefined()

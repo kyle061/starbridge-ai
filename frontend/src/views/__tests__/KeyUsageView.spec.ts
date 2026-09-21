@@ -4,6 +4,10 @@ import { nextTick } from 'vue'
 
 import KeyUsageView from '../KeyUsageView.vue'
 
+vi.mock('@/composables/useClipboard', () => ({
+  useClipboard: () => ({ copied: false, copyToClipboard: vi.fn() }),
+}))
+
 const { showInfo, showSuccess, showError, fetchPublicSettings } = vi.hoisted(() => ({
   showInfo: vi.fn(),
   showSuccess: vi.fn(),

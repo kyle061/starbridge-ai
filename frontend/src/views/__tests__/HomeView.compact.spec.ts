@@ -81,6 +81,25 @@ describe('HomeView compact mode', () => {
     vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: false } as MediaQueryList)
   })
 
+  it('opens and closes mobile navigation with Escape', async () => {
+    const wrapper = mountHome()
+    const toggle = wrapper.get('[data-testid="home-menu-toggle"]')
+    expect(toggle.attributes('aria-expanded')).toBe('false')
+    await toggle.trigger('click')
+    expect(wrapper.find('[data-testid="home-mobile-menu"]').exists()).toBe(true)
+    await wrapper.get('header').trigger('keydown', { key: 'Escape' })
+    expect(toggle.attributes('aria-expanded')).toBe('false')
+    expect(wrapper.find('[data-testid="home-mobile-menu"]').exists()).toBe(false)
+  })
+
+  it('respects channel visibility and preserves login return destinations', () => {
+    const enabled = mountHome({ channel_monitor_enabled: true })
+    expect(destinations(enabled)).toContain('/login?redirect=/monitor')
+    expect(destinations(enabled)).toContain('/login?redirect=/keys')
+    const disabled = mountHome({ channel_monitor_enabled: false })
+    expect(destinations(disabled)).not.toContain('/login?redirect=/monitor')
+  })
+
   it('renders custom HTML ahead of compact mode', () => {
     const wrapper = mountHome({
       compact_home_enabled: true,
@@ -112,7 +131,7 @@ describe('HomeView compact mode', () => {
     const wrapper = mountHome(settings)
 
     expect(wrapper.find('[data-testid="compact-home"]').exists()).toBe(false)
-    expect(wrapper.find('.terminal-container').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-connection"]').exists()).toBe(true)
   })
 
   it('links unauthenticated visitors to login', () => {

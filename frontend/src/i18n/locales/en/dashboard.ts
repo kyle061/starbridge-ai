@@ -154,7 +154,14 @@ export default {
     requestCount: '{count} requests',
     usageUnavailable: 'Usage unavailable. Refresh to retry.',
     gatewayUsageHint: 'Configure your client with this site URL and an API key from this page. Use “Use Key” to copy the client configuration. Only model calls through this gateway count toward the key; upstream credentials are not automatically linked to a user key. Token counts include input, output, and cache tokens.',
+    noMatchingKeys: 'No matching keys',
+    tryOtherFilters: 'Try another keyword or clear the group and status filters.',
+    clearFilters: 'Clear filters',
     workflow: {
+      title: 'Connect your client',
+      show: 'Show guide',
+      hide: 'Hide guide',
+
       endpoint: {
         title: 'Confirm the endpoint',
         description: 'Use this site’s API endpoint above.'

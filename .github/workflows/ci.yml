@@ -28,6 +28,8 @@ jobs:
           src/components/account/__tests__/CreateAccountModal.spec.ts
           src/components/common/__tests__/Pagination.spec.ts
           src/components/common/__tests__/DataTable.spec.ts
+          src/components/common/__tests__/SupportContact.spec.ts
+          src/components/layout/__tests__/docUrlSanitization.spec.ts
           src/components/layout/__tests__/AppSidebar.spec.ts
           src/components/layout/__tests__/TablePageLayout.spec.ts
           src/components/keys/__tests__/EndpointPopover.spec.ts
@@ -36,6 +38,8 @@ jobs:
           src/components/modelPlaza/__tests__/PlazaModelPricingTable.spec.ts
           src/components/admin/usage/__tests__/UsageStatsCards.spec.ts
           src/views/user/__tests__/KeysView.spec.ts
+          src/views/__tests__/HomeView.compact.spec.ts
+          src/views/__tests__/KeyUsageView.spec.ts
           src/views/user/__tests__/PaymentView.spec.ts
           src/views/user/__tests__/RedeemView.spec.ts
           src/components/keys/__tests__/BulkEditKeysModal.spec.ts

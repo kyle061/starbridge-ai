@@ -15,11 +15,45 @@ export default {
     register: 'Sign Up Free',
     getStarted: 'Get Started',
     goToDashboard: 'Go to Dashboard',
-    contactWeChat: 'WeChat Contact',
+    navigation: 'Main navigation',
+    openMenu: 'Open menu',
+    modelPricing: 'Models & pricing',
+    channelStatus: 'Channel status',
+    quickStart: 'Connection guide',
+    heroEyebrow: 'Multi-model API service',
+    overview: 'Connection, usage and status',
+    balanceNote: 'All keys share your balance · Customer prices include billing multipliers',
+    connection: {
+      title: 'Connect your client',
+      endpoint: 'API service address',
+      copyEndpoint: 'Copy API service address',
+      description: 'Choose “Use Key” on the API Keys page for the complete configuration and endpoint for your client.',
+      action: 'Get a key and configuration'
+    },
+    faq: {
+      title: 'Before you get started',
+      subtitle: 'Understand your balance and set up your client in one place.',
+      balance: {
+        question: 'How do my account balance and API keys work together?',
+        answer: 'All API keys share your available account balance. Creating a key does not add or require allocating balance. New requests stop when available balance runs out. Usage records show individual calls.'
+      },
+      pricing: {
+        question: 'Do I need to apply the billing multiplier again?',
+        answer: 'Customer prices already include the billing multiplier. Do not multiply them again. Prices and multipliers can vary by model; usage records show the actual charge. Input, output and cache usage have their corresponding rates.'
+      },
+      groups: {
+        question: 'What are plans, groups and channel monitoring?',
+        answer: 'Plans describe the balance, validity or model access you can purchase; see each plan for details. Groups determine which models a key can use and their billing rules. Use the default available group for a typical setup. Channel monitoring shows check results, latency and check times.'
+      },
+      client: {
+        question: 'How do I connect Codex? Is CC-Switch required?',
+        answer: 'Click “Use Key” on the API Keys page, select your client and copy its configuration. The site address and key are included. CC-Switch is an optional import tool; copying the configuration also works. No installation error dialog appears when CC-Switch is absent.'
+      }
+    },
     // User-focused value proposition
     heroSubtitle: 'One Key, All AI Models',
     seoTitle: 'Starbridge AI Multi-model AI API Gateway',
-    heroDescription: 'No need to manage multiple subscriptions. Access Claude, GPT, Gemini and more with a single API key',
+    heroDescription: 'Access OpenAI, DeepSeek, Claude and other models through one gateway. Copy client configurations from API Keys and review calls and charges in usage records. Model availability depends on your account permissions.',
     tags: {
       subscriptionToApi: 'Multi-model gateway',
       stickySession: 'Session Persistence',
@@ -71,12 +105,12 @@ export default {
       }
     },
     features: {
-      unifiedGateway: 'One-Click Access',
-      unifiedGatewayDesc: 'Get a single API key to call all connected AI models. No separate applications needed.',
-      multiAccount: 'Always Reliable',
-      multiAccountDesc: 'Smart routing across multiple upstream accounts with automatic failover. Say goodbye to errors.',
-      balanceQuota: 'Pay What You Use',
-      balanceQuotaDesc: 'Usage-based billing with quota limits. Full visibility into team consumption.'
+      unifiedGateway: 'One place to configure your clients',
+      unifiedGatewayDesc: 'Get configurations for Codex, Claude Code and compatible clients, with the endpoint and key included.',
+      multiAccount: 'Check your channel status',
+      multiAccountDesc: 'Review availability, model response latency and check times to help diagnose service issues.',
+      balanceQuota: 'Track every call and charge',
+      balanceQuotaDesc: 'Share one account balance and review requests, tokens and billed costs. New requests stop when available balance runs out.'
     },
     // Comparison section
     comparison: {

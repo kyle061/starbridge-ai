@@ -319,6 +319,38 @@ describe('user KeysView column settings', () => {
     isCurrentStep.mockReturnValue(false)
   })
 
+  it('collapses the connection guide for existing keys and lets the user expand it', async () => {
+    const wrapper = await mountView()
+    const toggle = wrapper.get('[data-test="keys-guide-toggle"]')
+    expect(toggle.attributes('aria-expanded')).toBe('false')
+    await toggle.trigger('click')
+    expect(wrapper.get('#keys-connection-guide').text()).toContain('keys.gatewayUsageHint')
+    wrapper.unmount()
+  })
+
+  it('opens the guide for a truly empty account', async () => {
+    listKeys.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 20, pages: 0 })
+    const wrapper = await mountView()
+    expect(wrapper.get('[data-test="keys-guide-toggle"]').attributes('aria-expanded')).toBe('true')
+    wrapper.unmount()
+  })
+
+  it('shows filter recovery instead of first-key onboarding for no search results', async () => {
+    const wrapper = await mountView()
+    listKeys.mockResolvedValue({ items: [], total: 0, page: 1, page_size: 20, pages: 0 })
+    const search = wrapper.findComponent(SearchInputStub)
+    search.vm.$emit('update:modelValue', 'missing-key')
+    search.vm.$emit('search')
+    await flushPromises()
+    const empty = wrapper.findComponent({ name: 'EmptyState' })
+    expect(empty.props('title')).toBe('keys.noMatchingKeys')
+    expect(wrapper.get('[data-test="keys-guide-toggle"]').attributes('aria-expanded')).toBe('false')
+    empty.vm.$emit('action')
+    await flushPromises()
+    expect(search.props('modelValue')).toBe('')
+    wrapper.unmount()
+  })
+
   it('requires credit before creating keys and links to code redemption', async () => {
     getAccess.mockResolvedValue({ enabled: true, has_purchased: false, balance: 0, can_create_key: false, requests_allowed: false })
     const wrapper = await mountView()

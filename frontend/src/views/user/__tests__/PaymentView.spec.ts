@@ -9,6 +9,10 @@ import en from '@/i18n/locales/en'
 import zh from '@/i18n/locales/zh'
 import type { CheckoutInfoResponse, MethodLimit, SubscriptionPlan } from '@/types/payment'
 
+vi.mock('@/composables/useClipboard', () => ({
+  useClipboard: () => ({ copied: false, copyToClipboard: vi.fn() }),
+}))
+
 const routeState = vi.hoisted(() => ({
   path: '/purchase',
   query: {} as Record<string, unknown>,
@@ -243,6 +247,7 @@ async function mountSubscriptionConfirm(options: Parameters<typeof checkoutInfoW
   const wrapper = shallowMount(PaymentView, {
     global: {
       stubs: {
+        SupportContact: false,
         AppLayout: {
           template: '<div><slot /></div>',
         },
@@ -284,6 +289,7 @@ async function mountSubscriptionPlanList(planCount: number) {
   const wrapper = shallowMount(PaymentView, {
     global: {
       stubs: {
+        SupportContact: false,
         AppLayout: {
           template: '<div><slot /></div>',
         },
@@ -312,6 +318,7 @@ describe('PaymentView help text', () => {
     const wrapper = shallowMount(PaymentView, {
       global: {
         stubs: {
+        SupportContact: false,
           AppLayout: { template: '<div><slot /></div>' },
           RechargeComingSoon: false,
         Teleport: true,
@@ -381,6 +388,7 @@ describe('PaymentView contact info', () => {
     const wrapper = shallowMount(PaymentView, {
       global: {
         stubs: {
+        SupportContact: false,
           AppLayout: { template: '<div><slot /></div>' },
           RechargeComingSoon: false,
           Teleport: true,
@@ -453,6 +461,7 @@ describe('PaymentView recharge rate preview', () => {
     const wrapper = shallowMount(PaymentView, {
       global: {
         stubs: {
+        SupportContact: false,
           AppLayout: { template: '<div><slot /></div>' },
           RechargeComingSoon: false,
         Teleport: true,
@@ -621,6 +630,7 @@ describe('PaymentView payment recovery', () => {
     const wrapper = shallowMount(PaymentView, {
       global: {
         stubs: {
+        SupportContact: false,
           AppLayout: {
             template: '<div><slot /></div>',
           },
@@ -679,6 +689,7 @@ describe('PaymentView WeChat JSAPI flow', () => {
     shallowMount(PaymentView, {
       global: {
         stubs: {
+        SupportContact: false,
           RechargeComingSoon: false,
         Teleport: true,
           Transition: false,
@@ -709,6 +720,7 @@ describe('PaymentView WeChat JSAPI flow', () => {
     shallowMount(PaymentView, {
       global: {
         stubs: {
+        SupportContact: false,
           RechargeComingSoon: false,
         Teleport: true,
           Transition: false,
@@ -731,6 +743,7 @@ describe('PaymentView WeChat JSAPI flow', () => {
     const wrapper = shallowMount(PaymentView, {
       global: {
         stubs: {
+        SupportContact: false,
           RechargeComingSoon: false,
         Teleport: true,
           Transition: false,
@@ -776,6 +789,7 @@ describe('PaymentView WeChat JSAPI flow', () => {
     shallowMount(PaymentView, {
       global: {
         stubs: {
+        SupportContact: false,
           RechargeComingSoon: false,
         Teleport: true,
           Transition: false,
@@ -815,6 +829,7 @@ describe('PaymentView WeChat JSAPI flow', () => {
     shallowMount(PaymentView, {
       global: {
         stubs: {
+        SupportContact: false,
           RechargeComingSoon: false,
         Teleport: true,
           Transition: false,
@@ -864,6 +879,7 @@ describe('PaymentView WeChat JSAPI flow', () => {
     shallowMount(PaymentView, {
       global: {
         stubs: {
+        SupportContact: false,
           RechargeComingSoon: false,
         Teleport: true,
           Transition: false,
