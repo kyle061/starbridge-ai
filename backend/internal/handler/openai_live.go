@@ -97,20 +97,41 @@ func (h *OpenAIGatewayHandler) Live(c *gin.Context) {
 		return
 	}
 
+	groupID, groupLimit := groupConcurrencyConfig(apiKey)
+	groupRelease, groupAcquired, err := h.concurrencyHelper.TryAcquireGroupSlot(
+		c.Request.Context(),
+		groupID,
+		groupLimit,
+	)
+	if err != nil {
+		h.errorResponse(c, http.StatusServiceUnavailable, "api_error", "Live group concurrency unavailable")
+		return
+	}
+	if !groupAcquired {
+		h.errorResponse(c, http.StatusTooManyRequests, "rate_limit_error", "Live group concurrency limit reached")
+		return
+	}
+
 	userRelease, acquired, err := h.concurrencyHelper.TryAcquireUserSlot(
 		c.Request.Context(),
 		subject.UserID,
 		subject.Concurrency,
 	)
 	if err != nil {
+		if groupRelease != nil {
+			groupRelease()
+		}
 		h.errorResponse(c, http.StatusServiceUnavailable, "api_error", "Live concurrency unavailable")
 		return
 	}
 	if !acquired {
+		if groupRelease != nil {
+			groupRelease()
+		}
 		h.errorResponse(c, http.StatusTooManyRequests, "rate_limit_error", "Live concurrency limit reached")
 		return
 	}
-	defer userRelease()
+	defer combineReleaseFuncs(userRelease, groupRelease)()
 
 	identity := liveCallIdentity(c, apiKey, subject.UserID, subscription)
 	created, err := h.gatewayService.CreateLiveCall(c.Request.Context(), request, identity, subject.Concurrency)

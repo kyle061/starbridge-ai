@@ -18,6 +18,15 @@ import (
 
 const gatewayStreamHeartbeatBytesKey = "gateway_stream_heartbeat_bytes"
 
+const groupConcurrencyReleaseKey = "gateway_group_concurrency_release"
+
+func groupConcurrencyConfig(apiKey *service.APIKey) (int64, int) {
+	if apiKey == nil || apiKey.GroupID == nil || apiKey.Group == nil || apiKey.Group.ConcurrencyLimit <= 0 {
+		return 0, 0
+	}
+	return *apiKey.GroupID, apiKey.Group.ConcurrencyLimit
+}
+
 func recordGatewayStreamHeartbeat(c *gin.Context, written int) {
 	if c == nil || written <= 0 {
 		return
@@ -242,6 +251,31 @@ func (h *ConcurrencyHelper) TryAcquireUserSlotForAPIKey(ctx context.Context, use
 	return h.withAPIKeySlot(ctx, apiKeyID, releaseFunc), true, nil
 }
 
+// TryAcquireUserSlotForAPIKeyWithGroup acquires a user slot and an independent
+// group slot for WebSocket turn paths that do not have a gin.Context helper.
+func (h *ConcurrencyHelper) TryAcquireUserSlotForAPIKeyWithGroup(
+	ctx context.Context,
+	userID int64,
+	maxConcurrency int,
+	apiKeyID int64,
+	groupID int64,
+	groupLimit int,
+) (func(), bool, error) {
+	groupRelease, groupAcquired, err := h.TryAcquireGroupSlot(ctx, groupID, groupLimit)
+	if err != nil || !groupAcquired {
+		return nil, groupAcquired, err
+	}
+	userRelease, userAcquired, err := h.TryAcquireUserSlot(ctx, userID, maxConcurrency)
+	if err != nil || !userAcquired {
+		if groupRelease != nil {
+			groupRelease()
+		}
+		return nil, userAcquired, err
+	}
+	release := h.withAPIKeySlot(ctx, apiKeyID, userRelease)
+	return combineReleaseFuncs(release, groupRelease), true, nil
+}
+
 // AcquireOpenAIWSIngressLease bounds the whole client WebSocket lifecycle,
 // independently from per-turn user and account slots.
 func (h *ConcurrencyHelper) AcquireOpenAIWSIngressLease(ctx context.Context, apiKeyID int64, maxConnections int) (*service.OpenAIWSIngressLease, bool, error) {
@@ -264,6 +298,59 @@ func (h *ConcurrencyHelper) TryAcquireAccountSlot(ctx context.Context, accountID
 	return result.ReleaseFunc, true, nil
 }
 
+// TryAcquireGroupSlot attempts to acquire the configured group-wide ceiling.
+func (h *ConcurrencyHelper) TryAcquireGroupSlot(ctx context.Context, groupID int64, maxConcurrency int) (func(), bool, error) {
+	if h == nil || h.concurrencyService == nil {
+		return func() {}, true, nil
+	}
+	result, err := h.concurrencyService.AcquireGroupSlot(ctx, groupID, maxConcurrency)
+	if err != nil {
+		return nil, false, err
+	}
+	if result == nil || !result.Acquired {
+		return nil, false, nil
+	}
+	return result.ReleaseFunc, true, nil
+}
+
+// AcquireGroupSlotWithWait waits for the group-wide ceiling while preserving
+// the same streaming keepalive behavior as account/user slots.
+func (h *ConcurrencyHelper) AcquireGroupSlotWithWait(c *gin.Context, groupID int64, maxConcurrency int, isStream bool, streamStarted *bool) (func(), error) {
+	if maxConcurrency <= 0 || groupID <= 0 {
+		return func() {}, nil
+	}
+	return h.waitForSlotWithPing(c, "group", groupID, maxConcurrency, isStream, streamStarted)
+}
+
+func (h *ConcurrencyHelper) acquireGroupSlotFromGin(c *gin.Context, isStream bool, streamStarted *bool) (func(), error) {
+	if c == nil {
+		return func() {}, nil
+	}
+	if release, ok := c.Get(groupConcurrencyReleaseKey); ok {
+		if fn, ok := release.(func()); ok && fn != nil {
+			return func() {}, nil
+		}
+	}
+	apiKey, ok := middleware2.GetAPIKeyFromContext(c)
+	if !ok || apiKey == nil || apiKey.GroupID == nil || apiKey.Group == nil {
+		return func() {}, nil
+	}
+	limit := apiKey.Group.ConcurrencyLimit
+	if limit <= 0 {
+		return func() {}, nil
+	}
+	release, err := h.AcquireGroupSlotWithWait(c, *apiKey.GroupID, limit, isStream, streamStarted)
+	if err != nil {
+		return nil, err
+	}
+	if release == nil {
+		release = func() {}
+	}
+	wrapped := wrapReleaseOnDone(c.Request.Context(), release)
+	c.Set(groupConcurrencyReleaseKey, wrapped)
+	return wrapped, nil
+}
+
 // AcquireUserSlotWithWait acquires a user concurrency slot, waiting if necessary.
 // For streaming requests, sends ping events during the wait.
 // streamStarted is updated if streaming response has begun.
@@ -273,6 +360,16 @@ func (h *ConcurrencyHelper) AcquireUserSlotWithWait(c *gin.Context, userID int64
 
 func (h *ConcurrencyHelper) acquireUserSlotWithWaitTimeout(c *gin.Context, userID int64, maxConcurrency int, timeout time.Duration, isStream bool, streamStarted *bool) (func(), error) {
 	ctx := c.Request.Context()
+	groupRelease, err := h.acquireGroupSlotFromGin(c, isStream, streamStarted)
+	if err != nil {
+		return nil, err
+	}
+	releaseGroupOnFailure := true
+	defer func() {
+		if releaseGroupOnFailure && groupRelease != nil {
+			groupRelease()
+		}
+	}()
 
 	// Try to acquire immediately
 	releaseFunc, acquired, err := h.TryAcquireUserSlot(ctx, userID, maxConcurrency)
@@ -281,7 +378,8 @@ func (h *ConcurrencyHelper) acquireUserSlotWithWaitTimeout(c *gin.Context, userI
 	}
 
 	if acquired {
-		return h.withAPIKeySlotFromGin(c, releaseFunc), nil
+		releaseGroupOnFailure = false
+		return combineReleaseFuncs(h.withAPIKeySlotFromGin(c, releaseFunc), groupRelease), nil
 	}
 
 	queueLimit := service.CalculateMaxWait(maxConcurrency) - maxConcurrency
@@ -302,7 +400,8 @@ func (h *ConcurrencyHelper) acquireUserSlotWithWaitTimeout(c *gin.Context, userI
 	if err != nil {
 		return nil, err
 	}
-	return h.withAPIKeySlotFromGin(c, releaseFunc), nil
+	releaseGroupOnFailure = false
+	return combineReleaseFuncs(h.withAPIKeySlotFromGin(c, releaseFunc), groupRelease), nil
 }
 
 func (h *ConcurrencyHelper) withAPIKeySlotFromGin(c *gin.Context, releaseFunc func()) func() {
@@ -365,6 +464,9 @@ func (h *ConcurrencyHelper) waitForSlotWithPingTimeout(c *gin.Context, slotType 
 	acquireSlot := func() (*service.AcquireResult, error) {
 		if slotType == "user" {
 			return h.concurrencyService.AcquireUserSlot(ctx, id, maxConcurrency)
+		}
+		if slotType == "group" {
+			return h.concurrencyService.AcquireGroupSlot(ctx, id, maxConcurrency)
 		}
 		return h.concurrencyService.AcquireAccountSlot(ctx, id, maxConcurrency)
 	}
@@ -443,6 +545,19 @@ func (h *ConcurrencyHelper) waitForSlotWithPingTimeout(c *gin.Context, slotType 
 			backoff = nextBackoff(backoff)
 			timer.Reset(backoff)
 		}
+	}
+}
+
+func combineReleaseFuncs(first, second func()) func() {
+	if first == nil {
+		return second
+	}
+	if second == nil {
+		return first
+	}
+	return func() {
+		first()
+		second()
 	}
 }
 

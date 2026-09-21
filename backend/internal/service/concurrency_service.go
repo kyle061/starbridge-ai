@@ -61,6 +61,16 @@ type APIKeyConcurrencyCache interface {
 	GetAPIKeyConcurrencyBatch(ctx context.Context, apiKeyIDs []int64) (map[int64]int, error)
 }
 
+// GroupConcurrencyCache is an optional extension implemented by distributed
+// concurrency caches that enforce a group-wide request ceiling. It is kept
+// separate from ConcurrencyCache so lightweight test doubles and older cache
+// implementations remain source-compatible.
+type GroupConcurrencyCache interface {
+	AcquireGroupSlot(ctx context.Context, groupID int64, maxConcurrency int, requestID string) (bool, error)
+	ReleaseGroupSlot(ctx context.Context, groupID int64, requestID string) error
+	GetGroupConcurrency(ctx context.Context, groupID int64) (int, error)
+}
+
 // OpenAIWSIngressLeaseCache owns the short-lived distributed lease used to
 // bound live client WebSocket sessions. It is deliberately independent of the
 // request-slot namespace: idle ingress connections do not occupy turn slots.
@@ -412,6 +422,52 @@ func (s *ConcurrencyService) AcquireUserSlot(ctx context.Context, userID int64, 
 		Acquired:    false,
 		ReleaseFunc: nil,
 	}, nil
+}
+
+// AcquireGroupSlot attempts to acquire a slot from the independent group-wide
+// concurrency ceiling. A cache that does not implement GroupConcurrencyCache
+// fails open so older deployments can roll out the service code safely.
+func (s *ConcurrencyService) AcquireGroupSlot(ctx context.Context, groupID int64, maxConcurrency int) (*AcquireResult, error) {
+	if maxConcurrency <= 0 || groupID <= 0 || s == nil || s.cache == nil {
+		return &AcquireResult{Acquired: true, ReleaseFunc: func() {}}, nil
+	}
+
+	cache, ok := s.cache.(GroupConcurrencyCache)
+	if !ok {
+		return &AcquireResult{Acquired: true, ReleaseFunc: func() {}}, nil
+	}
+
+	requestID := generateRequestID()
+	acquired, err := cache.AcquireGroupSlot(ctx, groupID, maxConcurrency, requestID)
+	if err != nil {
+		return nil, err
+	}
+	if !acquired {
+		return &AcquireResult{Acquired: false}, nil
+	}
+
+	return &AcquireResult{
+		Acquired: true,
+		ReleaseFunc: func() {
+			bgCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := cache.ReleaseGroupSlot(bgCtx, groupID, requestID); err != nil {
+				logger.LegacyPrintf("service.concurrency", "Warning: failed to release group slot for %d (req=%s): %v", groupID, requestID, err)
+			}
+		},
+	}, nil
+}
+
+// GetGroupConcurrency returns the current best-effort group slot count.
+func (s *ConcurrencyService) GetGroupConcurrency(ctx context.Context, groupID int64) (int, error) {
+	if s == nil || s.cache == nil || groupID <= 0 {
+		return 0, nil
+	}
+	cache, ok := s.cache.(GroupConcurrencyCache)
+	if !ok {
+		return 0, nil
+	}
+	return cache.GetGroupConcurrency(ctx, groupID)
 }
 
 // TrackAPIKeySlot records one active request slot for an API key without
