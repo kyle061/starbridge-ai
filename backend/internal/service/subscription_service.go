@@ -38,6 +38,7 @@ var (
 	ErrDailyLimitExceeded          = infraerrors.TooManyRequests("DAILY_LIMIT_EXCEEDED", "daily usage limit exceeded")
 	ErrWeeklyLimitExceeded         = infraerrors.TooManyRequests("WEEKLY_LIMIT_EXCEEDED", "weekly usage limit exceeded")
 	ErrMonthlyLimitExceeded        = infraerrors.TooManyRequests("MONTHLY_LIMIT_EXCEEDED", "monthly usage limit exceeded")
+	ErrSubscriptionQuotaExceeded   = infraerrors.TooManyRequests("SUBSCRIPTION_QUOTA_EXCEEDED", "subscription quota exhausted")
 	ErrSubscriptionNilInput        = infraerrors.BadRequest("SUBSCRIPTION_NIL_INPUT", "subscription input cannot be nil")
 	ErrAdjustWouldExpire           = infraerrors.BadRequest("ADJUST_WOULD_EXPIRE", "adjustment would result in expired subscription (remaining days must be > 0)")
 )
@@ -192,11 +193,14 @@ func (s *SubscriptionService) invalidateSubscriptionCaches(userID, groupID int64
 
 // AssignSubscriptionInput 分配订阅输入
 type AssignSubscriptionInput struct {
-	UserID       int64
-	GroupID      int64
-	ValidityDays int
-	AssignedBy   int64
-	Notes        string
+	UserID          int64
+	GroupID         int64
+	ValidityDays    int
+	AssignedBy      int64
+	Notes           string
+	QuotaUSD        float64
+	UsageMultiplier float64
+	PlanName        string
 }
 
 // AssignSubscription 分配订阅给用户（不允许重复分配）
@@ -246,6 +250,9 @@ func (s *SubscriptionService) assignOrExtendSubscription(ctx context.Context, in
 	// 已有订阅，执行续期（在事务中完成所有更新）
 	if existingSub != nil {
 		if err := s.updateExistingSubscriptionTerm(ctx, existingSub.ID, validityDays, input.Notes, false); err != nil {
+			return nil, false, err
+		}
+		if err := s.applyPurchasedEntitlements(ctx, existingSub, input); err != nil {
 			return nil, false, err
 		}
 
@@ -424,15 +431,18 @@ func (s *SubscriptionService) createSubscription(ctx context.Context, input *Ass
 	}
 
 	sub := &UserSubscription{
-		UserID:     input.UserID,
-		GroupID:    input.GroupID,
-		StartsAt:   now,
-		ExpiresAt:  expiresAt,
-		Status:     SubscriptionStatusActive,
-		AssignedAt: now,
-		Notes:      input.Notes,
-		CreatedAt:  now,
-		UpdatedAt:  now,
+		UserID:          input.UserID,
+		GroupID:         input.GroupID,
+		StartsAt:        now,
+		ExpiresAt:       expiresAt,
+		Status:          SubscriptionStatusActive,
+		AssignedAt:      now,
+		Notes:           input.Notes,
+		QuotaUSD:        input.QuotaUSD,
+		UsageMultiplier: input.UsageMultiplier,
+		PlanName:        input.PlanName,
+		CreatedAt:       now,
+		UpdatedAt:       now,
 	}
 	// 只有当 AssignedBy > 0 时才设置（0 表示系统分配，如兑换码）
 	if input.AssignedBy > 0 {
@@ -445,6 +455,28 @@ func (s *SubscriptionService) createSubscription(ctx context.Context, input *Ass
 
 	// 重新获取完整订阅信息（包含关联）
 	return s.userSubRepo.GetByID(ctx, sub.ID)
+}
+
+func (s *SubscriptionService) applyPurchasedEntitlements(ctx context.Context, existing *UserSubscription, input *AssignSubscriptionInput) error {
+	if existing == nil || input == nil || (input.QuotaUSD <= 0 && input.UsageMultiplier <= 0 && strings.TrimSpace(input.PlanName) == "") {
+		return nil
+	}
+	current, err := s.userSubRepo.GetByIDForUpdate(ctx, existing.ID)
+	if err != nil {
+		return fmt.Errorf("lock subscription entitlements: %w", err)
+	}
+	// quota_usd=0 is the legacy/admin-assigned unlimited marker. Keep it
+	// unlimited when a user renews an unlimited subscription from the console.
+	if input.QuotaUSD > 0 && current.QuotaUSD > 0 {
+		current.QuotaUSD += input.QuotaUSD
+	}
+	if input.UsageMultiplier > 0 {
+		current.UsageMultiplier = input.UsageMultiplier
+	}
+	if strings.TrimSpace(input.PlanName) != "" {
+		current.PlanName = strings.TrimSpace(input.PlanName)
+	}
+	return s.userSubRepo.Update(ctx, current)
 }
 
 // BulkAssignSubscriptionInput 批量分配订阅输入
@@ -1042,6 +1074,9 @@ func (s *SubscriptionService) ValidateAndCheckLimits(sub *UserSubscription, grou
 	}
 	if !sub.CheckMonthlyLimit(group, 0) {
 		return needsMaintenance, ErrMonthlyLimitExceeded
+	}
+	if sub.QuotaUSD > 0 && sub.QuotaUsedUSD >= sub.QuotaUSD {
+		return needsMaintenance, ErrSubscriptionQuotaExceeded
 	}
 
 	return needsMaintenance, nil

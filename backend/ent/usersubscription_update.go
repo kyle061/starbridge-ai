@@ -250,6 +250,83 @@ func (_u *UserSubscriptionUpdate) AddMonthlyUsageUsd(v float64) *UserSubscriptio
 	return _u
 }
 
+// SetQuotaUsd sets the "quota_usd" field.
+func (_u *UserSubscriptionUpdate) SetQuotaUsd(v float64) *UserSubscriptionUpdate {
+	_u.mutation.ResetQuotaUsd()
+	_u.mutation.SetQuotaUsd(v)
+	return _u
+}
+
+// SetNillableQuotaUsd sets the "quota_usd" field if the given value is not nil.
+func (_u *UserSubscriptionUpdate) SetNillableQuotaUsd(v *float64) *UserSubscriptionUpdate {
+	if v != nil {
+		_u.SetQuotaUsd(*v)
+	}
+	return _u
+}
+
+// AddQuotaUsd adds value to the "quota_usd" field.
+func (_u *UserSubscriptionUpdate) AddQuotaUsd(v float64) *UserSubscriptionUpdate {
+	_u.mutation.AddQuotaUsd(v)
+	return _u
+}
+
+// SetQuotaUsedUsd sets the "quota_used_usd" field.
+func (_u *UserSubscriptionUpdate) SetQuotaUsedUsd(v float64) *UserSubscriptionUpdate {
+	_u.mutation.ResetQuotaUsedUsd()
+	_u.mutation.SetQuotaUsedUsd(v)
+	return _u
+}
+
+// SetNillableQuotaUsedUsd sets the "quota_used_usd" field if the given value is not nil.
+func (_u *UserSubscriptionUpdate) SetNillableQuotaUsedUsd(v *float64) *UserSubscriptionUpdate {
+	if v != nil {
+		_u.SetQuotaUsedUsd(*v)
+	}
+	return _u
+}
+
+// AddQuotaUsedUsd adds value to the "quota_used_usd" field.
+func (_u *UserSubscriptionUpdate) AddQuotaUsedUsd(v float64) *UserSubscriptionUpdate {
+	_u.mutation.AddQuotaUsedUsd(v)
+	return _u
+}
+
+// SetUsageMultiplier sets the "usage_multiplier" field.
+func (_u *UserSubscriptionUpdate) SetUsageMultiplier(v float64) *UserSubscriptionUpdate {
+	_u.mutation.ResetUsageMultiplier()
+	_u.mutation.SetUsageMultiplier(v)
+	return _u
+}
+
+// SetNillableUsageMultiplier sets the "usage_multiplier" field if the given value is not nil.
+func (_u *UserSubscriptionUpdate) SetNillableUsageMultiplier(v *float64) *UserSubscriptionUpdate {
+	if v != nil {
+		_u.SetUsageMultiplier(*v)
+	}
+	return _u
+}
+
+// AddUsageMultiplier adds value to the "usage_multiplier" field.
+func (_u *UserSubscriptionUpdate) AddUsageMultiplier(v float64) *UserSubscriptionUpdate {
+	_u.mutation.AddUsageMultiplier(v)
+	return _u
+}
+
+// SetPlanName sets the "plan_name" field.
+func (_u *UserSubscriptionUpdate) SetPlanName(v string) *UserSubscriptionUpdate {
+	_u.mutation.SetPlanName(v)
+	return _u
+}
+
+// SetNillablePlanName sets the "plan_name" field if the given value is not nil.
+func (_u *UserSubscriptionUpdate) SetNillablePlanName(v *string) *UserSubscriptionUpdate {
+	if v != nil {
+		_u.SetPlanName(*v)
+	}
+	return _u
+}
+
 // SetAssignedBy sets the "assigned_by" field.
 func (_u *UserSubscriptionUpdate) SetAssignedBy(v int64) *UserSubscriptionUpdate {
 	_u.mutation.SetAssignedBy(v)
@@ -441,6 +518,11 @@ func (_u *UserSubscriptionUpdate) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "UserSubscription.status": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.PlanName(); ok {
+		if err := usersubscription.PlanNameValidator(v); err != nil {
+			return &ValidationError{Name: "plan_name", err: fmt.Errorf(`ent: validator failed for field "UserSubscription.plan_name": %w`, err)}
+		}
+	}
 	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "UserSubscription.user"`)
 	}
@@ -515,6 +597,27 @@ func (_u *UserSubscriptionUpdate) sqlSave(ctx context.Context) (_node int, err e
 	}
 	if value, ok := _u.mutation.AddedMonthlyUsageUsd(); ok {
 		_spec.AddField(usersubscription.FieldMonthlyUsageUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.QuotaUsd(); ok {
+		_spec.SetField(usersubscription.FieldQuotaUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedQuotaUsd(); ok {
+		_spec.AddField(usersubscription.FieldQuotaUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.QuotaUsedUsd(); ok {
+		_spec.SetField(usersubscription.FieldQuotaUsedUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedQuotaUsedUsd(); ok {
+		_spec.AddField(usersubscription.FieldQuotaUsedUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.UsageMultiplier(); ok {
+		_spec.SetField(usersubscription.FieldUsageMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedUsageMultiplier(); ok {
+		_spec.AddField(usersubscription.FieldUsageMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.PlanName(); ok {
+		_spec.SetField(usersubscription.FieldPlanName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.AssignedAt(); ok {
 		_spec.SetField(usersubscription.FieldAssignedAt, field.TypeTime, value)
@@ -896,6 +999,83 @@ func (_u *UserSubscriptionUpdateOne) AddMonthlyUsageUsd(v float64) *UserSubscrip
 	return _u
 }
 
+// SetQuotaUsd sets the "quota_usd" field.
+func (_u *UserSubscriptionUpdateOne) SetQuotaUsd(v float64) *UserSubscriptionUpdateOne {
+	_u.mutation.ResetQuotaUsd()
+	_u.mutation.SetQuotaUsd(v)
+	return _u
+}
+
+// SetNillableQuotaUsd sets the "quota_usd" field if the given value is not nil.
+func (_u *UserSubscriptionUpdateOne) SetNillableQuotaUsd(v *float64) *UserSubscriptionUpdateOne {
+	if v != nil {
+		_u.SetQuotaUsd(*v)
+	}
+	return _u
+}
+
+// AddQuotaUsd adds value to the "quota_usd" field.
+func (_u *UserSubscriptionUpdateOne) AddQuotaUsd(v float64) *UserSubscriptionUpdateOne {
+	_u.mutation.AddQuotaUsd(v)
+	return _u
+}
+
+// SetQuotaUsedUsd sets the "quota_used_usd" field.
+func (_u *UserSubscriptionUpdateOne) SetQuotaUsedUsd(v float64) *UserSubscriptionUpdateOne {
+	_u.mutation.ResetQuotaUsedUsd()
+	_u.mutation.SetQuotaUsedUsd(v)
+	return _u
+}
+
+// SetNillableQuotaUsedUsd sets the "quota_used_usd" field if the given value is not nil.
+func (_u *UserSubscriptionUpdateOne) SetNillableQuotaUsedUsd(v *float64) *UserSubscriptionUpdateOne {
+	if v != nil {
+		_u.SetQuotaUsedUsd(*v)
+	}
+	return _u
+}
+
+// AddQuotaUsedUsd adds value to the "quota_used_usd" field.
+func (_u *UserSubscriptionUpdateOne) AddQuotaUsedUsd(v float64) *UserSubscriptionUpdateOne {
+	_u.mutation.AddQuotaUsedUsd(v)
+	return _u
+}
+
+// SetUsageMultiplier sets the "usage_multiplier" field.
+func (_u *UserSubscriptionUpdateOne) SetUsageMultiplier(v float64) *UserSubscriptionUpdateOne {
+	_u.mutation.ResetUsageMultiplier()
+	_u.mutation.SetUsageMultiplier(v)
+	return _u
+}
+
+// SetNillableUsageMultiplier sets the "usage_multiplier" field if the given value is not nil.
+func (_u *UserSubscriptionUpdateOne) SetNillableUsageMultiplier(v *float64) *UserSubscriptionUpdateOne {
+	if v != nil {
+		_u.SetUsageMultiplier(*v)
+	}
+	return _u
+}
+
+// AddUsageMultiplier adds value to the "usage_multiplier" field.
+func (_u *UserSubscriptionUpdateOne) AddUsageMultiplier(v float64) *UserSubscriptionUpdateOne {
+	_u.mutation.AddUsageMultiplier(v)
+	return _u
+}
+
+// SetPlanName sets the "plan_name" field.
+func (_u *UserSubscriptionUpdateOne) SetPlanName(v string) *UserSubscriptionUpdateOne {
+	_u.mutation.SetPlanName(v)
+	return _u
+}
+
+// SetNillablePlanName sets the "plan_name" field if the given value is not nil.
+func (_u *UserSubscriptionUpdateOne) SetNillablePlanName(v *string) *UserSubscriptionUpdateOne {
+	if v != nil {
+		_u.SetPlanName(*v)
+	}
+	return _u
+}
+
 // SetAssignedBy sets the "assigned_by" field.
 func (_u *UserSubscriptionUpdateOne) SetAssignedBy(v int64) *UserSubscriptionUpdateOne {
 	_u.mutation.SetAssignedBy(v)
@@ -1100,6 +1280,11 @@ func (_u *UserSubscriptionUpdateOne) check() error {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "UserSubscription.status": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.PlanName(); ok {
+		if err := usersubscription.PlanNameValidator(v); err != nil {
+			return &ValidationError{Name: "plan_name", err: fmt.Errorf(`ent: validator failed for field "UserSubscription.plan_name": %w`, err)}
+		}
+	}
 	if _u.mutation.UserCleared() && len(_u.mutation.UserIDs()) > 0 {
 		return errors.New(`ent: clearing a required unique edge "UserSubscription.user"`)
 	}
@@ -1191,6 +1376,27 @@ func (_u *UserSubscriptionUpdateOne) sqlSave(ctx context.Context) (_node *UserSu
 	}
 	if value, ok := _u.mutation.AddedMonthlyUsageUsd(); ok {
 		_spec.AddField(usersubscription.FieldMonthlyUsageUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.QuotaUsd(); ok {
+		_spec.SetField(usersubscription.FieldQuotaUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedQuotaUsd(); ok {
+		_spec.AddField(usersubscription.FieldQuotaUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.QuotaUsedUsd(); ok {
+		_spec.SetField(usersubscription.FieldQuotaUsedUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedQuotaUsedUsd(); ok {
+		_spec.AddField(usersubscription.FieldQuotaUsedUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.UsageMultiplier(); ok {
+		_spec.SetField(usersubscription.FieldUsageMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedUsageMultiplier(); ok {
+		_spec.AddField(usersubscription.FieldUsageMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.PlanName(); ok {
+		_spec.SetField(usersubscription.FieldPlanName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.AssignedAt(); ok {
 		_spec.SetField(usersubscription.FieldAssignedAt, field.TypeTime, value)

@@ -38,6 +38,10 @@ func (r *userSubscriptionRepository) Create(ctx context.Context, sub *service.Us
 		SetDailyUsageUsd(sub.DailyUsageUSD).
 		SetWeeklyUsageUsd(sub.WeeklyUsageUSD).
 		SetMonthlyUsageUsd(sub.MonthlyUsageUSD).
+		SetQuotaUsd(sub.QuotaUSD).
+		SetQuotaUsedUsd(sub.QuotaUsedUSD).
+		SetUsageMultiplier(sub.UsageMultiplier).
+		SetPlanName(sub.PlanName).
 		SetNillableAssignedBy(sub.AssignedBy)
 
 	if sub.StartsAt.IsZero() {
@@ -149,6 +153,10 @@ func (r *userSubscriptionRepository) Update(ctx context.Context, sub *service.Us
 		SetDailyUsageUsd(sub.DailyUsageUSD).
 		SetWeeklyUsageUsd(sub.WeeklyUsageUSD).
 		SetMonthlyUsageUsd(sub.MonthlyUsageUSD).
+		SetQuotaUsd(sub.QuotaUSD).
+		SetQuotaUsedUsd(sub.QuotaUsedUSD).
+		SetUsageMultiplier(sub.UsageMultiplier).
+		SetPlanName(sub.PlanName).
 		SetNillableAssignedBy(sub.AssignedBy).
 		SetAssignedAt(sub.AssignedAt).
 		SetNotes(sub.Notes)
@@ -475,12 +483,14 @@ func (r *userSubscriptionRepository) IncrementUsage(ctx context.Context, id int6
 			daily_usage_usd = us.daily_usage_usd + $1,
 			weekly_usage_usd = us.weekly_usage_usd + $1,
 			monthly_usage_usd = us.monthly_usage_usd + $1,
+			quota_used_usd = CASE WHEN us.quota_usd > 0 THEN us.quota_used_usd + $1 ELSE us.quota_used_usd END,
 			updated_at = NOW()
 		FROM groups g
 		WHERE us.id = $2
 			AND us.deleted_at IS NULL
 			AND us.group_id = g.id
 			AND g.deleted_at IS NULL
+			AND (us.quota_usd <= 0 OR us.quota_used_usd + $1 <= us.quota_usd)
 	`
 
 	client := clientFromContext(ctx, r.client)
@@ -498,7 +508,10 @@ func (r *userSubscriptionRepository) IncrementUsage(ctx context.Context, id int6
 		return nil
 	}
 
-	// affected == 0：订阅不存在或已删除
+	existing, lookupErr := client.UserSubscription.Get(ctx, id)
+	if lookupErr == nil && existing.QuotaUsd > 0 && existing.QuotaUsedUsd+costUSD > existing.QuotaUsd {
+		return service.ErrSubscriptionQuotaExceeded
+	}
 	return service.ErrSubscriptionNotFound
 }
 
@@ -653,6 +666,10 @@ func userSubscriptionEntityToServiceWithStatusMapping(m *dbent.UserSubscription,
 		DailyUsageUSD:      m.DailyUsageUsd,
 		WeeklyUsageUSD:     m.WeeklyUsageUsd,
 		MonthlyUsageUSD:    m.MonthlyUsageUsd,
+		QuotaUSD:           m.QuotaUsd,
+		QuotaUsedUSD:       m.QuotaUsedUsd,
+		UsageMultiplier:    m.UsageMultiplier,
+		PlanName:           m.PlanName,
 		AssignedBy:         m.AssignedBy,
 		AssignedAt:         m.AssignedAt,
 		Notes:              derefString(m.Notes),

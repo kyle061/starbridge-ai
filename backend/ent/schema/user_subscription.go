@@ -68,6 +68,22 @@ func (UserSubscription) Fields() []ent.Field {
 		field.Float("monthly_usage_usd").
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,10)"}).
 			Default(0),
+		// quota_usd is the total purchased subscription quota. Zero means
+		// unlimited for legacy/admin-assigned subscriptions.
+		field.Float("quota_usd").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,10)"}).
+			Default(0),
+		field.Float("quota_used_usd").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,10)"}).
+			Default(0),
+		// usage_multiplier is snapshotted from the purchased plan. Zero keeps
+		// legacy/admin-assigned subscriptions on the group multiplier.
+		field.Float("usage_multiplier").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,4)"}).
+			Default(0),
+		field.String("plan_name").
+			MaxLen(100).
+			Default(""),
 
 		field.Int64("assigned_by").
 			Optional().

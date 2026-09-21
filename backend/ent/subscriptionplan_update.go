@@ -98,6 +98,48 @@ func (_u *SubscriptionPlanUpdate) AddPrice(v float64) *SubscriptionPlanUpdate {
 	return _u
 }
 
+// SetQuotaMultiplier sets the "quota_multiplier" field.
+func (_u *SubscriptionPlanUpdate) SetQuotaMultiplier(v float64) *SubscriptionPlanUpdate {
+	_u.mutation.ResetQuotaMultiplier()
+	_u.mutation.SetQuotaMultiplier(v)
+	return _u
+}
+
+// SetNillableQuotaMultiplier sets the "quota_multiplier" field if the given value is not nil.
+func (_u *SubscriptionPlanUpdate) SetNillableQuotaMultiplier(v *float64) *SubscriptionPlanUpdate {
+	if v != nil {
+		_u.SetQuotaMultiplier(*v)
+	}
+	return _u
+}
+
+// AddQuotaMultiplier adds value to the "quota_multiplier" field.
+func (_u *SubscriptionPlanUpdate) AddQuotaMultiplier(v float64) *SubscriptionPlanUpdate {
+	_u.mutation.AddQuotaMultiplier(v)
+	return _u
+}
+
+// SetUsageMultiplier sets the "usage_multiplier" field.
+func (_u *SubscriptionPlanUpdate) SetUsageMultiplier(v float64) *SubscriptionPlanUpdate {
+	_u.mutation.ResetUsageMultiplier()
+	_u.mutation.SetUsageMultiplier(v)
+	return _u
+}
+
+// SetNillableUsageMultiplier sets the "usage_multiplier" field if the given value is not nil.
+func (_u *SubscriptionPlanUpdate) SetNillableUsageMultiplier(v *float64) *SubscriptionPlanUpdate {
+	if v != nil {
+		_u.SetUsageMultiplier(*v)
+	}
+	return _u
+}
+
+// AddUsageMultiplier adds value to the "usage_multiplier" field.
+func (_u *SubscriptionPlanUpdate) AddUsageMultiplier(v float64) *SubscriptionPlanUpdate {
+	_u.mutation.AddUsageMultiplier(v)
+	return _u
+}
+
 // SetOriginalPrice sets the "original_price" field.
 func (_u *SubscriptionPlanUpdate) SetOriginalPrice(v float64) *SubscriptionPlanUpdate {
 	_u.mutation.ResetOriginalPrice()
@@ -339,6 +381,18 @@ func (_u *SubscriptionPlanUpdate) sqlSave(ctx context.Context) (_node int, err e
 	if value, ok := _u.mutation.AddedPrice(); ok {
 		_spec.AddField(subscriptionplan.FieldPrice, field.TypeFloat64, value)
 	}
+	if value, ok := _u.mutation.QuotaMultiplier(); ok {
+		_spec.SetField(subscriptionplan.FieldQuotaMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedQuotaMultiplier(); ok {
+		_spec.AddField(subscriptionplan.FieldQuotaMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.UsageMultiplier(); ok {
+		_spec.SetField(subscriptionplan.FieldUsageMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedUsageMultiplier(); ok {
+		_spec.AddField(subscriptionplan.FieldUsageMultiplier, field.TypeFloat64, value)
+	}
 	if value, ok := _u.mutation.OriginalPrice(); ok {
 		_spec.SetField(subscriptionplan.FieldOriginalPrice, field.TypeFloat64, value)
 	}
@@ -465,6 +519,48 @@ func (_u *SubscriptionPlanUpdateOne) SetNillablePrice(v *float64) *SubscriptionP
 // AddPrice adds value to the "price" field.
 func (_u *SubscriptionPlanUpdateOne) AddPrice(v float64) *SubscriptionPlanUpdateOne {
 	_u.mutation.AddPrice(v)
+	return _u
+}
+
+// SetQuotaMultiplier sets the "quota_multiplier" field.
+func (_u *SubscriptionPlanUpdateOne) SetQuotaMultiplier(v float64) *SubscriptionPlanUpdateOne {
+	_u.mutation.ResetQuotaMultiplier()
+	_u.mutation.SetQuotaMultiplier(v)
+	return _u
+}
+
+// SetNillableQuotaMultiplier sets the "quota_multiplier" field if the given value is not nil.
+func (_u *SubscriptionPlanUpdateOne) SetNillableQuotaMultiplier(v *float64) *SubscriptionPlanUpdateOne {
+	if v != nil {
+		_u.SetQuotaMultiplier(*v)
+	}
+	return _u
+}
+
+// AddQuotaMultiplier adds value to the "quota_multiplier" field.
+func (_u *SubscriptionPlanUpdateOne) AddQuotaMultiplier(v float64) *SubscriptionPlanUpdateOne {
+	_u.mutation.AddQuotaMultiplier(v)
+	return _u
+}
+
+// SetUsageMultiplier sets the "usage_multiplier" field.
+func (_u *SubscriptionPlanUpdateOne) SetUsageMultiplier(v float64) *SubscriptionPlanUpdateOne {
+	_u.mutation.ResetUsageMultiplier()
+	_u.mutation.SetUsageMultiplier(v)
+	return _u
+}
+
+// SetNillableUsageMultiplier sets the "usage_multiplier" field if the given value is not nil.
+func (_u *SubscriptionPlanUpdateOne) SetNillableUsageMultiplier(v *float64) *SubscriptionPlanUpdateOne {
+	if v != nil {
+		_u.SetUsageMultiplier(*v)
+	}
+	return _u
+}
+
+// AddUsageMultiplier adds value to the "usage_multiplier" field.
+func (_u *SubscriptionPlanUpdateOne) AddUsageMultiplier(v float64) *SubscriptionPlanUpdateOne {
+	_u.mutation.AddUsageMultiplier(v)
 	return _u
 }
 
@@ -738,6 +834,18 @@ func (_u *SubscriptionPlanUpdateOne) sqlSave(ctx context.Context) (_node *Subscr
 	}
 	if value, ok := _u.mutation.AddedPrice(); ok {
 		_spec.AddField(subscriptionplan.FieldPrice, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.QuotaMultiplier(); ok {
+		_spec.SetField(subscriptionplan.FieldQuotaMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedQuotaMultiplier(); ok {
+		_spec.AddField(subscriptionplan.FieldQuotaMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.UsageMultiplier(); ok {
+		_spec.SetField(subscriptionplan.FieldUsageMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedUsageMultiplier(); ok {
+		_spec.AddField(subscriptionplan.FieldUsageMultiplier, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.OriginalPrice(); ok {
 		_spec.SetField(subscriptionplan.FieldOriginalPrice, field.TypeFloat64, value)

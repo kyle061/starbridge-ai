@@ -74,6 +74,16 @@ func Price(v float64) predicate.SubscriptionPlan {
 	return predicate.SubscriptionPlan(sql.FieldEQ(FieldPrice, v))
 }
 
+// QuotaMultiplier applies equality check predicate on the "quota_multiplier" field. It's identical to QuotaMultiplierEQ.
+func QuotaMultiplier(v float64) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldEQ(FieldQuotaMultiplier, v))
+}
+
+// UsageMultiplier applies equality check predicate on the "usage_multiplier" field. It's identical to UsageMultiplierEQ.
+func UsageMultiplier(v float64) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldEQ(FieldUsageMultiplier, v))
+}
+
 // OriginalPrice applies equality check predicate on the "original_price" field. It's identical to OriginalPriceEQ.
 func OriginalPrice(v float64) predicate.SubscriptionPlan {
 	return predicate.SubscriptionPlan(sql.FieldEQ(FieldOriginalPrice, v))
@@ -332,6 +342,86 @@ func PriceLT(v float64) predicate.SubscriptionPlan {
 // PriceLTE applies the LTE predicate on the "price" field.
 func PriceLTE(v float64) predicate.SubscriptionPlan {
 	return predicate.SubscriptionPlan(sql.FieldLTE(FieldPrice, v))
+}
+
+// QuotaMultiplierEQ applies the EQ predicate on the "quota_multiplier" field.
+func QuotaMultiplierEQ(v float64) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldEQ(FieldQuotaMultiplier, v))
+}
+
+// QuotaMultiplierNEQ applies the NEQ predicate on the "quota_multiplier" field.
+func QuotaMultiplierNEQ(v float64) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldNEQ(FieldQuotaMultiplier, v))
+}
+
+// QuotaMultiplierIn applies the In predicate on the "quota_multiplier" field.
+func QuotaMultiplierIn(vs ...float64) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldIn(FieldQuotaMultiplier, vs...))
+}
+
+// QuotaMultiplierNotIn applies the NotIn predicate on the "quota_multiplier" field.
+func QuotaMultiplierNotIn(vs ...float64) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldNotIn(FieldQuotaMultiplier, vs...))
+}
+
+// QuotaMultiplierGT applies the GT predicate on the "quota_multiplier" field.
+func QuotaMultiplierGT(v float64) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldGT(FieldQuotaMultiplier, v))
+}
+
+// QuotaMultiplierGTE applies the GTE predicate on the "quota_multiplier" field.
+func QuotaMultiplierGTE(v float64) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldGTE(FieldQuotaMultiplier, v))
+}
+
+// QuotaMultiplierLT applies the LT predicate on the "quota_multiplier" field.
+func QuotaMultiplierLT(v float64) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldLT(FieldQuotaMultiplier, v))
+}
+
+// QuotaMultiplierLTE applies the LTE predicate on the "quota_multiplier" field.
+func QuotaMultiplierLTE(v float64) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldLTE(FieldQuotaMultiplier, v))
+}
+
+// UsageMultiplierEQ applies the EQ predicate on the "usage_multiplier" field.
+func UsageMultiplierEQ(v float64) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldEQ(FieldUsageMultiplier, v))
+}
+
+// UsageMultiplierNEQ applies the NEQ predicate on the "usage_multiplier" field.
+func UsageMultiplierNEQ(v float64) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldNEQ(FieldUsageMultiplier, v))
+}
+
+// UsageMultiplierIn applies the In predicate on the "usage_multiplier" field.
+func UsageMultiplierIn(vs ...float64) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldIn(FieldUsageMultiplier, vs...))
+}
+
+// UsageMultiplierNotIn applies the NotIn predicate on the "usage_multiplier" field.
+func UsageMultiplierNotIn(vs ...float64) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldNotIn(FieldUsageMultiplier, vs...))
+}
+
+// UsageMultiplierGT applies the GT predicate on the "usage_multiplier" field.
+func UsageMultiplierGT(v float64) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldGT(FieldUsageMultiplier, v))
+}
+
+// UsageMultiplierGTE applies the GTE predicate on the "usage_multiplier" field.
+func UsageMultiplierGTE(v float64) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldGTE(FieldUsageMultiplier, v))
+}
+
+// UsageMultiplierLT applies the LT predicate on the "usage_multiplier" field.
+func UsageMultiplierLT(v float64) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldLT(FieldUsageMultiplier, v))
+}
+
+// UsageMultiplierLTE applies the LTE predicate on the "usage_multiplier" field.
+func UsageMultiplierLTE(v float64) predicate.SubscriptionPlan {
+	return predicate.SubscriptionPlan(sql.FieldLTE(FieldUsageMultiplier, v))
 }
 
 // OriginalPriceEQ applies the EQ predicate on the "original_price" field.

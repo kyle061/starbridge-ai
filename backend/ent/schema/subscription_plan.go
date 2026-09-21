@@ -39,6 +39,16 @@ func (SubscriptionPlan) Fields() []ent.Field {
 			Default(""),
 		field.Float("price").
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,2)"}),
+		// quota_multiplier controls how much subscription quota a customer gets
+		// for each unit of the plan price (for example 1:10).
+		field.Float("quota_multiplier").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,4)"}).
+			Default(10),
+		// usage_multiplier is snapshotted onto a purchased subscription and
+		// controls the customer-facing consumption rate (default 12x).
+		field.Float("usage_multiplier").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,4)"}).
+			Default(12),
 		field.Float("original_price").
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,2)"}).
 			Optional().

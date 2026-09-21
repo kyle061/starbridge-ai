@@ -45,6 +45,12 @@
 
       <!-- Group quota info (compact) -->
       <div class="mb-3 grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg bg-gray-50 px-3 py-2 text-xs dark:bg-dark-700/50">
+        <div class="col-span-2 flex items-center justify-between">
+          <span class="text-gray-400 dark:text-dark-500">{{ t('payment.planCard.subscriptionQuota') }}</span>
+          <span class="font-medium text-gray-700 dark:text-gray-300">
+            ¥{{ subscriptionQuota.toFixed(2) }} · {{ t('payment.planCard.usageRate') }} {{ usageMultiplier.toFixed(2) }}x
+          </span>
+        </div>
         <div v-if="plan.daily_limit_usd != null" class="flex items-center justify-between">
           <span class="text-gray-400 dark:text-dark-500">{{ t('payment.planCard.dailyLimit') }}</span>
           <span class="font-medium text-gray-700 dark:text-gray-300">${{ plan.daily_limit_usd }}</span>
@@ -157,4 +163,6 @@ const modelScopeLabels = computed(() => {
 })
 
 const validitySuffix = computed(() => planValiditySuffix(props.plan, t))
+const subscriptionQuota = computed(() => props.plan.price * (props.plan.quota_multiplier || 10))
+const usageMultiplier = computed(() => props.plan.usage_multiplier || 12)
 </script>

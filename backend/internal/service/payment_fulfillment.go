@@ -588,11 +588,14 @@ func (s *PaymentService) ensurePaymentSubscriptionAssigned(ctx context.Context, 
 			return fmt.Errorf("check existing subscription assignment: %w", lookupErr)
 		default:
 			if _, _, err := s.subscriptionSvc.assignOrExtendSubscription(txCtx, &AssignSubscriptionInput{
-				UserID:       o.UserID,
-				GroupID:      groupID,
-				ValidityDays: days,
-				AssignedBy:   0,
-				Notes:        orderNote,
+				UserID:          o.UserID,
+				GroupID:         groupID,
+				ValidityDays:    days,
+				AssignedBy:      0,
+				Notes:           orderNote,
+				QuotaUSD:        valueOrZeroFloat(o.SubscriptionQuotaUsd),
+				UsageMultiplier: valueOrZeroFloat(o.SubscriptionUsageMultiplier),
+				PlanName:        valueOrZeroString(o.SubscriptionPlanName),
 			}, true); err != nil {
 				return fmt.Errorf("assign subscription: %w", err)
 			}
@@ -631,6 +634,20 @@ func (s *PaymentService) ensurePaymentSubscriptionAssigned(ctx context.Context, 
 		return fmt.Errorf("invalidate subscription cache after fulfillment: %w", err)
 	}
 	return nil
+}
+
+func valueOrZeroFloat(value *float64) float64 {
+	if value == nil {
+		return 0
+	}
+	return *value
+}
+
+func valueOrZeroString(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
 
 func hasPaymentSubscriptionAssignmentAudit(ctx context.Context, client *dbent.Client, orderID int64) (bool, error) {

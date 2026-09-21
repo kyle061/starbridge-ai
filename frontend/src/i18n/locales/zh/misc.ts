@@ -8,6 +8,7 @@ export default {
     daily: '每日',
     weekly: '每周',
     monthly: '每月',
+    quota: '额度',
     daysRemaining: '剩余 {days} 天',
     expired: '已过期',
     expiresToday: '今天到期',
@@ -134,7 +135,9 @@ export default {
     resetIn: '{time} 后重置',
     quotaEndsIn: '额度将在 {time} 后结束',
     windowNotActive: '等待首次使用',
-    usageOf: '已用 {used} / {limit}'
+    usageOf: '已用 {used} / {limit}',
+    subscriptionQuota: '订阅额度',
+    usageRate: '消耗倍率：'
   },
 
   // Onboarding Tour
@@ -504,6 +507,9 @@ export default {
       dailyLimit: '日限额',
       weeklyLimit: '周限额',
       monthlyLimit: '月限额',
+      subscriptionQuota: '订阅额度',
+      usageRate: '消耗倍率',
+      validityBound: '有效期',
       quota: '配额',
       unlimited: '无限制',
       models: '模型',
@@ -596,6 +602,13 @@ export default {
       deletePlanConfirm: '确定要删除此套餐吗？',
       originalPrice: '原价',
       price: '价格',
+      entitlements: '权益倍率',
+      quotaMultiplier: '订阅额度倍率',
+      usageMultiplier: '订阅消耗倍率',
+      quotaMultiplierHint: '订阅额度 = 价格 × 此倍率（默认 10 倍）',
+      usageMultiplierHint: '订阅消耗按此倍率计费（默认 12 倍）',
+      quotaMultiplierShort: '额度',
+      usageMultiplierShort: '消耗',
       currency: '币种标注',
       currencyPlaceholder: '如 USD / NZD / CNY',
       currencyHint: '仅用于价格展示的 ISO 三字母币种码，留空不展示，不影响实际扣款',

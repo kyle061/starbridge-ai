@@ -145,6 +145,21 @@ func SubscriptionDays(v int) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldSubscriptionDays, v))
 }
 
+// SubscriptionQuotaUsd applies equality check predicate on the "subscription_quota_usd" field. It's identical to SubscriptionQuotaUsdEQ.
+func SubscriptionQuotaUsd(v float64) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldSubscriptionQuotaUsd, v))
+}
+
+// SubscriptionUsageMultiplier applies equality check predicate on the "subscription_usage_multiplier" field. It's identical to SubscriptionUsageMultiplierEQ.
+func SubscriptionUsageMultiplier(v float64) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldSubscriptionUsageMultiplier, v))
+}
+
+// SubscriptionPlanName applies equality check predicate on the "subscription_plan_name" field. It's identical to SubscriptionPlanNameEQ.
+func SubscriptionPlanName(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldSubscriptionPlanName, v))
+}
+
 // ProviderInstanceID applies equality check predicate on the "provider_instance_id" field. It's identical to ProviderInstanceIDEQ.
 func ProviderInstanceID(v string) predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldEQ(FieldProviderInstanceID, v))
@@ -1288,6 +1303,181 @@ func SubscriptionDaysIsNil() predicate.PaymentOrder {
 // SubscriptionDaysNotNil applies the NotNil predicate on the "subscription_days" field.
 func SubscriptionDaysNotNil() predicate.PaymentOrder {
 	return predicate.PaymentOrder(sql.FieldNotNull(FieldSubscriptionDays))
+}
+
+// SubscriptionQuotaUsdEQ applies the EQ predicate on the "subscription_quota_usd" field.
+func SubscriptionQuotaUsdEQ(v float64) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldSubscriptionQuotaUsd, v))
+}
+
+// SubscriptionQuotaUsdNEQ applies the NEQ predicate on the "subscription_quota_usd" field.
+func SubscriptionQuotaUsdNEQ(v float64) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNEQ(FieldSubscriptionQuotaUsd, v))
+}
+
+// SubscriptionQuotaUsdIn applies the In predicate on the "subscription_quota_usd" field.
+func SubscriptionQuotaUsdIn(vs ...float64) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIn(FieldSubscriptionQuotaUsd, vs...))
+}
+
+// SubscriptionQuotaUsdNotIn applies the NotIn predicate on the "subscription_quota_usd" field.
+func SubscriptionQuotaUsdNotIn(vs ...float64) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotIn(FieldSubscriptionQuotaUsd, vs...))
+}
+
+// SubscriptionQuotaUsdGT applies the GT predicate on the "subscription_quota_usd" field.
+func SubscriptionQuotaUsdGT(v float64) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGT(FieldSubscriptionQuotaUsd, v))
+}
+
+// SubscriptionQuotaUsdGTE applies the GTE predicate on the "subscription_quota_usd" field.
+func SubscriptionQuotaUsdGTE(v float64) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGTE(FieldSubscriptionQuotaUsd, v))
+}
+
+// SubscriptionQuotaUsdLT applies the LT predicate on the "subscription_quota_usd" field.
+func SubscriptionQuotaUsdLT(v float64) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLT(FieldSubscriptionQuotaUsd, v))
+}
+
+// SubscriptionQuotaUsdLTE applies the LTE predicate on the "subscription_quota_usd" field.
+func SubscriptionQuotaUsdLTE(v float64) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLTE(FieldSubscriptionQuotaUsd, v))
+}
+
+// SubscriptionQuotaUsdIsNil applies the IsNil predicate on the "subscription_quota_usd" field.
+func SubscriptionQuotaUsdIsNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIsNull(FieldSubscriptionQuotaUsd))
+}
+
+// SubscriptionQuotaUsdNotNil applies the NotNil predicate on the "subscription_quota_usd" field.
+func SubscriptionQuotaUsdNotNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotNull(FieldSubscriptionQuotaUsd))
+}
+
+// SubscriptionUsageMultiplierEQ applies the EQ predicate on the "subscription_usage_multiplier" field.
+func SubscriptionUsageMultiplierEQ(v float64) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldSubscriptionUsageMultiplier, v))
+}
+
+// SubscriptionUsageMultiplierNEQ applies the NEQ predicate on the "subscription_usage_multiplier" field.
+func SubscriptionUsageMultiplierNEQ(v float64) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNEQ(FieldSubscriptionUsageMultiplier, v))
+}
+
+// SubscriptionUsageMultiplierIn applies the In predicate on the "subscription_usage_multiplier" field.
+func SubscriptionUsageMultiplierIn(vs ...float64) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIn(FieldSubscriptionUsageMultiplier, vs...))
+}
+
+// SubscriptionUsageMultiplierNotIn applies the NotIn predicate on the "subscription_usage_multiplier" field.
+func SubscriptionUsageMultiplierNotIn(vs ...float64) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotIn(FieldSubscriptionUsageMultiplier, vs...))
+}
+
+// SubscriptionUsageMultiplierGT applies the GT predicate on the "subscription_usage_multiplier" field.
+func SubscriptionUsageMultiplierGT(v float64) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGT(FieldSubscriptionUsageMultiplier, v))
+}
+
+// SubscriptionUsageMultiplierGTE applies the GTE predicate on the "subscription_usage_multiplier" field.
+func SubscriptionUsageMultiplierGTE(v float64) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGTE(FieldSubscriptionUsageMultiplier, v))
+}
+
+// SubscriptionUsageMultiplierLT applies the LT predicate on the "subscription_usage_multiplier" field.
+func SubscriptionUsageMultiplierLT(v float64) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLT(FieldSubscriptionUsageMultiplier, v))
+}
+
+// SubscriptionUsageMultiplierLTE applies the LTE predicate on the "subscription_usage_multiplier" field.
+func SubscriptionUsageMultiplierLTE(v float64) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLTE(FieldSubscriptionUsageMultiplier, v))
+}
+
+// SubscriptionUsageMultiplierIsNil applies the IsNil predicate on the "subscription_usage_multiplier" field.
+func SubscriptionUsageMultiplierIsNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIsNull(FieldSubscriptionUsageMultiplier))
+}
+
+// SubscriptionUsageMultiplierNotNil applies the NotNil predicate on the "subscription_usage_multiplier" field.
+func SubscriptionUsageMultiplierNotNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotNull(FieldSubscriptionUsageMultiplier))
+}
+
+// SubscriptionPlanNameEQ applies the EQ predicate on the "subscription_plan_name" field.
+func SubscriptionPlanNameEQ(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEQ(FieldSubscriptionPlanName, v))
+}
+
+// SubscriptionPlanNameNEQ applies the NEQ predicate on the "subscription_plan_name" field.
+func SubscriptionPlanNameNEQ(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNEQ(FieldSubscriptionPlanName, v))
+}
+
+// SubscriptionPlanNameIn applies the In predicate on the "subscription_plan_name" field.
+func SubscriptionPlanNameIn(vs ...string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIn(FieldSubscriptionPlanName, vs...))
+}
+
+// SubscriptionPlanNameNotIn applies the NotIn predicate on the "subscription_plan_name" field.
+func SubscriptionPlanNameNotIn(vs ...string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotIn(FieldSubscriptionPlanName, vs...))
+}
+
+// SubscriptionPlanNameGT applies the GT predicate on the "subscription_plan_name" field.
+func SubscriptionPlanNameGT(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGT(FieldSubscriptionPlanName, v))
+}
+
+// SubscriptionPlanNameGTE applies the GTE predicate on the "subscription_plan_name" field.
+func SubscriptionPlanNameGTE(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldGTE(FieldSubscriptionPlanName, v))
+}
+
+// SubscriptionPlanNameLT applies the LT predicate on the "subscription_plan_name" field.
+func SubscriptionPlanNameLT(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLT(FieldSubscriptionPlanName, v))
+}
+
+// SubscriptionPlanNameLTE applies the LTE predicate on the "subscription_plan_name" field.
+func SubscriptionPlanNameLTE(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldLTE(FieldSubscriptionPlanName, v))
+}
+
+// SubscriptionPlanNameContains applies the Contains predicate on the "subscription_plan_name" field.
+func SubscriptionPlanNameContains(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldContains(FieldSubscriptionPlanName, v))
+}
+
+// SubscriptionPlanNameHasPrefix applies the HasPrefix predicate on the "subscription_plan_name" field.
+func SubscriptionPlanNameHasPrefix(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldHasPrefix(FieldSubscriptionPlanName, v))
+}
+
+// SubscriptionPlanNameHasSuffix applies the HasSuffix predicate on the "subscription_plan_name" field.
+func SubscriptionPlanNameHasSuffix(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldHasSuffix(FieldSubscriptionPlanName, v))
+}
+
+// SubscriptionPlanNameIsNil applies the IsNil predicate on the "subscription_plan_name" field.
+func SubscriptionPlanNameIsNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldIsNull(FieldSubscriptionPlanName))
+}
+
+// SubscriptionPlanNameNotNil applies the NotNil predicate on the "subscription_plan_name" field.
+func SubscriptionPlanNameNotNil() predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldNotNull(FieldSubscriptionPlanName))
+}
+
+// SubscriptionPlanNameEqualFold applies the EqualFold predicate on the "subscription_plan_name" field.
+func SubscriptionPlanNameEqualFold(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldEqualFold(FieldSubscriptionPlanName, v))
+}
+
+// SubscriptionPlanNameContainsFold applies the ContainsFold predicate on the "subscription_plan_name" field.
+func SubscriptionPlanNameContainsFold(v string) predicate.PaymentOrder {
+	return predicate.PaymentOrder(sql.FieldContainsFold(FieldSubscriptionPlanName, v))
 }
 
 // ProviderInstanceIDEQ applies the EQ predicate on the "provider_instance_id" field.

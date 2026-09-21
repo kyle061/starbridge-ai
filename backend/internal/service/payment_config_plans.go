@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
@@ -48,6 +49,16 @@ func validatePlanRequired(name string, groupID int64, price float64, validityDay
 	return nil
 }
 
+func normalizePlanMultiplier(value, fallback float64) (float64, error) {
+	if value == 0 {
+		value = fallback
+	}
+	if value <= 0 || math.IsNaN(value) || math.IsInf(value, 0) {
+		return 0, infraerrors.BadRequest("PLAN_MULTIPLIER_INVALID", "plan multipliers must be greater than 0")
+	}
+	return value, nil
+}
+
 // validatePlanPatch validates only the non-nil fields in a patch update.
 func validatePlanPatch(req UpdatePlanRequest) error {
 	if req.Name != nil && strings.TrimSpace(*req.Name) == "" {
@@ -67,6 +78,12 @@ func validatePlanPatch(req UpdatePlanRequest) error {
 	}
 	if req.OriginalPrice != nil && *req.OriginalPrice < 0 {
 		return infraerrors.BadRequest("PLAN_ORIGINAL_PRICE_INVALID", "original price must be >= 0")
+	}
+	if req.QuotaMultiplier != nil && (*req.QuotaMultiplier <= 0 || math.IsNaN(*req.QuotaMultiplier) || math.IsInf(*req.QuotaMultiplier, 0)) {
+		return infraerrors.BadRequest("PLAN_MULTIPLIER_INVALID", "quota multiplier must be greater than 0")
+	}
+	if req.UsageMultiplier != nil && (*req.UsageMultiplier <= 0 || math.IsNaN(*req.UsageMultiplier) || math.IsInf(*req.UsageMultiplier, 0)) {
+		return infraerrors.BadRequest("PLAN_MULTIPLIER_INVALID", "usage multiplier must be greater than 0")
 	}
 	return nil
 }
@@ -140,9 +157,18 @@ func (s *PaymentConfigService) CreatePlan(ctx context.Context, req CreatePlanReq
 	if err != nil {
 		return nil, err
 	}
+	quotaMultiplier, err := normalizePlanMultiplier(req.QuotaMultiplier, 10)
+	if err != nil {
+		return nil, err
+	}
+	usageMultiplier, err := normalizePlanMultiplier(req.UsageMultiplier, 12)
+	if err != nil {
+		return nil, err
+	}
 	b := s.entClient.SubscriptionPlan.Create().
 		SetGroupID(req.GroupID).SetName(req.Name).SetDescription(req.Description).
-		SetPrice(req.Price).SetCurrency(currency).SetValidityDays(req.ValidityDays).SetValidityUnit(req.ValidityUnit).
+		SetPrice(req.Price).SetQuotaMultiplier(quotaMultiplier).SetUsageMultiplier(usageMultiplier).
+		SetCurrency(currency).SetValidityDays(req.ValidityDays).SetValidityUnit(req.ValidityUnit).
 		SetFeatures(req.Features).SetProductName(req.ProductName).
 		SetForSale(req.ForSale).SetSortOrder(req.SortOrder)
 	if req.OriginalPrice != nil {
@@ -198,6 +224,12 @@ func (s *PaymentConfigService) UpdatePlan(ctx context.Context, id int64, req Upd
 	}
 	if req.SortOrder != nil {
 		u.SetSortOrder(*req.SortOrder)
+	}
+	if req.QuotaMultiplier != nil {
+		u.SetQuotaMultiplier(*req.QuotaMultiplier)
+	}
+	if req.UsageMultiplier != nil {
+		u.SetUsageMultiplier(*req.UsageMultiplier)
 	}
 	return u.Save(ctx)
 }

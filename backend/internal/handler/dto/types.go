@@ -178,17 +178,17 @@ type Group struct {
 // 注意：普通用户接口不得返回 model_routing/account_count/account_groups 等内部信息。
 type AdminGroup struct {
 	Group
-	RateMultiplier              float64 `json:"rate_multiplier"`
-	ImageRateIndependent        bool    `json:"image_rate_independent"`
-	ImageRateMultiplier         float64 `json:"image_rate_multiplier"`
+	RateMultiplier               float64 `json:"rate_multiplier"`
+	ImageRateIndependent         bool    `json:"image_rate_independent"`
+	ImageRateMultiplier          float64 `json:"image_rate_multiplier"`
 	BatchImageDiscountMultiplier float64 `json:"batch_image_discount_multiplier"`
-	BatchImageHoldMultiplier    float64 `json:"batch_image_hold_multiplier"`
-	VideoRateIndependent        bool    `json:"video_rate_independent"`
-	VideoRateMultiplier         float64 `json:"video_rate_multiplier"`
-	PeakRateEnabled             bool    `json:"peak_rate_enabled"`
-	PeakStart                   string  `json:"peak_start"`
-	PeakEnd                     string  `json:"peak_end"`
-	PeakRateMultiplier          float64 `json:"peak_rate_multiplier"`
+	BatchImageHoldMultiplier     float64 `json:"batch_image_hold_multiplier"`
+	VideoRateIndependent         bool    `json:"video_rate_independent"`
+	VideoRateMultiplier          float64 `json:"video_rate_multiplier"`
+	PeakRateEnabled              bool    `json:"peak_rate_enabled"`
+	PeakStart                    string  `json:"peak_start"`
+	PeakEnd                      string  `json:"peak_end"`
+	PeakRateMultiplier           float64 `json:"peak_rate_multiplier"`
 	// ForceOpenAIFast 是管理端请求策略，用户侧分组 DTO 无需暴露。
 	ForceOpenAIFast bool `json:"force_openai_fast"`
 	// FreeOpenAIFast 是管理端计费策略，用户侧分组 DTO 无需暴露。
@@ -693,9 +693,9 @@ type UsageLog struct {
 // AdminUsageLog 是管理员接口使用的 usage log DTO（包含管理员字段）。
 type AdminUsageLog struct {
 	UsageLog
-	RateMultiplier float64 `json:"rate_multiplier"`
-	APIKey         *AdminAPIKey `json:"api_key,omitempty"`
-	Group          *AdminGroup `json:"group,omitempty"`
+	RateMultiplier float64                `json:"rate_multiplier"`
+	APIKey         *AdminAPIKey           `json:"api_key,omitempty"`
+	Group          *AdminGroup            `json:"group,omitempty"`
 	Subscription   *AdminUserSubscription `json:"subscription,omitempty"`
 
 	// UpstreamModel is the actual model sent to the upstream provider after mapping.
@@ -788,6 +788,10 @@ type UserSubscription struct {
 	DailyUsageUSD   float64 `json:"daily_usage_usd"`
 	WeeklyUsageUSD  float64 `json:"weekly_usage_usd"`
 	MonthlyUsageUSD float64 `json:"monthly_usage_usd"`
+	QuotaUSD        float64 `json:"quota_usd"`
+	QuotaUsedUSD    float64 `json:"quota_used_usd"`
+	UsageMultiplier float64 `json:"usage_multiplier"`
+	PlanName        string  `json:"plan_name,omitempty"`
 
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`

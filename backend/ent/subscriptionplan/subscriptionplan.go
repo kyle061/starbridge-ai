@@ -21,6 +21,10 @@ const (
 	FieldDescription = "description"
 	// FieldPrice holds the string denoting the price field in the database.
 	FieldPrice = "price"
+	// FieldQuotaMultiplier holds the string denoting the quota_multiplier field in the database.
+	FieldQuotaMultiplier = "quota_multiplier"
+	// FieldUsageMultiplier holds the string denoting the usage_multiplier field in the database.
+	FieldUsageMultiplier = "usage_multiplier"
 	// FieldOriginalPrice holds the string denoting the original_price field in the database.
 	FieldOriginalPrice = "original_price"
 	// FieldCurrency holds the string denoting the currency field in the database.
@@ -52,6 +56,8 @@ var Columns = []string{
 	FieldName,
 	FieldDescription,
 	FieldPrice,
+	FieldQuotaMultiplier,
+	FieldUsageMultiplier,
 	FieldOriginalPrice,
 	FieldCurrency,
 	FieldValidityDays,
@@ -79,6 +85,10 @@ var (
 	NameValidator func(string) error
 	// DefaultDescription holds the default value on creation for the "description" field.
 	DefaultDescription string
+	// DefaultQuotaMultiplier holds the default value on creation for the "quota_multiplier" field.
+	DefaultQuotaMultiplier float64
+	// DefaultUsageMultiplier holds the default value on creation for the "usage_multiplier" field.
+	DefaultUsageMultiplier float64
 	// DefaultCurrency holds the default value on creation for the "currency" field.
 	DefaultCurrency string
 	// CurrencyValidator is a validator for the "currency" field. It is called by the builders before save.
@@ -133,6 +143,16 @@ func ByDescription(opts ...sql.OrderTermOption) OrderOption {
 // ByPrice orders the results by the price field.
 func ByPrice(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPrice, opts...).ToFunc()
+}
+
+// ByQuotaMultiplier orders the results by the quota_multiplier field.
+func ByQuotaMultiplier(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldQuotaMultiplier, opts...).ToFunc()
+}
+
+// ByUsageMultiplier orders the results by the usage_multiplier field.
+func ByUsageMultiplier(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUsageMultiplier, opts...).ToFunc()
 }
 
 // ByOriginalPrice orders the results by the original_price field.

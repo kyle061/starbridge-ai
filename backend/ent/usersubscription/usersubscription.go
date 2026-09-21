@@ -43,6 +43,14 @@ const (
 	FieldWeeklyUsageUsd = "weekly_usage_usd"
 	// FieldMonthlyUsageUsd holds the string denoting the monthly_usage_usd field in the database.
 	FieldMonthlyUsageUsd = "monthly_usage_usd"
+	// FieldQuotaUsd holds the string denoting the quota_usd field in the database.
+	FieldQuotaUsd = "quota_usd"
+	// FieldQuotaUsedUsd holds the string denoting the quota_used_usd field in the database.
+	FieldQuotaUsedUsd = "quota_used_usd"
+	// FieldUsageMultiplier holds the string denoting the usage_multiplier field in the database.
+	FieldUsageMultiplier = "usage_multiplier"
+	// FieldPlanName holds the string denoting the plan_name field in the database.
+	FieldPlanName = "plan_name"
 	// FieldAssignedBy holds the string denoting the assigned_by field in the database.
 	FieldAssignedBy = "assigned_by"
 	// FieldAssignedAt holds the string denoting the assigned_at field in the database.
@@ -106,6 +114,10 @@ var Columns = []string{
 	FieldDailyUsageUsd,
 	FieldWeeklyUsageUsd,
 	FieldMonthlyUsageUsd,
+	FieldQuotaUsd,
+	FieldQuotaUsedUsd,
+	FieldUsageMultiplier,
+	FieldPlanName,
 	FieldAssignedBy,
 	FieldAssignedAt,
 	FieldNotes,
@@ -145,6 +157,16 @@ var (
 	DefaultWeeklyUsageUsd float64
 	// DefaultMonthlyUsageUsd holds the default value on creation for the "monthly_usage_usd" field.
 	DefaultMonthlyUsageUsd float64
+	// DefaultQuotaUsd holds the default value on creation for the "quota_usd" field.
+	DefaultQuotaUsd float64
+	// DefaultQuotaUsedUsd holds the default value on creation for the "quota_used_usd" field.
+	DefaultQuotaUsedUsd float64
+	// DefaultUsageMultiplier holds the default value on creation for the "usage_multiplier" field.
+	DefaultUsageMultiplier float64
+	// DefaultPlanName holds the default value on creation for the "plan_name" field.
+	DefaultPlanName string
+	// PlanNameValidator is a validator for the "plan_name" field. It is called by the builders before save.
+	PlanNameValidator func(string) error
 	// DefaultAssignedAt holds the default value on creation for the "assigned_at" field.
 	DefaultAssignedAt func() time.Time
 )
@@ -225,6 +247,26 @@ func ByWeeklyUsageUsd(opts ...sql.OrderTermOption) OrderOption {
 // ByMonthlyUsageUsd orders the results by the monthly_usage_usd field.
 func ByMonthlyUsageUsd(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldMonthlyUsageUsd, opts...).ToFunc()
+}
+
+// ByQuotaUsd orders the results by the quota_usd field.
+func ByQuotaUsd(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldQuotaUsd, opts...).ToFunc()
+}
+
+// ByQuotaUsedUsd orders the results by the quota_used_usd field.
+func ByQuotaUsedUsd(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldQuotaUsedUsd, opts...).ToFunc()
+}
+
+// ByUsageMultiplier orders the results by the usage_multiplier field.
+func ByUsageMultiplier(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUsageMultiplier, opts...).ToFunc()
+}
+
+// ByPlanName orders the results by the plan_name field.
+func ByPlanName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPlanName, opts...).ToFunc()
 }
 
 // ByAssignedBy orders the results by the assigned_by field.

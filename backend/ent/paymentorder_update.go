@@ -365,6 +365,80 @@ func (_u *PaymentOrderUpdate) ClearSubscriptionDays() *PaymentOrderUpdate {
 	return _u
 }
 
+// SetSubscriptionQuotaUsd sets the "subscription_quota_usd" field.
+func (_u *PaymentOrderUpdate) SetSubscriptionQuotaUsd(v float64) *PaymentOrderUpdate {
+	_u.mutation.ResetSubscriptionQuotaUsd()
+	_u.mutation.SetSubscriptionQuotaUsd(v)
+	return _u
+}
+
+// SetNillableSubscriptionQuotaUsd sets the "subscription_quota_usd" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableSubscriptionQuotaUsd(v *float64) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetSubscriptionQuotaUsd(*v)
+	}
+	return _u
+}
+
+// AddSubscriptionQuotaUsd adds value to the "subscription_quota_usd" field.
+func (_u *PaymentOrderUpdate) AddSubscriptionQuotaUsd(v float64) *PaymentOrderUpdate {
+	_u.mutation.AddSubscriptionQuotaUsd(v)
+	return _u
+}
+
+// ClearSubscriptionQuotaUsd clears the value of the "subscription_quota_usd" field.
+func (_u *PaymentOrderUpdate) ClearSubscriptionQuotaUsd() *PaymentOrderUpdate {
+	_u.mutation.ClearSubscriptionQuotaUsd()
+	return _u
+}
+
+// SetSubscriptionUsageMultiplier sets the "subscription_usage_multiplier" field.
+func (_u *PaymentOrderUpdate) SetSubscriptionUsageMultiplier(v float64) *PaymentOrderUpdate {
+	_u.mutation.ResetSubscriptionUsageMultiplier()
+	_u.mutation.SetSubscriptionUsageMultiplier(v)
+	return _u
+}
+
+// SetNillableSubscriptionUsageMultiplier sets the "subscription_usage_multiplier" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableSubscriptionUsageMultiplier(v *float64) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetSubscriptionUsageMultiplier(*v)
+	}
+	return _u
+}
+
+// AddSubscriptionUsageMultiplier adds value to the "subscription_usage_multiplier" field.
+func (_u *PaymentOrderUpdate) AddSubscriptionUsageMultiplier(v float64) *PaymentOrderUpdate {
+	_u.mutation.AddSubscriptionUsageMultiplier(v)
+	return _u
+}
+
+// ClearSubscriptionUsageMultiplier clears the value of the "subscription_usage_multiplier" field.
+func (_u *PaymentOrderUpdate) ClearSubscriptionUsageMultiplier() *PaymentOrderUpdate {
+	_u.mutation.ClearSubscriptionUsageMultiplier()
+	return _u
+}
+
+// SetSubscriptionPlanName sets the "subscription_plan_name" field.
+func (_u *PaymentOrderUpdate) SetSubscriptionPlanName(v string) *PaymentOrderUpdate {
+	_u.mutation.SetSubscriptionPlanName(v)
+	return _u
+}
+
+// SetNillableSubscriptionPlanName sets the "subscription_plan_name" field if the given value is not nil.
+func (_u *PaymentOrderUpdate) SetNillableSubscriptionPlanName(v *string) *PaymentOrderUpdate {
+	if v != nil {
+		_u.SetSubscriptionPlanName(*v)
+	}
+	return _u
+}
+
+// ClearSubscriptionPlanName clears the value of the "subscription_plan_name" field.
+func (_u *PaymentOrderUpdate) ClearSubscriptionPlanName() *PaymentOrderUpdate {
+	_u.mutation.ClearSubscriptionPlanName()
+	return _u
+}
+
 // SetProviderInstanceID sets the "provider_instance_id" field.
 func (_u *PaymentOrderUpdate) SetProviderInstanceID(v string) *PaymentOrderUpdate {
 	_u.mutation.SetProviderInstanceID(v)
@@ -803,6 +877,11 @@ func (_u *PaymentOrderUpdate) check() error {
 			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.order_type": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.SubscriptionPlanName(); ok {
+		if err := paymentorder.SubscriptionPlanNameValidator(v); err != nil {
+			return &ValidationError{Name: "subscription_plan_name", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.subscription_plan_name": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.ProviderInstanceID(); ok {
 		if err := paymentorder.ProviderInstanceIDValidator(v); err != nil {
 			return &ValidationError{Name: "provider_instance_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider_instance_id": %w`, err)}
@@ -940,6 +1019,30 @@ func (_u *PaymentOrderUpdate) sqlSave(ctx context.Context) (_node int, err error
 	}
 	if _u.mutation.SubscriptionDaysCleared() {
 		_spec.ClearField(paymentorder.FieldSubscriptionDays, field.TypeInt)
+	}
+	if value, ok := _u.mutation.SubscriptionQuotaUsd(); ok {
+		_spec.SetField(paymentorder.FieldSubscriptionQuotaUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedSubscriptionQuotaUsd(); ok {
+		_spec.AddField(paymentorder.FieldSubscriptionQuotaUsd, field.TypeFloat64, value)
+	}
+	if _u.mutation.SubscriptionQuotaUsdCleared() {
+		_spec.ClearField(paymentorder.FieldSubscriptionQuotaUsd, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.SubscriptionUsageMultiplier(); ok {
+		_spec.SetField(paymentorder.FieldSubscriptionUsageMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedSubscriptionUsageMultiplier(); ok {
+		_spec.AddField(paymentorder.FieldSubscriptionUsageMultiplier, field.TypeFloat64, value)
+	}
+	if _u.mutation.SubscriptionUsageMultiplierCleared() {
+		_spec.ClearField(paymentorder.FieldSubscriptionUsageMultiplier, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.SubscriptionPlanName(); ok {
+		_spec.SetField(paymentorder.FieldSubscriptionPlanName, field.TypeString, value)
+	}
+	if _u.mutation.SubscriptionPlanNameCleared() {
+		_spec.ClearField(paymentorder.FieldSubscriptionPlanName, field.TypeString)
 	}
 	if value, ok := _u.mutation.ProviderInstanceID(); ok {
 		_spec.SetField(paymentorder.FieldProviderInstanceID, field.TypeString, value)
@@ -1428,6 +1531,80 @@ func (_u *PaymentOrderUpdateOne) ClearSubscriptionDays() *PaymentOrderUpdateOne 
 	return _u
 }
 
+// SetSubscriptionQuotaUsd sets the "subscription_quota_usd" field.
+func (_u *PaymentOrderUpdateOne) SetSubscriptionQuotaUsd(v float64) *PaymentOrderUpdateOne {
+	_u.mutation.ResetSubscriptionQuotaUsd()
+	_u.mutation.SetSubscriptionQuotaUsd(v)
+	return _u
+}
+
+// SetNillableSubscriptionQuotaUsd sets the "subscription_quota_usd" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableSubscriptionQuotaUsd(v *float64) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetSubscriptionQuotaUsd(*v)
+	}
+	return _u
+}
+
+// AddSubscriptionQuotaUsd adds value to the "subscription_quota_usd" field.
+func (_u *PaymentOrderUpdateOne) AddSubscriptionQuotaUsd(v float64) *PaymentOrderUpdateOne {
+	_u.mutation.AddSubscriptionQuotaUsd(v)
+	return _u
+}
+
+// ClearSubscriptionQuotaUsd clears the value of the "subscription_quota_usd" field.
+func (_u *PaymentOrderUpdateOne) ClearSubscriptionQuotaUsd() *PaymentOrderUpdateOne {
+	_u.mutation.ClearSubscriptionQuotaUsd()
+	return _u
+}
+
+// SetSubscriptionUsageMultiplier sets the "subscription_usage_multiplier" field.
+func (_u *PaymentOrderUpdateOne) SetSubscriptionUsageMultiplier(v float64) *PaymentOrderUpdateOne {
+	_u.mutation.ResetSubscriptionUsageMultiplier()
+	_u.mutation.SetSubscriptionUsageMultiplier(v)
+	return _u
+}
+
+// SetNillableSubscriptionUsageMultiplier sets the "subscription_usage_multiplier" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableSubscriptionUsageMultiplier(v *float64) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetSubscriptionUsageMultiplier(*v)
+	}
+	return _u
+}
+
+// AddSubscriptionUsageMultiplier adds value to the "subscription_usage_multiplier" field.
+func (_u *PaymentOrderUpdateOne) AddSubscriptionUsageMultiplier(v float64) *PaymentOrderUpdateOne {
+	_u.mutation.AddSubscriptionUsageMultiplier(v)
+	return _u
+}
+
+// ClearSubscriptionUsageMultiplier clears the value of the "subscription_usage_multiplier" field.
+func (_u *PaymentOrderUpdateOne) ClearSubscriptionUsageMultiplier() *PaymentOrderUpdateOne {
+	_u.mutation.ClearSubscriptionUsageMultiplier()
+	return _u
+}
+
+// SetSubscriptionPlanName sets the "subscription_plan_name" field.
+func (_u *PaymentOrderUpdateOne) SetSubscriptionPlanName(v string) *PaymentOrderUpdateOne {
+	_u.mutation.SetSubscriptionPlanName(v)
+	return _u
+}
+
+// SetNillableSubscriptionPlanName sets the "subscription_plan_name" field if the given value is not nil.
+func (_u *PaymentOrderUpdateOne) SetNillableSubscriptionPlanName(v *string) *PaymentOrderUpdateOne {
+	if v != nil {
+		_u.SetSubscriptionPlanName(*v)
+	}
+	return _u
+}
+
+// ClearSubscriptionPlanName clears the value of the "subscription_plan_name" field.
+func (_u *PaymentOrderUpdateOne) ClearSubscriptionPlanName() *PaymentOrderUpdateOne {
+	_u.mutation.ClearSubscriptionPlanName()
+	return _u
+}
+
 // SetProviderInstanceID sets the "provider_instance_id" field.
 func (_u *PaymentOrderUpdateOne) SetProviderInstanceID(v string) *PaymentOrderUpdateOne {
 	_u.mutation.SetProviderInstanceID(v)
@@ -1879,6 +2056,11 @@ func (_u *PaymentOrderUpdateOne) check() error {
 			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.order_type": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.SubscriptionPlanName(); ok {
+		if err := paymentorder.SubscriptionPlanNameValidator(v); err != nil {
+			return &ValidationError{Name: "subscription_plan_name", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.subscription_plan_name": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.ProviderInstanceID(); ok {
 		if err := paymentorder.ProviderInstanceIDValidator(v); err != nil {
 			return &ValidationError{Name: "provider_instance_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider_instance_id": %w`, err)}
@@ -2033,6 +2215,30 @@ func (_u *PaymentOrderUpdateOne) sqlSave(ctx context.Context) (_node *PaymentOrd
 	}
 	if _u.mutation.SubscriptionDaysCleared() {
 		_spec.ClearField(paymentorder.FieldSubscriptionDays, field.TypeInt)
+	}
+	if value, ok := _u.mutation.SubscriptionQuotaUsd(); ok {
+		_spec.SetField(paymentorder.FieldSubscriptionQuotaUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedSubscriptionQuotaUsd(); ok {
+		_spec.AddField(paymentorder.FieldSubscriptionQuotaUsd, field.TypeFloat64, value)
+	}
+	if _u.mutation.SubscriptionQuotaUsdCleared() {
+		_spec.ClearField(paymentorder.FieldSubscriptionQuotaUsd, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.SubscriptionUsageMultiplier(); ok {
+		_spec.SetField(paymentorder.FieldSubscriptionUsageMultiplier, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedSubscriptionUsageMultiplier(); ok {
+		_spec.AddField(paymentorder.FieldSubscriptionUsageMultiplier, field.TypeFloat64, value)
+	}
+	if _u.mutation.SubscriptionUsageMultiplierCleared() {
+		_spec.ClearField(paymentorder.FieldSubscriptionUsageMultiplier, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.SubscriptionPlanName(); ok {
+		_spec.SetField(paymentorder.FieldSubscriptionPlanName, field.TypeString, value)
+	}
+	if _u.mutation.SubscriptionPlanNameCleared() {
+		_spec.ClearField(paymentorder.FieldSubscriptionPlanName, field.TypeString)
 	}
 	if value, ok := _u.mutation.ProviderInstanceID(); ok {
 		_spec.SetField(paymentorder.FieldProviderInstanceID, field.TypeString, value)

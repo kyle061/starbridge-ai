@@ -24,6 +24,10 @@ type UserSubscription struct {
 	DailyUsageUSD   float64
 	WeeklyUsageUSD  float64
 	MonthlyUsageUSD float64
+	QuotaUSD        float64
+	QuotaUsedUSD    float64
+	UsageMultiplier float64
+	PlanName        string
 
 	AssignedBy *int64
 	AssignedAt time.Time
@@ -36,6 +40,29 @@ type UserSubscription struct {
 	User           *User
 	Group          *Group
 	AssignedByUser *User
+}
+
+// EffectiveUsageMultiplier returns the purchased subscription multiplier.
+// Zero is retained for legacy/admin-assigned subscriptions and means 1x.
+func (s *UserSubscription) EffectiveUsageMultiplier() float64 {
+	if s == nil || s.UsageMultiplier <= 0 {
+		return 1
+	}
+	return s.UsageMultiplier
+}
+
+func (s *UserSubscription) RemainingQuotaUSD() float64 {
+	if s == nil || s.QuotaUSD <= 0 {
+		return -1
+	}
+	return maxFloat(0, s.QuotaUSD-s.QuotaUsedUSD)
+}
+
+func maxFloat(a, b float64) float64 {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func (s *UserSubscription) IsActive() bool {

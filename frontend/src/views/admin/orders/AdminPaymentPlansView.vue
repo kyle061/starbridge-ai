@@ -34,6 +34,12 @@
             <span v-if="row.original_price" class="ml-1 text-xs text-gray-400 line-through">{{ planCurrencySymbol(row.currency) }}{{ row.original_price.toFixed(2) }}</span>
           </div>
         </template>
+        <template #cell-quota_multiplier="{ value, row }">
+          <div class="text-xs text-gray-600 dark:text-gray-300">
+            <div>{{ t('payment.admin.quotaMultiplierShort') }} {{ Number(value || 10).toFixed(2) }}x</div>
+            <div>{{ t('payment.admin.usageMultiplierShort') }} {{ Number(row.usage_multiplier || 12).toFixed(2) }}x</div>
+          </div>
+        </template>
         <template #cell-validity_days="{ value, row }">
           <span class="text-sm">{{ value }} {{ t('payment.admin.' + (row.validity_unit || 'days')) }}</span>
         </template>
@@ -147,6 +153,7 @@ const planColumns = computed((): Column[] => [
   { key: 'name', label: t('payment.admin.planName') },
   { key: 'group_id', label: t('payment.admin.group') },
   { key: 'price', label: t('payment.admin.price') },
+  { key: 'quota_multiplier', label: t('payment.admin.entitlements') },
   { key: 'validity_days', label: t('payment.admin.validity') },
   { key: 'for_sale', label: t('payment.admin.forSale') },
   { key: 'sort_order', label: t('payment.admin.sortOrder') },

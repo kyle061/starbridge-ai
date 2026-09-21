@@ -50,6 +50,12 @@ const (
 	FieldSubscriptionGroupID = "subscription_group_id"
 	// FieldSubscriptionDays holds the string denoting the subscription_days field in the database.
 	FieldSubscriptionDays = "subscription_days"
+	// FieldSubscriptionQuotaUsd holds the string denoting the subscription_quota_usd field in the database.
+	FieldSubscriptionQuotaUsd = "subscription_quota_usd"
+	// FieldSubscriptionUsageMultiplier holds the string denoting the subscription_usage_multiplier field in the database.
+	FieldSubscriptionUsageMultiplier = "subscription_usage_multiplier"
+	// FieldSubscriptionPlanName holds the string denoting the subscription_plan_name field in the database.
+	FieldSubscriptionPlanName = "subscription_plan_name"
 	// FieldProviderInstanceID holds the string denoting the provider_instance_id field in the database.
 	FieldProviderInstanceID = "provider_instance_id"
 	// FieldProviderKey holds the string denoting the provider_key field in the database.
@@ -126,6 +132,9 @@ var Columns = []string{
 	FieldPlanID,
 	FieldSubscriptionGroupID,
 	FieldSubscriptionDays,
+	FieldSubscriptionQuotaUsd,
+	FieldSubscriptionUsageMultiplier,
+	FieldSubscriptionPlanName,
 	FieldProviderInstanceID,
 	FieldProviderKey,
 	FieldProviderSnapshot,
@@ -180,6 +189,8 @@ var (
 	DefaultOrderType string
 	// OrderTypeValidator is a validator for the "order_type" field. It is called by the builders before save.
 	OrderTypeValidator func(string) error
+	// SubscriptionPlanNameValidator is a validator for the "subscription_plan_name" field. It is called by the builders before save.
+	SubscriptionPlanNameValidator func(string) error
 	// ProviderInstanceIDValidator is a validator for the "provider_instance_id" field. It is called by the builders before save.
 	ProviderInstanceIDValidator func(string) error
 	// ProviderKeyValidator is a validator for the "provider_key" field. It is called by the builders before save.
@@ -302,6 +313,21 @@ func BySubscriptionGroupID(opts ...sql.OrderTermOption) OrderOption {
 // BySubscriptionDays orders the results by the subscription_days field.
 func BySubscriptionDays(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSubscriptionDays, opts...).ToFunc()
+}
+
+// BySubscriptionQuotaUsd orders the results by the subscription_quota_usd field.
+func BySubscriptionQuotaUsd(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubscriptionQuotaUsd, opts...).ToFunc()
+}
+
+// BySubscriptionUsageMultiplier orders the results by the subscription_usage_multiplier field.
+func BySubscriptionUsageMultiplier(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubscriptionUsageMultiplier, opts...).ToFunc()
+}
+
+// BySubscriptionPlanName orders the results by the subscription_plan_name field.
+func BySubscriptionPlanName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSubscriptionPlanName, opts...).ToFunc()
 }
 
 // ByProviderInstanceID orders the results by the provider_instance_id field.

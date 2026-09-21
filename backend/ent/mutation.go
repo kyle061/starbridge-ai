@@ -30188,60 +30188,65 @@ func (m *PaymentAuditLogMutation) ResetEdge(name string) error {
 // PaymentOrderMutation represents an operation that mutates the PaymentOrder nodes in the graph.
 type PaymentOrderMutation struct {
 	config
-	op                       Op
-	typ                      string
-	id                       *int64
-	user_email               *string
-	user_name                *string
-	user_notes               *string
-	amount                   *float64
-	addamount                *float64
-	pay_amount               *float64
-	addpay_amount            *float64
-	fee_rate                 *float64
-	addfee_rate              *float64
-	recharge_code            *string
-	out_trade_no             *string
-	payment_type             *string
-	payment_trade_no         *string
-	pay_url                  *string
-	qr_code                  *string
-	qr_code_img              *string
-	order_type               *string
-	plan_id                  *int64
-	addplan_id               *int64
-	subscription_group_id    *int64
-	addsubscription_group_id *int64
-	subscription_days        *int
-	addsubscription_days     *int
-	provider_instance_id     *string
-	provider_key             *string
-	provider_snapshot        *map[string]interface{}
-	status                   *string
-	refund_amount            *float64
-	addrefund_amount         *float64
-	refund_reason            *string
-	refund_at                *time.Time
-	force_refund             *bool
-	refund_requested_at      *time.Time
-	refund_request_reason    *string
-	refund_requested_by      *string
-	expires_at               *time.Time
-	paid_at                  *time.Time
-	completed_at             *time.Time
-	failed_at                *time.Time
-	failed_reason            *string
-	client_ip                *string
-	src_host                 *string
-	src_url                  *string
-	created_at               *time.Time
-	updated_at               *time.Time
-	clearedFields            map[string]struct{}
-	user                     *int64
-	cleareduser              bool
-	done                     bool
-	oldValue                 func(context.Context) (*PaymentOrder, error)
-	predicates               []predicate.PaymentOrder
+	op                               Op
+	typ                              string
+	id                               *int64
+	user_email                       *string
+	user_name                        *string
+	user_notes                       *string
+	amount                           *float64
+	addamount                        *float64
+	pay_amount                       *float64
+	addpay_amount                    *float64
+	fee_rate                         *float64
+	addfee_rate                      *float64
+	recharge_code                    *string
+	out_trade_no                     *string
+	payment_type                     *string
+	payment_trade_no                 *string
+	pay_url                          *string
+	qr_code                          *string
+	qr_code_img                      *string
+	order_type                       *string
+	plan_id                          *int64
+	addplan_id                       *int64
+	subscription_group_id            *int64
+	addsubscription_group_id         *int64
+	subscription_days                *int
+	addsubscription_days             *int
+	subscription_quota_usd           *float64
+	addsubscription_quota_usd        *float64
+	subscription_usage_multiplier    *float64
+	addsubscription_usage_multiplier *float64
+	subscription_plan_name           *string
+	provider_instance_id             *string
+	provider_key                     *string
+	provider_snapshot                *map[string]interface{}
+	status                           *string
+	refund_amount                    *float64
+	addrefund_amount                 *float64
+	refund_reason                    *string
+	refund_at                        *time.Time
+	force_refund                     *bool
+	refund_requested_at              *time.Time
+	refund_request_reason            *string
+	refund_requested_by              *string
+	expires_at                       *time.Time
+	paid_at                          *time.Time
+	completed_at                     *time.Time
+	failed_at                        *time.Time
+	failed_reason                    *string
+	client_ip                        *string
+	src_host                         *string
+	src_url                          *string
+	created_at                       *time.Time
+	updated_at                       *time.Time
+	clearedFields                    map[string]struct{}
+	user                             *int64
+	cleareduser                      bool
+	done                             bool
+	oldValue                         func(context.Context) (*PaymentOrder, error)
+	predicates                       []predicate.PaymentOrder
 }
 
 var _ ent.Mutation = (*PaymentOrderMutation)(nil)
@@ -31202,6 +31207,195 @@ func (m *PaymentOrderMutation) ResetSubscriptionDays() {
 	m.subscription_days = nil
 	m.addsubscription_days = nil
 	delete(m.clearedFields, paymentorder.FieldSubscriptionDays)
+}
+
+// SetSubscriptionQuotaUsd sets the "subscription_quota_usd" field.
+func (m *PaymentOrderMutation) SetSubscriptionQuotaUsd(f float64) {
+	m.subscription_quota_usd = &f
+	m.addsubscription_quota_usd = nil
+}
+
+// SubscriptionQuotaUsd returns the value of the "subscription_quota_usd" field in the mutation.
+func (m *PaymentOrderMutation) SubscriptionQuotaUsd() (r float64, exists bool) {
+	v := m.subscription_quota_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubscriptionQuotaUsd returns the old "subscription_quota_usd" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldSubscriptionQuotaUsd(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubscriptionQuotaUsd is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubscriptionQuotaUsd requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubscriptionQuotaUsd: %w", err)
+	}
+	return oldValue.SubscriptionQuotaUsd, nil
+}
+
+// AddSubscriptionQuotaUsd adds f to the "subscription_quota_usd" field.
+func (m *PaymentOrderMutation) AddSubscriptionQuotaUsd(f float64) {
+	if m.addsubscription_quota_usd != nil {
+		*m.addsubscription_quota_usd += f
+	} else {
+		m.addsubscription_quota_usd = &f
+	}
+}
+
+// AddedSubscriptionQuotaUsd returns the value that was added to the "subscription_quota_usd" field in this mutation.
+func (m *PaymentOrderMutation) AddedSubscriptionQuotaUsd() (r float64, exists bool) {
+	v := m.addsubscription_quota_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearSubscriptionQuotaUsd clears the value of the "subscription_quota_usd" field.
+func (m *PaymentOrderMutation) ClearSubscriptionQuotaUsd() {
+	m.subscription_quota_usd = nil
+	m.addsubscription_quota_usd = nil
+	m.clearedFields[paymentorder.FieldSubscriptionQuotaUsd] = struct{}{}
+}
+
+// SubscriptionQuotaUsdCleared returns if the "subscription_quota_usd" field was cleared in this mutation.
+func (m *PaymentOrderMutation) SubscriptionQuotaUsdCleared() bool {
+	_, ok := m.clearedFields[paymentorder.FieldSubscriptionQuotaUsd]
+	return ok
+}
+
+// ResetSubscriptionQuotaUsd resets all changes to the "subscription_quota_usd" field.
+func (m *PaymentOrderMutation) ResetSubscriptionQuotaUsd() {
+	m.subscription_quota_usd = nil
+	m.addsubscription_quota_usd = nil
+	delete(m.clearedFields, paymentorder.FieldSubscriptionQuotaUsd)
+}
+
+// SetSubscriptionUsageMultiplier sets the "subscription_usage_multiplier" field.
+func (m *PaymentOrderMutation) SetSubscriptionUsageMultiplier(f float64) {
+	m.subscription_usage_multiplier = &f
+	m.addsubscription_usage_multiplier = nil
+}
+
+// SubscriptionUsageMultiplier returns the value of the "subscription_usage_multiplier" field in the mutation.
+func (m *PaymentOrderMutation) SubscriptionUsageMultiplier() (r float64, exists bool) {
+	v := m.subscription_usage_multiplier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubscriptionUsageMultiplier returns the old "subscription_usage_multiplier" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldSubscriptionUsageMultiplier(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubscriptionUsageMultiplier is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubscriptionUsageMultiplier requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubscriptionUsageMultiplier: %w", err)
+	}
+	return oldValue.SubscriptionUsageMultiplier, nil
+}
+
+// AddSubscriptionUsageMultiplier adds f to the "subscription_usage_multiplier" field.
+func (m *PaymentOrderMutation) AddSubscriptionUsageMultiplier(f float64) {
+	if m.addsubscription_usage_multiplier != nil {
+		*m.addsubscription_usage_multiplier += f
+	} else {
+		m.addsubscription_usage_multiplier = &f
+	}
+}
+
+// AddedSubscriptionUsageMultiplier returns the value that was added to the "subscription_usage_multiplier" field in this mutation.
+func (m *PaymentOrderMutation) AddedSubscriptionUsageMultiplier() (r float64, exists bool) {
+	v := m.addsubscription_usage_multiplier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearSubscriptionUsageMultiplier clears the value of the "subscription_usage_multiplier" field.
+func (m *PaymentOrderMutation) ClearSubscriptionUsageMultiplier() {
+	m.subscription_usage_multiplier = nil
+	m.addsubscription_usage_multiplier = nil
+	m.clearedFields[paymentorder.FieldSubscriptionUsageMultiplier] = struct{}{}
+}
+
+// SubscriptionUsageMultiplierCleared returns if the "subscription_usage_multiplier" field was cleared in this mutation.
+func (m *PaymentOrderMutation) SubscriptionUsageMultiplierCleared() bool {
+	_, ok := m.clearedFields[paymentorder.FieldSubscriptionUsageMultiplier]
+	return ok
+}
+
+// ResetSubscriptionUsageMultiplier resets all changes to the "subscription_usage_multiplier" field.
+func (m *PaymentOrderMutation) ResetSubscriptionUsageMultiplier() {
+	m.subscription_usage_multiplier = nil
+	m.addsubscription_usage_multiplier = nil
+	delete(m.clearedFields, paymentorder.FieldSubscriptionUsageMultiplier)
+}
+
+// SetSubscriptionPlanName sets the "subscription_plan_name" field.
+func (m *PaymentOrderMutation) SetSubscriptionPlanName(s string) {
+	m.subscription_plan_name = &s
+}
+
+// SubscriptionPlanName returns the value of the "subscription_plan_name" field in the mutation.
+func (m *PaymentOrderMutation) SubscriptionPlanName() (r string, exists bool) {
+	v := m.subscription_plan_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSubscriptionPlanName returns the old "subscription_plan_name" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldSubscriptionPlanName(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSubscriptionPlanName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSubscriptionPlanName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSubscriptionPlanName: %w", err)
+	}
+	return oldValue.SubscriptionPlanName, nil
+}
+
+// ClearSubscriptionPlanName clears the value of the "subscription_plan_name" field.
+func (m *PaymentOrderMutation) ClearSubscriptionPlanName() {
+	m.subscription_plan_name = nil
+	m.clearedFields[paymentorder.FieldSubscriptionPlanName] = struct{}{}
+}
+
+// SubscriptionPlanNameCleared returns if the "subscription_plan_name" field was cleared in this mutation.
+func (m *PaymentOrderMutation) SubscriptionPlanNameCleared() bool {
+	_, ok := m.clearedFields[paymentorder.FieldSubscriptionPlanName]
+	return ok
+}
+
+// ResetSubscriptionPlanName resets all changes to the "subscription_plan_name" field.
+func (m *PaymentOrderMutation) ResetSubscriptionPlanName() {
+	m.subscription_plan_name = nil
+	delete(m.clearedFields, paymentorder.FieldSubscriptionPlanName)
 }
 
 // SetProviderInstanceID sets the "provider_instance_id" field.
@@ -32210,7 +32404,7 @@ func (m *PaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 39)
+	fields := make([]string, 0, 42)
 	if m.user != nil {
 		fields = append(fields, paymentorder.FieldUserID)
 	}
@@ -32264,6 +32458,15 @@ func (m *PaymentOrderMutation) Fields() []string {
 	}
 	if m.subscription_days != nil {
 		fields = append(fields, paymentorder.FieldSubscriptionDays)
+	}
+	if m.subscription_quota_usd != nil {
+		fields = append(fields, paymentorder.FieldSubscriptionQuotaUsd)
+	}
+	if m.subscription_usage_multiplier != nil {
+		fields = append(fields, paymentorder.FieldSubscriptionUsageMultiplier)
+	}
+	if m.subscription_plan_name != nil {
+		fields = append(fields, paymentorder.FieldSubscriptionPlanName)
 	}
 	if m.provider_instance_id != nil {
 		fields = append(fields, paymentorder.FieldProviderInstanceID)
@@ -32372,6 +32575,12 @@ func (m *PaymentOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.SubscriptionGroupID()
 	case paymentorder.FieldSubscriptionDays:
 		return m.SubscriptionDays()
+	case paymentorder.FieldSubscriptionQuotaUsd:
+		return m.SubscriptionQuotaUsd()
+	case paymentorder.FieldSubscriptionUsageMultiplier:
+		return m.SubscriptionUsageMultiplier()
+	case paymentorder.FieldSubscriptionPlanName:
+		return m.SubscriptionPlanName()
 	case paymentorder.FieldProviderInstanceID:
 		return m.ProviderInstanceID()
 	case paymentorder.FieldProviderKey:
@@ -32459,6 +32668,12 @@ func (m *PaymentOrderMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldSubscriptionGroupID(ctx)
 	case paymentorder.FieldSubscriptionDays:
 		return m.OldSubscriptionDays(ctx)
+	case paymentorder.FieldSubscriptionQuotaUsd:
+		return m.OldSubscriptionQuotaUsd(ctx)
+	case paymentorder.FieldSubscriptionUsageMultiplier:
+		return m.OldSubscriptionUsageMultiplier(ctx)
+	case paymentorder.FieldSubscriptionPlanName:
+		return m.OldSubscriptionPlanName(ctx)
 	case paymentorder.FieldProviderInstanceID:
 		return m.OldProviderInstanceID(ctx)
 	case paymentorder.FieldProviderKey:
@@ -32636,6 +32851,27 @@ func (m *PaymentOrderMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetSubscriptionDays(v)
 		return nil
+	case paymentorder.FieldSubscriptionQuotaUsd:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubscriptionQuotaUsd(v)
+		return nil
+	case paymentorder.FieldSubscriptionUsageMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubscriptionUsageMultiplier(v)
+		return nil
+	case paymentorder.FieldSubscriptionPlanName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSubscriptionPlanName(v)
+		return nil
 	case paymentorder.FieldProviderInstanceID:
 		v, ok := value.(string)
 		if !ok {
@@ -32809,6 +33045,12 @@ func (m *PaymentOrderMutation) AddedFields() []string {
 	if m.addsubscription_days != nil {
 		fields = append(fields, paymentorder.FieldSubscriptionDays)
 	}
+	if m.addsubscription_quota_usd != nil {
+		fields = append(fields, paymentorder.FieldSubscriptionQuotaUsd)
+	}
+	if m.addsubscription_usage_multiplier != nil {
+		fields = append(fields, paymentorder.FieldSubscriptionUsageMultiplier)
+	}
 	if m.addrefund_amount != nil {
 		fields = append(fields, paymentorder.FieldRefundAmount)
 	}
@@ -32832,6 +33074,10 @@ func (m *PaymentOrderMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedSubscriptionGroupID()
 	case paymentorder.FieldSubscriptionDays:
 		return m.AddedSubscriptionDays()
+	case paymentorder.FieldSubscriptionQuotaUsd:
+		return m.AddedSubscriptionQuotaUsd()
+	case paymentorder.FieldSubscriptionUsageMultiplier:
+		return m.AddedSubscriptionUsageMultiplier()
 	case paymentorder.FieldRefundAmount:
 		return m.AddedRefundAmount()
 	}
@@ -32885,6 +33131,20 @@ func (m *PaymentOrderMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddSubscriptionDays(v)
 		return nil
+	case paymentorder.FieldSubscriptionQuotaUsd:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSubscriptionQuotaUsd(v)
+		return nil
+	case paymentorder.FieldSubscriptionUsageMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSubscriptionUsageMultiplier(v)
+		return nil
 	case paymentorder.FieldRefundAmount:
 		v, ok := value.(float64)
 		if !ok {
@@ -32920,6 +33180,15 @@ func (m *PaymentOrderMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(paymentorder.FieldSubscriptionDays) {
 		fields = append(fields, paymentorder.FieldSubscriptionDays)
+	}
+	if m.FieldCleared(paymentorder.FieldSubscriptionQuotaUsd) {
+		fields = append(fields, paymentorder.FieldSubscriptionQuotaUsd)
+	}
+	if m.FieldCleared(paymentorder.FieldSubscriptionUsageMultiplier) {
+		fields = append(fields, paymentorder.FieldSubscriptionUsageMultiplier)
+	}
+	if m.FieldCleared(paymentorder.FieldSubscriptionPlanName) {
+		fields = append(fields, paymentorder.FieldSubscriptionPlanName)
 	}
 	if m.FieldCleared(paymentorder.FieldProviderInstanceID) {
 		fields = append(fields, paymentorder.FieldProviderInstanceID)
@@ -32994,6 +33263,15 @@ func (m *PaymentOrderMutation) ClearField(name string) error {
 		return nil
 	case paymentorder.FieldSubscriptionDays:
 		m.ClearSubscriptionDays()
+		return nil
+	case paymentorder.FieldSubscriptionQuotaUsd:
+		m.ClearSubscriptionQuotaUsd()
+		return nil
+	case paymentorder.FieldSubscriptionUsageMultiplier:
+		m.ClearSubscriptionUsageMultiplier()
+		return nil
+	case paymentorder.FieldSubscriptionPlanName:
+		m.ClearSubscriptionPlanName()
 		return nil
 	case paymentorder.FieldProviderInstanceID:
 		m.ClearProviderInstanceID()
@@ -33095,6 +33373,15 @@ func (m *PaymentOrderMutation) ResetField(name string) error {
 		return nil
 	case paymentorder.FieldSubscriptionDays:
 		m.ResetSubscriptionDays()
+		return nil
+	case paymentorder.FieldSubscriptionQuotaUsd:
+		m.ResetSubscriptionQuotaUsd()
+		return nil
+	case paymentorder.FieldSubscriptionUsageMultiplier:
+		m.ResetSubscriptionUsageMultiplier()
+		return nil
+	case paymentorder.FieldSubscriptionPlanName:
+		m.ResetSubscriptionPlanName()
 		return nil
 	case paymentorder.FieldProviderInstanceID:
 		m.ResetProviderInstanceID()
@@ -40938,32 +41225,36 @@ func (m *SettingMutation) ResetEdge(name string) error {
 // SubscriptionPlanMutation represents an operation that mutates the SubscriptionPlan nodes in the graph.
 type SubscriptionPlanMutation struct {
 	config
-	op                Op
-	typ               string
-	id                *int64
-	group_id          *int64
-	addgroup_id       *int64
-	name              *string
-	description       *string
-	price             *float64
-	addprice          *float64
-	original_price    *float64
-	addoriginal_price *float64
-	currency          *string
-	validity_days     *int
-	addvalidity_days  *int
-	validity_unit     *string
-	features          *string
-	product_name      *string
-	for_sale          *bool
-	sort_order        *int
-	addsort_order     *int
-	created_at        *time.Time
-	updated_at        *time.Time
-	clearedFields     map[string]struct{}
-	done              bool
-	oldValue          func(context.Context) (*SubscriptionPlan, error)
-	predicates        []predicate.SubscriptionPlan
+	op                  Op
+	typ                 string
+	id                  *int64
+	group_id            *int64
+	addgroup_id         *int64
+	name                *string
+	description         *string
+	price               *float64
+	addprice            *float64
+	quota_multiplier    *float64
+	addquota_multiplier *float64
+	usage_multiplier    *float64
+	addusage_multiplier *float64
+	original_price      *float64
+	addoriginal_price   *float64
+	currency            *string
+	validity_days       *int
+	addvalidity_days    *int
+	validity_unit       *string
+	features            *string
+	product_name        *string
+	for_sale            *bool
+	sort_order          *int
+	addsort_order       *int
+	created_at          *time.Time
+	updated_at          *time.Time
+	clearedFields       map[string]struct{}
+	done                bool
+	oldValue            func(context.Context) (*SubscriptionPlan, error)
+	predicates          []predicate.SubscriptionPlan
 }
 
 var _ ent.Mutation = (*SubscriptionPlanMutation)(nil)
@@ -41246,6 +41537,118 @@ func (m *SubscriptionPlanMutation) AddedPrice() (r float64, exists bool) {
 func (m *SubscriptionPlanMutation) ResetPrice() {
 	m.price = nil
 	m.addprice = nil
+}
+
+// SetQuotaMultiplier sets the "quota_multiplier" field.
+func (m *SubscriptionPlanMutation) SetQuotaMultiplier(f float64) {
+	m.quota_multiplier = &f
+	m.addquota_multiplier = nil
+}
+
+// QuotaMultiplier returns the value of the "quota_multiplier" field in the mutation.
+func (m *SubscriptionPlanMutation) QuotaMultiplier() (r float64, exists bool) {
+	v := m.quota_multiplier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuotaMultiplier returns the old "quota_multiplier" field's value of the SubscriptionPlan entity.
+// If the SubscriptionPlan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SubscriptionPlanMutation) OldQuotaMultiplier(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuotaMultiplier is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuotaMultiplier requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuotaMultiplier: %w", err)
+	}
+	return oldValue.QuotaMultiplier, nil
+}
+
+// AddQuotaMultiplier adds f to the "quota_multiplier" field.
+func (m *SubscriptionPlanMutation) AddQuotaMultiplier(f float64) {
+	if m.addquota_multiplier != nil {
+		*m.addquota_multiplier += f
+	} else {
+		m.addquota_multiplier = &f
+	}
+}
+
+// AddedQuotaMultiplier returns the value that was added to the "quota_multiplier" field in this mutation.
+func (m *SubscriptionPlanMutation) AddedQuotaMultiplier() (r float64, exists bool) {
+	v := m.addquota_multiplier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetQuotaMultiplier resets all changes to the "quota_multiplier" field.
+func (m *SubscriptionPlanMutation) ResetQuotaMultiplier() {
+	m.quota_multiplier = nil
+	m.addquota_multiplier = nil
+}
+
+// SetUsageMultiplier sets the "usage_multiplier" field.
+func (m *SubscriptionPlanMutation) SetUsageMultiplier(f float64) {
+	m.usage_multiplier = &f
+	m.addusage_multiplier = nil
+}
+
+// UsageMultiplier returns the value of the "usage_multiplier" field in the mutation.
+func (m *SubscriptionPlanMutation) UsageMultiplier() (r float64, exists bool) {
+	v := m.usage_multiplier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUsageMultiplier returns the old "usage_multiplier" field's value of the SubscriptionPlan entity.
+// If the SubscriptionPlan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SubscriptionPlanMutation) OldUsageMultiplier(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUsageMultiplier is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUsageMultiplier requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUsageMultiplier: %w", err)
+	}
+	return oldValue.UsageMultiplier, nil
+}
+
+// AddUsageMultiplier adds f to the "usage_multiplier" field.
+func (m *SubscriptionPlanMutation) AddUsageMultiplier(f float64) {
+	if m.addusage_multiplier != nil {
+		*m.addusage_multiplier += f
+	} else {
+		m.addusage_multiplier = &f
+	}
+}
+
+// AddedUsageMultiplier returns the value that was added to the "usage_multiplier" field in this mutation.
+func (m *SubscriptionPlanMutation) AddedUsageMultiplier() (r float64, exists bool) {
+	v := m.addusage_multiplier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetUsageMultiplier resets all changes to the "usage_multiplier" field.
+func (m *SubscriptionPlanMutation) ResetUsageMultiplier() {
+	m.usage_multiplier = nil
+	m.addusage_multiplier = nil
 }
 
 // SetOriginalPrice sets the "original_price" field.
@@ -41716,7 +42119,7 @@ func (m *SubscriptionPlanMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SubscriptionPlanMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 16)
 	if m.group_id != nil {
 		fields = append(fields, subscriptionplan.FieldGroupID)
 	}
@@ -41728,6 +42131,12 @@ func (m *SubscriptionPlanMutation) Fields() []string {
 	}
 	if m.price != nil {
 		fields = append(fields, subscriptionplan.FieldPrice)
+	}
+	if m.quota_multiplier != nil {
+		fields = append(fields, subscriptionplan.FieldQuotaMultiplier)
+	}
+	if m.usage_multiplier != nil {
+		fields = append(fields, subscriptionplan.FieldUsageMultiplier)
 	}
 	if m.original_price != nil {
 		fields = append(fields, subscriptionplan.FieldOriginalPrice)
@@ -41775,6 +42184,10 @@ func (m *SubscriptionPlanMutation) Field(name string) (ent.Value, bool) {
 		return m.Description()
 	case subscriptionplan.FieldPrice:
 		return m.Price()
+	case subscriptionplan.FieldQuotaMultiplier:
+		return m.QuotaMultiplier()
+	case subscriptionplan.FieldUsageMultiplier:
+		return m.UsageMultiplier()
 	case subscriptionplan.FieldOriginalPrice:
 		return m.OriginalPrice()
 	case subscriptionplan.FieldCurrency:
@@ -41812,6 +42225,10 @@ func (m *SubscriptionPlanMutation) OldField(ctx context.Context, name string) (e
 		return m.OldDescription(ctx)
 	case subscriptionplan.FieldPrice:
 		return m.OldPrice(ctx)
+	case subscriptionplan.FieldQuotaMultiplier:
+		return m.OldQuotaMultiplier(ctx)
+	case subscriptionplan.FieldUsageMultiplier:
+		return m.OldUsageMultiplier(ctx)
 	case subscriptionplan.FieldOriginalPrice:
 		return m.OldOriginalPrice(ctx)
 	case subscriptionplan.FieldCurrency:
@@ -41868,6 +42285,20 @@ func (m *SubscriptionPlanMutation) SetField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetPrice(v)
+		return nil
+	case subscriptionplan.FieldQuotaMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuotaMultiplier(v)
+		return nil
+	case subscriptionplan.FieldUsageMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUsageMultiplier(v)
 		return nil
 	case subscriptionplan.FieldOriginalPrice:
 		v, ok := value.(float64)
@@ -41953,6 +42384,12 @@ func (m *SubscriptionPlanMutation) AddedFields() []string {
 	if m.addprice != nil {
 		fields = append(fields, subscriptionplan.FieldPrice)
 	}
+	if m.addquota_multiplier != nil {
+		fields = append(fields, subscriptionplan.FieldQuotaMultiplier)
+	}
+	if m.addusage_multiplier != nil {
+		fields = append(fields, subscriptionplan.FieldUsageMultiplier)
+	}
 	if m.addoriginal_price != nil {
 		fields = append(fields, subscriptionplan.FieldOriginalPrice)
 	}
@@ -41974,6 +42411,10 @@ func (m *SubscriptionPlanMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedGroupID()
 	case subscriptionplan.FieldPrice:
 		return m.AddedPrice()
+	case subscriptionplan.FieldQuotaMultiplier:
+		return m.AddedQuotaMultiplier()
+	case subscriptionplan.FieldUsageMultiplier:
+		return m.AddedUsageMultiplier()
 	case subscriptionplan.FieldOriginalPrice:
 		return m.AddedOriginalPrice()
 	case subscriptionplan.FieldValidityDays:
@@ -42002,6 +42443,20 @@ func (m *SubscriptionPlanMutation) AddField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddPrice(v)
+		return nil
+	case subscriptionplan.FieldQuotaMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddQuotaMultiplier(v)
+		return nil
+	case subscriptionplan.FieldUsageMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddUsageMultiplier(v)
 		return nil
 	case subscriptionplan.FieldOriginalPrice:
 		v, ok := value.(float64)
@@ -42071,6 +42526,12 @@ func (m *SubscriptionPlanMutation) ResetField(name string) error {
 		return nil
 	case subscriptionplan.FieldPrice:
 		m.ResetPrice()
+		return nil
+	case subscriptionplan.FieldQuotaMultiplier:
+		m.ResetQuotaMultiplier()
+		return nil
+	case subscriptionplan.FieldUsageMultiplier:
+		m.ResetUsageMultiplier()
 		return nil
 	case subscriptionplan.FieldOriginalPrice:
 		m.ResetOriginalPrice()
@@ -55470,6 +55931,13 @@ type UserSubscriptionMutation struct {
 	addweekly_usage_usd     *float64
 	monthly_usage_usd       *float64
 	addmonthly_usage_usd    *float64
+	quota_usd               *float64
+	addquota_usd            *float64
+	quota_used_usd          *float64
+	addquota_used_usd       *float64
+	usage_multiplier        *float64
+	addusage_multiplier     *float64
+	plan_name               *string
 	assigned_at             *time.Time
 	notes                   *string
 	clearedFields           map[string]struct{}
@@ -56201,6 +56669,210 @@ func (m *UserSubscriptionMutation) ResetMonthlyUsageUsd() {
 	m.addmonthly_usage_usd = nil
 }
 
+// SetQuotaUsd sets the "quota_usd" field.
+func (m *UserSubscriptionMutation) SetQuotaUsd(f float64) {
+	m.quota_usd = &f
+	m.addquota_usd = nil
+}
+
+// QuotaUsd returns the value of the "quota_usd" field in the mutation.
+func (m *UserSubscriptionMutation) QuotaUsd() (r float64, exists bool) {
+	v := m.quota_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuotaUsd returns the old "quota_usd" field's value of the UserSubscription entity.
+// If the UserSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserSubscriptionMutation) OldQuotaUsd(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuotaUsd is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuotaUsd requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuotaUsd: %w", err)
+	}
+	return oldValue.QuotaUsd, nil
+}
+
+// AddQuotaUsd adds f to the "quota_usd" field.
+func (m *UserSubscriptionMutation) AddQuotaUsd(f float64) {
+	if m.addquota_usd != nil {
+		*m.addquota_usd += f
+	} else {
+		m.addquota_usd = &f
+	}
+}
+
+// AddedQuotaUsd returns the value that was added to the "quota_usd" field in this mutation.
+func (m *UserSubscriptionMutation) AddedQuotaUsd() (r float64, exists bool) {
+	v := m.addquota_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetQuotaUsd resets all changes to the "quota_usd" field.
+func (m *UserSubscriptionMutation) ResetQuotaUsd() {
+	m.quota_usd = nil
+	m.addquota_usd = nil
+}
+
+// SetQuotaUsedUsd sets the "quota_used_usd" field.
+func (m *UserSubscriptionMutation) SetQuotaUsedUsd(f float64) {
+	m.quota_used_usd = &f
+	m.addquota_used_usd = nil
+}
+
+// QuotaUsedUsd returns the value of the "quota_used_usd" field in the mutation.
+func (m *UserSubscriptionMutation) QuotaUsedUsd() (r float64, exists bool) {
+	v := m.quota_used_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuotaUsedUsd returns the old "quota_used_usd" field's value of the UserSubscription entity.
+// If the UserSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserSubscriptionMutation) OldQuotaUsedUsd(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuotaUsedUsd is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuotaUsedUsd requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuotaUsedUsd: %w", err)
+	}
+	return oldValue.QuotaUsedUsd, nil
+}
+
+// AddQuotaUsedUsd adds f to the "quota_used_usd" field.
+func (m *UserSubscriptionMutation) AddQuotaUsedUsd(f float64) {
+	if m.addquota_used_usd != nil {
+		*m.addquota_used_usd += f
+	} else {
+		m.addquota_used_usd = &f
+	}
+}
+
+// AddedQuotaUsedUsd returns the value that was added to the "quota_used_usd" field in this mutation.
+func (m *UserSubscriptionMutation) AddedQuotaUsedUsd() (r float64, exists bool) {
+	v := m.addquota_used_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetQuotaUsedUsd resets all changes to the "quota_used_usd" field.
+func (m *UserSubscriptionMutation) ResetQuotaUsedUsd() {
+	m.quota_used_usd = nil
+	m.addquota_used_usd = nil
+}
+
+// SetUsageMultiplier sets the "usage_multiplier" field.
+func (m *UserSubscriptionMutation) SetUsageMultiplier(f float64) {
+	m.usage_multiplier = &f
+	m.addusage_multiplier = nil
+}
+
+// UsageMultiplier returns the value of the "usage_multiplier" field in the mutation.
+func (m *UserSubscriptionMutation) UsageMultiplier() (r float64, exists bool) {
+	v := m.usage_multiplier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUsageMultiplier returns the old "usage_multiplier" field's value of the UserSubscription entity.
+// If the UserSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserSubscriptionMutation) OldUsageMultiplier(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUsageMultiplier is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUsageMultiplier requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUsageMultiplier: %w", err)
+	}
+	return oldValue.UsageMultiplier, nil
+}
+
+// AddUsageMultiplier adds f to the "usage_multiplier" field.
+func (m *UserSubscriptionMutation) AddUsageMultiplier(f float64) {
+	if m.addusage_multiplier != nil {
+		*m.addusage_multiplier += f
+	} else {
+		m.addusage_multiplier = &f
+	}
+}
+
+// AddedUsageMultiplier returns the value that was added to the "usage_multiplier" field in this mutation.
+func (m *UserSubscriptionMutation) AddedUsageMultiplier() (r float64, exists bool) {
+	v := m.addusage_multiplier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetUsageMultiplier resets all changes to the "usage_multiplier" field.
+func (m *UserSubscriptionMutation) ResetUsageMultiplier() {
+	m.usage_multiplier = nil
+	m.addusage_multiplier = nil
+}
+
+// SetPlanName sets the "plan_name" field.
+func (m *UserSubscriptionMutation) SetPlanName(s string) {
+	m.plan_name = &s
+}
+
+// PlanName returns the value of the "plan_name" field in the mutation.
+func (m *UserSubscriptionMutation) PlanName() (r string, exists bool) {
+	v := m.plan_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPlanName returns the old "plan_name" field's value of the UserSubscription entity.
+// If the UserSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserSubscriptionMutation) OldPlanName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPlanName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPlanName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPlanName: %w", err)
+	}
+	return oldValue.PlanName, nil
+}
+
+// ResetPlanName resets all changes to the "plan_name" field.
+func (m *UserSubscriptionMutation) ResetPlanName() {
+	m.plan_name = nil
+}
+
 // SetAssignedBy sets the "assigned_by" field.
 func (m *UserSubscriptionMutation) SetAssignedBy(i int64) {
 	m.assigned_by_user = &i
@@ -56517,7 +57189,7 @@ func (m *UserSubscriptionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserSubscriptionMutation) Fields() []string {
-	fields := make([]string, 0, 17)
+	fields := make([]string, 0, 21)
 	if m.created_at != nil {
 		fields = append(fields, usersubscription.FieldCreatedAt)
 	}
@@ -56559,6 +57231,18 @@ func (m *UserSubscriptionMutation) Fields() []string {
 	}
 	if m.monthly_usage_usd != nil {
 		fields = append(fields, usersubscription.FieldMonthlyUsageUsd)
+	}
+	if m.quota_usd != nil {
+		fields = append(fields, usersubscription.FieldQuotaUsd)
+	}
+	if m.quota_used_usd != nil {
+		fields = append(fields, usersubscription.FieldQuotaUsedUsd)
+	}
+	if m.usage_multiplier != nil {
+		fields = append(fields, usersubscription.FieldUsageMultiplier)
+	}
+	if m.plan_name != nil {
+		fields = append(fields, usersubscription.FieldPlanName)
 	}
 	if m.assigned_by_user != nil {
 		fields = append(fields, usersubscription.FieldAssignedBy)
@@ -56605,6 +57289,14 @@ func (m *UserSubscriptionMutation) Field(name string) (ent.Value, bool) {
 		return m.WeeklyUsageUsd()
 	case usersubscription.FieldMonthlyUsageUsd:
 		return m.MonthlyUsageUsd()
+	case usersubscription.FieldQuotaUsd:
+		return m.QuotaUsd()
+	case usersubscription.FieldQuotaUsedUsd:
+		return m.QuotaUsedUsd()
+	case usersubscription.FieldUsageMultiplier:
+		return m.UsageMultiplier()
+	case usersubscription.FieldPlanName:
+		return m.PlanName()
 	case usersubscription.FieldAssignedBy:
 		return m.AssignedBy()
 	case usersubscription.FieldAssignedAt:
@@ -56648,6 +57340,14 @@ func (m *UserSubscriptionMutation) OldField(ctx context.Context, name string) (e
 		return m.OldWeeklyUsageUsd(ctx)
 	case usersubscription.FieldMonthlyUsageUsd:
 		return m.OldMonthlyUsageUsd(ctx)
+	case usersubscription.FieldQuotaUsd:
+		return m.OldQuotaUsd(ctx)
+	case usersubscription.FieldQuotaUsedUsd:
+		return m.OldQuotaUsedUsd(ctx)
+	case usersubscription.FieldUsageMultiplier:
+		return m.OldUsageMultiplier(ctx)
+	case usersubscription.FieldPlanName:
+		return m.OldPlanName(ctx)
 	case usersubscription.FieldAssignedBy:
 		return m.OldAssignedBy(ctx)
 	case usersubscription.FieldAssignedAt:
@@ -56761,6 +57461,34 @@ func (m *UserSubscriptionMutation) SetField(name string, value ent.Value) error 
 		}
 		m.SetMonthlyUsageUsd(v)
 		return nil
+	case usersubscription.FieldQuotaUsd:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuotaUsd(v)
+		return nil
+	case usersubscription.FieldQuotaUsedUsd:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuotaUsedUsd(v)
+		return nil
+	case usersubscription.FieldUsageMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUsageMultiplier(v)
+		return nil
+	case usersubscription.FieldPlanName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPlanName(v)
+		return nil
 	case usersubscription.FieldAssignedBy:
 		v, ok := value.(int64)
 		if !ok {
@@ -56799,6 +57527,15 @@ func (m *UserSubscriptionMutation) AddedFields() []string {
 	if m.addmonthly_usage_usd != nil {
 		fields = append(fields, usersubscription.FieldMonthlyUsageUsd)
 	}
+	if m.addquota_usd != nil {
+		fields = append(fields, usersubscription.FieldQuotaUsd)
+	}
+	if m.addquota_used_usd != nil {
+		fields = append(fields, usersubscription.FieldQuotaUsedUsd)
+	}
+	if m.addusage_multiplier != nil {
+		fields = append(fields, usersubscription.FieldUsageMultiplier)
+	}
 	return fields
 }
 
@@ -56813,6 +57550,12 @@ func (m *UserSubscriptionMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedWeeklyUsageUsd()
 	case usersubscription.FieldMonthlyUsageUsd:
 		return m.AddedMonthlyUsageUsd()
+	case usersubscription.FieldQuotaUsd:
+		return m.AddedQuotaUsd()
+	case usersubscription.FieldQuotaUsedUsd:
+		return m.AddedQuotaUsedUsd()
+	case usersubscription.FieldUsageMultiplier:
+		return m.AddedUsageMultiplier()
 	}
 	return nil, false
 }
@@ -56842,6 +57585,27 @@ func (m *UserSubscriptionMutation) AddField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddMonthlyUsageUsd(v)
+		return nil
+	case usersubscription.FieldQuotaUsd:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddQuotaUsd(v)
+		return nil
+	case usersubscription.FieldQuotaUsedUsd:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddQuotaUsedUsd(v)
+		return nil
+	case usersubscription.FieldUsageMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddUsageMultiplier(v)
 		return nil
 	}
 	return fmt.Errorf("unknown UserSubscription numeric field %s", name)
@@ -56950,6 +57714,18 @@ func (m *UserSubscriptionMutation) ResetField(name string) error {
 		return nil
 	case usersubscription.FieldMonthlyUsageUsd:
 		m.ResetMonthlyUsageUsd()
+		return nil
+	case usersubscription.FieldQuotaUsd:
+		m.ResetQuotaUsd()
+		return nil
+	case usersubscription.FieldQuotaUsedUsd:
+		m.ResetQuotaUsedUsd()
+		return nil
+	case usersubscription.FieldUsageMultiplier:
+		m.ResetUsageMultiplier()
+		return nil
+	case usersubscription.FieldPlanName:
+		m.ResetPlanName()
 		return nil
 	case usersubscription.FieldAssignedBy:
 		m.ResetAssignedBy()

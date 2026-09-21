@@ -20,7 +20,6 @@
           </Select>
         </div>
       </div>
-
       <!-- Group Info Preview -->
       <div v-if="selectedGroupInfo" class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-dark-600 dark:bg-dark-800">
         <div class="mb-2 flex items-center gap-2">
@@ -46,6 +45,18 @@
           </p>
         </div>
         <div><label class="input-label">{{ t('payment.admin.originalPrice') }}</label><input v-model.number="planForm.original_price" type="number" step="0.01" min="0" class="input" /></div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="input-label">{{ t('payment.admin.quotaMultiplier') }}</label>
+          <input v-model.number="planForm.quota_multiplier" type="number" step="0.01" min="0.01" class="input" required />
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.quotaMultiplierHint') }}</p>
+        </div>
+        <div>
+          <label class="input-label">{{ t('payment.admin.usageMultiplier') }}</label>
+          <input v-model.number="planForm.usage_multiplier" type="number" step="0.01" min="0.01" class="input" required />
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.usageMultiplierHint') }}</p>
+        </div>
       </div>
       <div class="grid grid-cols-2 gap-4">
         <div><label class="input-label">{{ t('payment.admin.validity') }} <span class="text-red-500">*</span></label><input v-model.number="planForm.validity_days" type="number" min="1" class="input" required /></div>
@@ -122,7 +133,7 @@ const { t } = useI18n()
 const appStore = useAppStore()
 
 const saving = ref(false)
-const planForm = reactive({ name: '', group_id: null as number | null, description: '', price: 0, original_price: 0, currency: '', validity_days: 30, validity_unit: 'days', sort_order: 0, for_sale: true })
+const planForm = reactive({ name: '', group_id: null as number | null, description: '', price: 0, original_price: 0, currency: '', validity_days: 30, validity_unit: 'days', sort_order: 0, for_sale: true, quota_multiplier: 10, usage_multiplier: 12 })
 const planFeaturesText = ref('')
 
 const validityUnitOptions = computed(() => [
@@ -175,10 +186,10 @@ const subscriptionCnyPreview = computed(() => {
 watch(() => props.show, (visible) => {
   if (!visible) return
   if (props.plan) {
-    Object.assign(planForm, { name: props.plan.name, group_id: props.plan.group_id, description: props.plan.description, price: props.plan.price, original_price: props.plan.original_price || 0, currency: props.plan.currency || '', validity_days: props.plan.validity_days, validity_unit: props.plan.validity_unit || 'days', sort_order: props.plan.sort_order || 0, for_sale: props.plan.for_sale })
+    Object.assign(planForm, { name: props.plan.name, group_id: props.plan.group_id, description: props.plan.description, price: props.plan.price, original_price: props.plan.original_price || 0, currency: props.plan.currency || '', validity_days: props.plan.validity_days, validity_unit: props.plan.validity_unit || 'days', sort_order: props.plan.sort_order || 0, for_sale: props.plan.for_sale, quota_multiplier: props.plan.quota_multiplier || 10, usage_multiplier: props.plan.usage_multiplier || 12 })
     planFeaturesText.value = (props.plan.features || []).join('\n')
   } else {
-    Object.assign(planForm, { name: '', group_id: null, description: '', price: 0, original_price: 0, currency: '', validity_days: 30, validity_unit: 'days', sort_order: 0, for_sale: true })
+    Object.assign(planForm, { name: '', group_id: null, description: '', price: 0, original_price: 0, currency: '', validity_days: 30, validity_unit: 'days', sort_order: 0, for_sale: true, quota_multiplier: 10, usage_multiplier: 12 })
     planFeaturesText.value = ''
   }
 })
@@ -198,6 +209,8 @@ function buildPlanPayload() {
     sort_order: planForm.sort_order,
     for_sale: planForm.for_sale,
     features,
+    quota_multiplier: planForm.quota_multiplier,
+    usage_multiplier: planForm.usage_multiplier,
   }
 }
 

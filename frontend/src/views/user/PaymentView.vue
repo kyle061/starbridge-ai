@@ -122,6 +122,15 @@
                 </p>
                 <!-- Limits grid -->
                 <div class="mt-3 grid grid-cols-2 gap-3">
+                  <div class="col-span-2 rounded-lg bg-gray-50 px-3 py-2 dark:bg-dark-700/50">
+                    <div class="flex items-center justify-between text-sm">
+                      <span class="text-gray-500 dark:text-gray-400">{{ t('payment.planCard.subscriptionQuota') }}</span>
+                      <span class="font-semibold text-gray-800 dark:text-gray-200">¥{{ subscriptionQuota.toFixed(2) }}</span>
+                    </div>
+                    <div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                      {{ t('payment.planCard.usageRate') }} {{ selectedPlan.usage_multiplier || 12 }}x · {{ t('payment.planCard.validityBound') }} {{ planValiditySuffix }}
+                    </div>
+                  </div>
                   <div v-if="selectedPlan.daily_limit_usd != null">
                     <span class="text-xs text-gray-400 dark:text-gray-500">{{ t('payment.planCard.dailyLimit') }}</span>
                     <div class="text-lg font-semibold text-gray-800 dark:text-gray-200">${{ selectedPlan.daily_limit_usd }}</div>
@@ -750,6 +759,11 @@ const renewalPlans = computed(() => {
 const planValiditySuffix = computed(() => {
   if (!selectedPlan.value) return ''
   return validitySuffixOf(selectedPlan.value, t)
+})
+
+const subscriptionQuota = computed(() => {
+  if (!selectedPlan.value) return 0
+  return selectedPlan.value.price * (selectedPlan.value.quota_multiplier || 10)
 })
 
 function selectPlan(plan: SubscriptionPlan) {

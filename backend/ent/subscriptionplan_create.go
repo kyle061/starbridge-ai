@@ -54,6 +54,34 @@ func (_c *SubscriptionPlanCreate) SetPrice(v float64) *SubscriptionPlanCreate {
 	return _c
 }
 
+// SetQuotaMultiplier sets the "quota_multiplier" field.
+func (_c *SubscriptionPlanCreate) SetQuotaMultiplier(v float64) *SubscriptionPlanCreate {
+	_c.mutation.SetQuotaMultiplier(v)
+	return _c
+}
+
+// SetNillableQuotaMultiplier sets the "quota_multiplier" field if the given value is not nil.
+func (_c *SubscriptionPlanCreate) SetNillableQuotaMultiplier(v *float64) *SubscriptionPlanCreate {
+	if v != nil {
+		_c.SetQuotaMultiplier(*v)
+	}
+	return _c
+}
+
+// SetUsageMultiplier sets the "usage_multiplier" field.
+func (_c *SubscriptionPlanCreate) SetUsageMultiplier(v float64) *SubscriptionPlanCreate {
+	_c.mutation.SetUsageMultiplier(v)
+	return _c
+}
+
+// SetNillableUsageMultiplier sets the "usage_multiplier" field if the given value is not nil.
+func (_c *SubscriptionPlanCreate) SetNillableUsageMultiplier(v *float64) *SubscriptionPlanCreate {
+	if v != nil {
+		_c.SetUsageMultiplier(*v)
+	}
+	return _c
+}
+
 // SetOriginalPrice sets the "original_price" field.
 func (_c *SubscriptionPlanCreate) SetOriginalPrice(v float64) *SubscriptionPlanCreate {
 	_c.mutation.SetOriginalPrice(v)
@@ -233,6 +261,14 @@ func (_c *SubscriptionPlanCreate) defaults() {
 		v := subscriptionplan.DefaultDescription
 		_c.mutation.SetDescription(v)
 	}
+	if _, ok := _c.mutation.QuotaMultiplier(); !ok {
+		v := subscriptionplan.DefaultQuotaMultiplier
+		_c.mutation.SetQuotaMultiplier(v)
+	}
+	if _, ok := _c.mutation.UsageMultiplier(); !ok {
+		v := subscriptionplan.DefaultUsageMultiplier
+		_c.mutation.SetUsageMultiplier(v)
+	}
 	if _, ok := _c.mutation.Currency(); !ok {
 		v := subscriptionplan.DefaultCurrency
 		_c.mutation.SetCurrency(v)
@@ -289,6 +325,12 @@ func (_c *SubscriptionPlanCreate) check() error {
 	}
 	if _, ok := _c.mutation.Price(); !ok {
 		return &ValidationError{Name: "price", err: errors.New(`ent: missing required field "SubscriptionPlan.price"`)}
+	}
+	if _, ok := _c.mutation.QuotaMultiplier(); !ok {
+		return &ValidationError{Name: "quota_multiplier", err: errors.New(`ent: missing required field "SubscriptionPlan.quota_multiplier"`)}
+	}
+	if _, ok := _c.mutation.UsageMultiplier(); !ok {
+		return &ValidationError{Name: "usage_multiplier", err: errors.New(`ent: missing required field "SubscriptionPlan.usage_multiplier"`)}
 	}
 	if _, ok := _c.mutation.Currency(); !ok {
 		return &ValidationError{Name: "currency", err: errors.New(`ent: missing required field "SubscriptionPlan.currency"`)}
@@ -374,6 +416,14 @@ func (_c *SubscriptionPlanCreate) createSpec() (*SubscriptionPlan, *sqlgraph.Cre
 	if value, ok := _c.mutation.Price(); ok {
 		_spec.SetField(subscriptionplan.FieldPrice, field.TypeFloat64, value)
 		_node.Price = value
+	}
+	if value, ok := _c.mutation.QuotaMultiplier(); ok {
+		_spec.SetField(subscriptionplan.FieldQuotaMultiplier, field.TypeFloat64, value)
+		_node.QuotaMultiplier = value
+	}
+	if value, ok := _c.mutation.UsageMultiplier(); ok {
+		_spec.SetField(subscriptionplan.FieldUsageMultiplier, field.TypeFloat64, value)
+		_node.UsageMultiplier = value
 	}
 	if value, ok := _c.mutation.OriginalPrice(); ok {
 		_spec.SetField(subscriptionplan.FieldOriginalPrice, field.TypeFloat64, value)
@@ -524,6 +574,42 @@ func (u *SubscriptionPlanUpsert) UpdatePrice() *SubscriptionPlanUpsert {
 // AddPrice adds v to the "price" field.
 func (u *SubscriptionPlanUpsert) AddPrice(v float64) *SubscriptionPlanUpsert {
 	u.Add(subscriptionplan.FieldPrice, v)
+	return u
+}
+
+// SetQuotaMultiplier sets the "quota_multiplier" field.
+func (u *SubscriptionPlanUpsert) SetQuotaMultiplier(v float64) *SubscriptionPlanUpsert {
+	u.Set(subscriptionplan.FieldQuotaMultiplier, v)
+	return u
+}
+
+// UpdateQuotaMultiplier sets the "quota_multiplier" field to the value that was provided on create.
+func (u *SubscriptionPlanUpsert) UpdateQuotaMultiplier() *SubscriptionPlanUpsert {
+	u.SetExcluded(subscriptionplan.FieldQuotaMultiplier)
+	return u
+}
+
+// AddQuotaMultiplier adds v to the "quota_multiplier" field.
+func (u *SubscriptionPlanUpsert) AddQuotaMultiplier(v float64) *SubscriptionPlanUpsert {
+	u.Add(subscriptionplan.FieldQuotaMultiplier, v)
+	return u
+}
+
+// SetUsageMultiplier sets the "usage_multiplier" field.
+func (u *SubscriptionPlanUpsert) SetUsageMultiplier(v float64) *SubscriptionPlanUpsert {
+	u.Set(subscriptionplan.FieldUsageMultiplier, v)
+	return u
+}
+
+// UpdateUsageMultiplier sets the "usage_multiplier" field to the value that was provided on create.
+func (u *SubscriptionPlanUpsert) UpdateUsageMultiplier() *SubscriptionPlanUpsert {
+	u.SetExcluded(subscriptionplan.FieldUsageMultiplier)
+	return u
+}
+
+// AddUsageMultiplier adds v to the "usage_multiplier" field.
+func (u *SubscriptionPlanUpsert) AddUsageMultiplier(v float64) *SubscriptionPlanUpsert {
+	u.Add(subscriptionplan.FieldUsageMultiplier, v)
 	return u
 }
 
@@ -771,6 +857,48 @@ func (u *SubscriptionPlanUpsertOne) AddPrice(v float64) *SubscriptionPlanUpsertO
 func (u *SubscriptionPlanUpsertOne) UpdatePrice() *SubscriptionPlanUpsertOne {
 	return u.Update(func(s *SubscriptionPlanUpsert) {
 		s.UpdatePrice()
+	})
+}
+
+// SetQuotaMultiplier sets the "quota_multiplier" field.
+func (u *SubscriptionPlanUpsertOne) SetQuotaMultiplier(v float64) *SubscriptionPlanUpsertOne {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.SetQuotaMultiplier(v)
+	})
+}
+
+// AddQuotaMultiplier adds v to the "quota_multiplier" field.
+func (u *SubscriptionPlanUpsertOne) AddQuotaMultiplier(v float64) *SubscriptionPlanUpsertOne {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.AddQuotaMultiplier(v)
+	})
+}
+
+// UpdateQuotaMultiplier sets the "quota_multiplier" field to the value that was provided on create.
+func (u *SubscriptionPlanUpsertOne) UpdateQuotaMultiplier() *SubscriptionPlanUpsertOne {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.UpdateQuotaMultiplier()
+	})
+}
+
+// SetUsageMultiplier sets the "usage_multiplier" field.
+func (u *SubscriptionPlanUpsertOne) SetUsageMultiplier(v float64) *SubscriptionPlanUpsertOne {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.SetUsageMultiplier(v)
+	})
+}
+
+// AddUsageMultiplier adds v to the "usage_multiplier" field.
+func (u *SubscriptionPlanUpsertOne) AddUsageMultiplier(v float64) *SubscriptionPlanUpsertOne {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.AddUsageMultiplier(v)
+	})
+}
+
+// UpdateUsageMultiplier sets the "usage_multiplier" field to the value that was provided on create.
+func (u *SubscriptionPlanUpsertOne) UpdateUsageMultiplier() *SubscriptionPlanUpsertOne {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.UpdateUsageMultiplier()
 	})
 }
 
@@ -1206,6 +1334,48 @@ func (u *SubscriptionPlanUpsertBulk) AddPrice(v float64) *SubscriptionPlanUpsert
 func (u *SubscriptionPlanUpsertBulk) UpdatePrice() *SubscriptionPlanUpsertBulk {
 	return u.Update(func(s *SubscriptionPlanUpsert) {
 		s.UpdatePrice()
+	})
+}
+
+// SetQuotaMultiplier sets the "quota_multiplier" field.
+func (u *SubscriptionPlanUpsertBulk) SetQuotaMultiplier(v float64) *SubscriptionPlanUpsertBulk {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.SetQuotaMultiplier(v)
+	})
+}
+
+// AddQuotaMultiplier adds v to the "quota_multiplier" field.
+func (u *SubscriptionPlanUpsertBulk) AddQuotaMultiplier(v float64) *SubscriptionPlanUpsertBulk {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.AddQuotaMultiplier(v)
+	})
+}
+
+// UpdateQuotaMultiplier sets the "quota_multiplier" field to the value that was provided on create.
+func (u *SubscriptionPlanUpsertBulk) UpdateQuotaMultiplier() *SubscriptionPlanUpsertBulk {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.UpdateQuotaMultiplier()
+	})
+}
+
+// SetUsageMultiplier sets the "usage_multiplier" field.
+func (u *SubscriptionPlanUpsertBulk) SetUsageMultiplier(v float64) *SubscriptionPlanUpsertBulk {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.SetUsageMultiplier(v)
+	})
+}
+
+// AddUsageMultiplier adds v to the "usage_multiplier" field.
+func (u *SubscriptionPlanUpsertBulk) AddUsageMultiplier(v float64) *SubscriptionPlanUpsertBulk {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.AddUsageMultiplier(v)
+	})
+}
+
+// UpdateUsageMultiplier sets the "usage_multiplier" field to the value that was provided on create.
+func (u *SubscriptionPlanUpsertBulk) UpdateUsageMultiplier() *SubscriptionPlanUpsertBulk {
+	return u.Update(func(s *SubscriptionPlanUpsert) {
+		s.UpdateUsageMultiplier()
 	})
 }
 

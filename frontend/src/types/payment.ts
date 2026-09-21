@@ -104,6 +104,9 @@ export interface PaymentOrder {
   refund_requested_by?: number
   refund_request_reason?: string
   plan_id?: number
+  subscription_quota_usd?: number
+  subscription_usage_multiplier?: number
+  subscription_plan_name?: string
   provider_instance_id?: string
 }
 
@@ -130,6 +133,8 @@ export interface SubscriptionPlan {
   features: string[]
   for_sale: boolean
   sort_order: number
+  quota_multiplier?: number
+  usage_multiplier?: number
 }
 
 export interface PaymentChannel {

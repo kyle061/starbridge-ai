@@ -211,6 +211,48 @@ func (_c *PaymentOrderCreate) SetNillableSubscriptionDays(v *int) *PaymentOrderC
 	return _c
 }
 
+// SetSubscriptionQuotaUsd sets the "subscription_quota_usd" field.
+func (_c *PaymentOrderCreate) SetSubscriptionQuotaUsd(v float64) *PaymentOrderCreate {
+	_c.mutation.SetSubscriptionQuotaUsd(v)
+	return _c
+}
+
+// SetNillableSubscriptionQuotaUsd sets the "subscription_quota_usd" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableSubscriptionQuotaUsd(v *float64) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetSubscriptionQuotaUsd(*v)
+	}
+	return _c
+}
+
+// SetSubscriptionUsageMultiplier sets the "subscription_usage_multiplier" field.
+func (_c *PaymentOrderCreate) SetSubscriptionUsageMultiplier(v float64) *PaymentOrderCreate {
+	_c.mutation.SetSubscriptionUsageMultiplier(v)
+	return _c
+}
+
+// SetNillableSubscriptionUsageMultiplier sets the "subscription_usage_multiplier" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableSubscriptionUsageMultiplier(v *float64) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetSubscriptionUsageMultiplier(*v)
+	}
+	return _c
+}
+
+// SetSubscriptionPlanName sets the "subscription_plan_name" field.
+func (_c *PaymentOrderCreate) SetSubscriptionPlanName(v string) *PaymentOrderCreate {
+	_c.mutation.SetSubscriptionPlanName(v)
+	return _c
+}
+
+// SetNillableSubscriptionPlanName sets the "subscription_plan_name" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableSubscriptionPlanName(v *string) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetSubscriptionPlanName(*v)
+	}
+	return _c
+}
+
 // SetProviderInstanceID sets the "provider_instance_id" field.
 func (_c *PaymentOrderCreate) SetProviderInstanceID(v string) *PaymentOrderCreate {
 	_c.mutation.SetProviderInstanceID(v)
@@ -617,6 +659,11 @@ func (_c *PaymentOrderCreate) check() error {
 			return &ValidationError{Name: "order_type", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.order_type": %w`, err)}
 		}
 	}
+	if v, ok := _c.mutation.SubscriptionPlanName(); ok {
+		if err := paymentorder.SubscriptionPlanNameValidator(v); err != nil {
+			return &ValidationError{Name: "subscription_plan_name", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.subscription_plan_name": %w`, err)}
+		}
+	}
 	if v, ok := _c.mutation.ProviderInstanceID(); ok {
 		if err := paymentorder.ProviderInstanceIDValidator(v); err != nil {
 			return &ValidationError{Name: "provider_instance_id", err: fmt.Errorf(`ent: validator failed for field "PaymentOrder.provider_instance_id": %w`, err)}
@@ -768,6 +815,18 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 	if value, ok := _c.mutation.SubscriptionDays(); ok {
 		_spec.SetField(paymentorder.FieldSubscriptionDays, field.TypeInt, value)
 		_node.SubscriptionDays = &value
+	}
+	if value, ok := _c.mutation.SubscriptionQuotaUsd(); ok {
+		_spec.SetField(paymentorder.FieldSubscriptionQuotaUsd, field.TypeFloat64, value)
+		_node.SubscriptionQuotaUsd = &value
+	}
+	if value, ok := _c.mutation.SubscriptionUsageMultiplier(); ok {
+		_spec.SetField(paymentorder.FieldSubscriptionUsageMultiplier, field.TypeFloat64, value)
+		_node.SubscriptionUsageMultiplier = &value
+	}
+	if value, ok := _c.mutation.SubscriptionPlanName(); ok {
+		_spec.SetField(paymentorder.FieldSubscriptionPlanName, field.TypeString, value)
+		_node.SubscriptionPlanName = &value
 	}
 	if value, ok := _c.mutation.ProviderInstanceID(); ok {
 		_spec.SetField(paymentorder.FieldProviderInstanceID, field.TypeString, value)
@@ -1213,6 +1272,72 @@ func (u *PaymentOrderUpsert) AddSubscriptionDays(v int) *PaymentOrderUpsert {
 // ClearSubscriptionDays clears the value of the "subscription_days" field.
 func (u *PaymentOrderUpsert) ClearSubscriptionDays() *PaymentOrderUpsert {
 	u.SetNull(paymentorder.FieldSubscriptionDays)
+	return u
+}
+
+// SetSubscriptionQuotaUsd sets the "subscription_quota_usd" field.
+func (u *PaymentOrderUpsert) SetSubscriptionQuotaUsd(v float64) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldSubscriptionQuotaUsd, v)
+	return u
+}
+
+// UpdateSubscriptionQuotaUsd sets the "subscription_quota_usd" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateSubscriptionQuotaUsd() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldSubscriptionQuotaUsd)
+	return u
+}
+
+// AddSubscriptionQuotaUsd adds v to the "subscription_quota_usd" field.
+func (u *PaymentOrderUpsert) AddSubscriptionQuotaUsd(v float64) *PaymentOrderUpsert {
+	u.Add(paymentorder.FieldSubscriptionQuotaUsd, v)
+	return u
+}
+
+// ClearSubscriptionQuotaUsd clears the value of the "subscription_quota_usd" field.
+func (u *PaymentOrderUpsert) ClearSubscriptionQuotaUsd() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldSubscriptionQuotaUsd)
+	return u
+}
+
+// SetSubscriptionUsageMultiplier sets the "subscription_usage_multiplier" field.
+func (u *PaymentOrderUpsert) SetSubscriptionUsageMultiplier(v float64) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldSubscriptionUsageMultiplier, v)
+	return u
+}
+
+// UpdateSubscriptionUsageMultiplier sets the "subscription_usage_multiplier" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateSubscriptionUsageMultiplier() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldSubscriptionUsageMultiplier)
+	return u
+}
+
+// AddSubscriptionUsageMultiplier adds v to the "subscription_usage_multiplier" field.
+func (u *PaymentOrderUpsert) AddSubscriptionUsageMultiplier(v float64) *PaymentOrderUpsert {
+	u.Add(paymentorder.FieldSubscriptionUsageMultiplier, v)
+	return u
+}
+
+// ClearSubscriptionUsageMultiplier clears the value of the "subscription_usage_multiplier" field.
+func (u *PaymentOrderUpsert) ClearSubscriptionUsageMultiplier() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldSubscriptionUsageMultiplier)
+	return u
+}
+
+// SetSubscriptionPlanName sets the "subscription_plan_name" field.
+func (u *PaymentOrderUpsert) SetSubscriptionPlanName(v string) *PaymentOrderUpsert {
+	u.Set(paymentorder.FieldSubscriptionPlanName, v)
+	return u
+}
+
+// UpdateSubscriptionPlanName sets the "subscription_plan_name" field to the value that was provided on create.
+func (u *PaymentOrderUpsert) UpdateSubscriptionPlanName() *PaymentOrderUpsert {
+	u.SetExcluded(paymentorder.FieldSubscriptionPlanName)
+	return u
+}
+
+// ClearSubscriptionPlanName clears the value of the "subscription_plan_name" field.
+func (u *PaymentOrderUpsert) ClearSubscriptionPlanName() *PaymentOrderUpsert {
+	u.SetNull(paymentorder.FieldSubscriptionPlanName)
 	return u
 }
 
@@ -1925,6 +2050,83 @@ func (u *PaymentOrderUpsertOne) UpdateSubscriptionDays() *PaymentOrderUpsertOne 
 func (u *PaymentOrderUpsertOne) ClearSubscriptionDays() *PaymentOrderUpsertOne {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.ClearSubscriptionDays()
+	})
+}
+
+// SetSubscriptionQuotaUsd sets the "subscription_quota_usd" field.
+func (u *PaymentOrderUpsertOne) SetSubscriptionQuotaUsd(v float64) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetSubscriptionQuotaUsd(v)
+	})
+}
+
+// AddSubscriptionQuotaUsd adds v to the "subscription_quota_usd" field.
+func (u *PaymentOrderUpsertOne) AddSubscriptionQuotaUsd(v float64) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddSubscriptionQuotaUsd(v)
+	})
+}
+
+// UpdateSubscriptionQuotaUsd sets the "subscription_quota_usd" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateSubscriptionQuotaUsd() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateSubscriptionQuotaUsd()
+	})
+}
+
+// ClearSubscriptionQuotaUsd clears the value of the "subscription_quota_usd" field.
+func (u *PaymentOrderUpsertOne) ClearSubscriptionQuotaUsd() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearSubscriptionQuotaUsd()
+	})
+}
+
+// SetSubscriptionUsageMultiplier sets the "subscription_usage_multiplier" field.
+func (u *PaymentOrderUpsertOne) SetSubscriptionUsageMultiplier(v float64) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetSubscriptionUsageMultiplier(v)
+	})
+}
+
+// AddSubscriptionUsageMultiplier adds v to the "subscription_usage_multiplier" field.
+func (u *PaymentOrderUpsertOne) AddSubscriptionUsageMultiplier(v float64) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddSubscriptionUsageMultiplier(v)
+	})
+}
+
+// UpdateSubscriptionUsageMultiplier sets the "subscription_usage_multiplier" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateSubscriptionUsageMultiplier() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateSubscriptionUsageMultiplier()
+	})
+}
+
+// ClearSubscriptionUsageMultiplier clears the value of the "subscription_usage_multiplier" field.
+func (u *PaymentOrderUpsertOne) ClearSubscriptionUsageMultiplier() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearSubscriptionUsageMultiplier()
+	})
+}
+
+// SetSubscriptionPlanName sets the "subscription_plan_name" field.
+func (u *PaymentOrderUpsertOne) SetSubscriptionPlanName(v string) *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetSubscriptionPlanName(v)
+	})
+}
+
+// UpdateSubscriptionPlanName sets the "subscription_plan_name" field to the value that was provided on create.
+func (u *PaymentOrderUpsertOne) UpdateSubscriptionPlanName() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateSubscriptionPlanName()
+	})
+}
+
+// ClearSubscriptionPlanName clears the value of the "subscription_plan_name" field.
+func (u *PaymentOrderUpsertOne) ClearSubscriptionPlanName() *PaymentOrderUpsertOne {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearSubscriptionPlanName()
 	})
 }
 
@@ -2857,6 +3059,83 @@ func (u *PaymentOrderUpsertBulk) UpdateSubscriptionDays() *PaymentOrderUpsertBul
 func (u *PaymentOrderUpsertBulk) ClearSubscriptionDays() *PaymentOrderUpsertBulk {
 	return u.Update(func(s *PaymentOrderUpsert) {
 		s.ClearSubscriptionDays()
+	})
+}
+
+// SetSubscriptionQuotaUsd sets the "subscription_quota_usd" field.
+func (u *PaymentOrderUpsertBulk) SetSubscriptionQuotaUsd(v float64) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetSubscriptionQuotaUsd(v)
+	})
+}
+
+// AddSubscriptionQuotaUsd adds v to the "subscription_quota_usd" field.
+func (u *PaymentOrderUpsertBulk) AddSubscriptionQuotaUsd(v float64) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddSubscriptionQuotaUsd(v)
+	})
+}
+
+// UpdateSubscriptionQuotaUsd sets the "subscription_quota_usd" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateSubscriptionQuotaUsd() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateSubscriptionQuotaUsd()
+	})
+}
+
+// ClearSubscriptionQuotaUsd clears the value of the "subscription_quota_usd" field.
+func (u *PaymentOrderUpsertBulk) ClearSubscriptionQuotaUsd() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearSubscriptionQuotaUsd()
+	})
+}
+
+// SetSubscriptionUsageMultiplier sets the "subscription_usage_multiplier" field.
+func (u *PaymentOrderUpsertBulk) SetSubscriptionUsageMultiplier(v float64) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetSubscriptionUsageMultiplier(v)
+	})
+}
+
+// AddSubscriptionUsageMultiplier adds v to the "subscription_usage_multiplier" field.
+func (u *PaymentOrderUpsertBulk) AddSubscriptionUsageMultiplier(v float64) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.AddSubscriptionUsageMultiplier(v)
+	})
+}
+
+// UpdateSubscriptionUsageMultiplier sets the "subscription_usage_multiplier" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateSubscriptionUsageMultiplier() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateSubscriptionUsageMultiplier()
+	})
+}
+
+// ClearSubscriptionUsageMultiplier clears the value of the "subscription_usage_multiplier" field.
+func (u *PaymentOrderUpsertBulk) ClearSubscriptionUsageMultiplier() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearSubscriptionUsageMultiplier()
+	})
+}
+
+// SetSubscriptionPlanName sets the "subscription_plan_name" field.
+func (u *PaymentOrderUpsertBulk) SetSubscriptionPlanName(v string) *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.SetSubscriptionPlanName(v)
+	})
+}
+
+// UpdateSubscriptionPlanName sets the "subscription_plan_name" field to the value that was provided on create.
+func (u *PaymentOrderUpsertBulk) UpdateSubscriptionPlanName() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.UpdateSubscriptionPlanName()
+	})
+}
+
+// ClearSubscriptionPlanName clears the value of the "subscription_plan_name" field.
+func (u *PaymentOrderUpsertBulk) ClearSubscriptionPlanName() *PaymentOrderUpsertBulk {
+	return u.Update(func(s *PaymentOrderUpsert) {
+		s.ClearSubscriptionPlanName()
 	})
 }
 

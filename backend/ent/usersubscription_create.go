@@ -189,6 +189,62 @@ func (_c *UserSubscriptionCreate) SetNillableMonthlyUsageUsd(v *float64) *UserSu
 	return _c
 }
 
+// SetQuotaUsd sets the "quota_usd" field.
+func (_c *UserSubscriptionCreate) SetQuotaUsd(v float64) *UserSubscriptionCreate {
+	_c.mutation.SetQuotaUsd(v)
+	return _c
+}
+
+// SetNillableQuotaUsd sets the "quota_usd" field if the given value is not nil.
+func (_c *UserSubscriptionCreate) SetNillableQuotaUsd(v *float64) *UserSubscriptionCreate {
+	if v != nil {
+		_c.SetQuotaUsd(*v)
+	}
+	return _c
+}
+
+// SetQuotaUsedUsd sets the "quota_used_usd" field.
+func (_c *UserSubscriptionCreate) SetQuotaUsedUsd(v float64) *UserSubscriptionCreate {
+	_c.mutation.SetQuotaUsedUsd(v)
+	return _c
+}
+
+// SetNillableQuotaUsedUsd sets the "quota_used_usd" field if the given value is not nil.
+func (_c *UserSubscriptionCreate) SetNillableQuotaUsedUsd(v *float64) *UserSubscriptionCreate {
+	if v != nil {
+		_c.SetQuotaUsedUsd(*v)
+	}
+	return _c
+}
+
+// SetUsageMultiplier sets the "usage_multiplier" field.
+func (_c *UserSubscriptionCreate) SetUsageMultiplier(v float64) *UserSubscriptionCreate {
+	_c.mutation.SetUsageMultiplier(v)
+	return _c
+}
+
+// SetNillableUsageMultiplier sets the "usage_multiplier" field if the given value is not nil.
+func (_c *UserSubscriptionCreate) SetNillableUsageMultiplier(v *float64) *UserSubscriptionCreate {
+	if v != nil {
+		_c.SetUsageMultiplier(*v)
+	}
+	return _c
+}
+
+// SetPlanName sets the "plan_name" field.
+func (_c *UserSubscriptionCreate) SetPlanName(v string) *UserSubscriptionCreate {
+	_c.mutation.SetPlanName(v)
+	return _c
+}
+
+// SetNillablePlanName sets the "plan_name" field if the given value is not nil.
+func (_c *UserSubscriptionCreate) SetNillablePlanName(v *string) *UserSubscriptionCreate {
+	if v != nil {
+		_c.SetPlanName(*v)
+	}
+	return _c
+}
+
 // SetAssignedBy sets the "assigned_by" field.
 func (_c *UserSubscriptionCreate) SetAssignedBy(v int64) *UserSubscriptionCreate {
 	_c.mutation.SetAssignedBy(v)
@@ -342,6 +398,22 @@ func (_c *UserSubscriptionCreate) defaults() error {
 		v := usersubscription.DefaultMonthlyUsageUsd
 		_c.mutation.SetMonthlyUsageUsd(v)
 	}
+	if _, ok := _c.mutation.QuotaUsd(); !ok {
+		v := usersubscription.DefaultQuotaUsd
+		_c.mutation.SetQuotaUsd(v)
+	}
+	if _, ok := _c.mutation.QuotaUsedUsd(); !ok {
+		v := usersubscription.DefaultQuotaUsedUsd
+		_c.mutation.SetQuotaUsedUsd(v)
+	}
+	if _, ok := _c.mutation.UsageMultiplier(); !ok {
+		v := usersubscription.DefaultUsageMultiplier
+		_c.mutation.SetUsageMultiplier(v)
+	}
+	if _, ok := _c.mutation.PlanName(); !ok {
+		v := usersubscription.DefaultPlanName
+		_c.mutation.SetPlanName(v)
+	}
 	if _, ok := _c.mutation.AssignedAt(); !ok {
 		if usersubscription.DefaultAssignedAt == nil {
 			return fmt.Errorf("ent: uninitialized usersubscription.DefaultAssignedAt (forgotten import ent/runtime?)")
@@ -388,6 +460,23 @@ func (_c *UserSubscriptionCreate) check() error {
 	}
 	if _, ok := _c.mutation.MonthlyUsageUsd(); !ok {
 		return &ValidationError{Name: "monthly_usage_usd", err: errors.New(`ent: missing required field "UserSubscription.monthly_usage_usd"`)}
+	}
+	if _, ok := _c.mutation.QuotaUsd(); !ok {
+		return &ValidationError{Name: "quota_usd", err: errors.New(`ent: missing required field "UserSubscription.quota_usd"`)}
+	}
+	if _, ok := _c.mutation.QuotaUsedUsd(); !ok {
+		return &ValidationError{Name: "quota_used_usd", err: errors.New(`ent: missing required field "UserSubscription.quota_used_usd"`)}
+	}
+	if _, ok := _c.mutation.UsageMultiplier(); !ok {
+		return &ValidationError{Name: "usage_multiplier", err: errors.New(`ent: missing required field "UserSubscription.usage_multiplier"`)}
+	}
+	if _, ok := _c.mutation.PlanName(); !ok {
+		return &ValidationError{Name: "plan_name", err: errors.New(`ent: missing required field "UserSubscription.plan_name"`)}
+	}
+	if v, ok := _c.mutation.PlanName(); ok {
+		if err := usersubscription.PlanNameValidator(v); err != nil {
+			return &ValidationError{Name: "plan_name", err: fmt.Errorf(`ent: validator failed for field "UserSubscription.plan_name": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.AssignedAt(); !ok {
 		return &ValidationError{Name: "assigned_at", err: errors.New(`ent: missing required field "UserSubscription.assigned_at"`)}
@@ -472,6 +561,22 @@ func (_c *UserSubscriptionCreate) createSpec() (*UserSubscription, *sqlgraph.Cre
 	if value, ok := _c.mutation.MonthlyUsageUsd(); ok {
 		_spec.SetField(usersubscription.FieldMonthlyUsageUsd, field.TypeFloat64, value)
 		_node.MonthlyUsageUsd = value
+	}
+	if value, ok := _c.mutation.QuotaUsd(); ok {
+		_spec.SetField(usersubscription.FieldQuotaUsd, field.TypeFloat64, value)
+		_node.QuotaUsd = value
+	}
+	if value, ok := _c.mutation.QuotaUsedUsd(); ok {
+		_spec.SetField(usersubscription.FieldQuotaUsedUsd, field.TypeFloat64, value)
+		_node.QuotaUsedUsd = value
+	}
+	if value, ok := _c.mutation.UsageMultiplier(); ok {
+		_spec.SetField(usersubscription.FieldUsageMultiplier, field.TypeFloat64, value)
+		_node.UsageMultiplier = value
+	}
+	if value, ok := _c.mutation.PlanName(); ok {
+		_spec.SetField(usersubscription.FieldPlanName, field.TypeString, value)
+		_node.PlanName = value
 	}
 	if value, ok := _c.mutation.AssignedAt(); ok {
 		_spec.SetField(usersubscription.FieldAssignedAt, field.TypeTime, value)
@@ -798,6 +903,72 @@ func (u *UserSubscriptionUpsert) AddMonthlyUsageUsd(v float64) *UserSubscription
 	return u
 }
 
+// SetQuotaUsd sets the "quota_usd" field.
+func (u *UserSubscriptionUpsert) SetQuotaUsd(v float64) *UserSubscriptionUpsert {
+	u.Set(usersubscription.FieldQuotaUsd, v)
+	return u
+}
+
+// UpdateQuotaUsd sets the "quota_usd" field to the value that was provided on create.
+func (u *UserSubscriptionUpsert) UpdateQuotaUsd() *UserSubscriptionUpsert {
+	u.SetExcluded(usersubscription.FieldQuotaUsd)
+	return u
+}
+
+// AddQuotaUsd adds v to the "quota_usd" field.
+func (u *UserSubscriptionUpsert) AddQuotaUsd(v float64) *UserSubscriptionUpsert {
+	u.Add(usersubscription.FieldQuotaUsd, v)
+	return u
+}
+
+// SetQuotaUsedUsd sets the "quota_used_usd" field.
+func (u *UserSubscriptionUpsert) SetQuotaUsedUsd(v float64) *UserSubscriptionUpsert {
+	u.Set(usersubscription.FieldQuotaUsedUsd, v)
+	return u
+}
+
+// UpdateQuotaUsedUsd sets the "quota_used_usd" field to the value that was provided on create.
+func (u *UserSubscriptionUpsert) UpdateQuotaUsedUsd() *UserSubscriptionUpsert {
+	u.SetExcluded(usersubscription.FieldQuotaUsedUsd)
+	return u
+}
+
+// AddQuotaUsedUsd adds v to the "quota_used_usd" field.
+func (u *UserSubscriptionUpsert) AddQuotaUsedUsd(v float64) *UserSubscriptionUpsert {
+	u.Add(usersubscription.FieldQuotaUsedUsd, v)
+	return u
+}
+
+// SetUsageMultiplier sets the "usage_multiplier" field.
+func (u *UserSubscriptionUpsert) SetUsageMultiplier(v float64) *UserSubscriptionUpsert {
+	u.Set(usersubscription.FieldUsageMultiplier, v)
+	return u
+}
+
+// UpdateUsageMultiplier sets the "usage_multiplier" field to the value that was provided on create.
+func (u *UserSubscriptionUpsert) UpdateUsageMultiplier() *UserSubscriptionUpsert {
+	u.SetExcluded(usersubscription.FieldUsageMultiplier)
+	return u
+}
+
+// AddUsageMultiplier adds v to the "usage_multiplier" field.
+func (u *UserSubscriptionUpsert) AddUsageMultiplier(v float64) *UserSubscriptionUpsert {
+	u.Add(usersubscription.FieldUsageMultiplier, v)
+	return u
+}
+
+// SetPlanName sets the "plan_name" field.
+func (u *UserSubscriptionUpsert) SetPlanName(v string) *UserSubscriptionUpsert {
+	u.Set(usersubscription.FieldPlanName, v)
+	return u
+}
+
+// UpdatePlanName sets the "plan_name" field to the value that was provided on create.
+func (u *UserSubscriptionUpsert) UpdatePlanName() *UserSubscriptionUpsert {
+	u.SetExcluded(usersubscription.FieldPlanName)
+	return u
+}
+
 // SetAssignedBy sets the "assigned_by" field.
 func (u *UserSubscriptionUpsert) SetAssignedBy(v int64) *UserSubscriptionUpsert {
 	u.Set(usersubscription.FieldAssignedBy, v)
@@ -1119,6 +1290,83 @@ func (u *UserSubscriptionUpsertOne) AddMonthlyUsageUsd(v float64) *UserSubscript
 func (u *UserSubscriptionUpsertOne) UpdateMonthlyUsageUsd() *UserSubscriptionUpsertOne {
 	return u.Update(func(s *UserSubscriptionUpsert) {
 		s.UpdateMonthlyUsageUsd()
+	})
+}
+
+// SetQuotaUsd sets the "quota_usd" field.
+func (u *UserSubscriptionUpsertOne) SetQuotaUsd(v float64) *UserSubscriptionUpsertOne {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.SetQuotaUsd(v)
+	})
+}
+
+// AddQuotaUsd adds v to the "quota_usd" field.
+func (u *UserSubscriptionUpsertOne) AddQuotaUsd(v float64) *UserSubscriptionUpsertOne {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.AddQuotaUsd(v)
+	})
+}
+
+// UpdateQuotaUsd sets the "quota_usd" field to the value that was provided on create.
+func (u *UserSubscriptionUpsertOne) UpdateQuotaUsd() *UserSubscriptionUpsertOne {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.UpdateQuotaUsd()
+	})
+}
+
+// SetQuotaUsedUsd sets the "quota_used_usd" field.
+func (u *UserSubscriptionUpsertOne) SetQuotaUsedUsd(v float64) *UserSubscriptionUpsertOne {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.SetQuotaUsedUsd(v)
+	})
+}
+
+// AddQuotaUsedUsd adds v to the "quota_used_usd" field.
+func (u *UserSubscriptionUpsertOne) AddQuotaUsedUsd(v float64) *UserSubscriptionUpsertOne {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.AddQuotaUsedUsd(v)
+	})
+}
+
+// UpdateQuotaUsedUsd sets the "quota_used_usd" field to the value that was provided on create.
+func (u *UserSubscriptionUpsertOne) UpdateQuotaUsedUsd() *UserSubscriptionUpsertOne {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.UpdateQuotaUsedUsd()
+	})
+}
+
+// SetUsageMultiplier sets the "usage_multiplier" field.
+func (u *UserSubscriptionUpsertOne) SetUsageMultiplier(v float64) *UserSubscriptionUpsertOne {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.SetUsageMultiplier(v)
+	})
+}
+
+// AddUsageMultiplier adds v to the "usage_multiplier" field.
+func (u *UserSubscriptionUpsertOne) AddUsageMultiplier(v float64) *UserSubscriptionUpsertOne {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.AddUsageMultiplier(v)
+	})
+}
+
+// UpdateUsageMultiplier sets the "usage_multiplier" field to the value that was provided on create.
+func (u *UserSubscriptionUpsertOne) UpdateUsageMultiplier() *UserSubscriptionUpsertOne {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.UpdateUsageMultiplier()
+	})
+}
+
+// SetPlanName sets the "plan_name" field.
+func (u *UserSubscriptionUpsertOne) SetPlanName(v string) *UserSubscriptionUpsertOne {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.SetPlanName(v)
+	})
+}
+
+// UpdatePlanName sets the "plan_name" field to the value that was provided on create.
+func (u *UserSubscriptionUpsertOne) UpdatePlanName() *UserSubscriptionUpsertOne {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.UpdatePlanName()
 	})
 }
 
@@ -1617,6 +1865,83 @@ func (u *UserSubscriptionUpsertBulk) AddMonthlyUsageUsd(v float64) *UserSubscrip
 func (u *UserSubscriptionUpsertBulk) UpdateMonthlyUsageUsd() *UserSubscriptionUpsertBulk {
 	return u.Update(func(s *UserSubscriptionUpsert) {
 		s.UpdateMonthlyUsageUsd()
+	})
+}
+
+// SetQuotaUsd sets the "quota_usd" field.
+func (u *UserSubscriptionUpsertBulk) SetQuotaUsd(v float64) *UserSubscriptionUpsertBulk {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.SetQuotaUsd(v)
+	})
+}
+
+// AddQuotaUsd adds v to the "quota_usd" field.
+func (u *UserSubscriptionUpsertBulk) AddQuotaUsd(v float64) *UserSubscriptionUpsertBulk {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.AddQuotaUsd(v)
+	})
+}
+
+// UpdateQuotaUsd sets the "quota_usd" field to the value that was provided on create.
+func (u *UserSubscriptionUpsertBulk) UpdateQuotaUsd() *UserSubscriptionUpsertBulk {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.UpdateQuotaUsd()
+	})
+}
+
+// SetQuotaUsedUsd sets the "quota_used_usd" field.
+func (u *UserSubscriptionUpsertBulk) SetQuotaUsedUsd(v float64) *UserSubscriptionUpsertBulk {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.SetQuotaUsedUsd(v)
+	})
+}
+
+// AddQuotaUsedUsd adds v to the "quota_used_usd" field.
+func (u *UserSubscriptionUpsertBulk) AddQuotaUsedUsd(v float64) *UserSubscriptionUpsertBulk {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.AddQuotaUsedUsd(v)
+	})
+}
+
+// UpdateQuotaUsedUsd sets the "quota_used_usd" field to the value that was provided on create.
+func (u *UserSubscriptionUpsertBulk) UpdateQuotaUsedUsd() *UserSubscriptionUpsertBulk {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.UpdateQuotaUsedUsd()
+	})
+}
+
+// SetUsageMultiplier sets the "usage_multiplier" field.
+func (u *UserSubscriptionUpsertBulk) SetUsageMultiplier(v float64) *UserSubscriptionUpsertBulk {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.SetUsageMultiplier(v)
+	})
+}
+
+// AddUsageMultiplier adds v to the "usage_multiplier" field.
+func (u *UserSubscriptionUpsertBulk) AddUsageMultiplier(v float64) *UserSubscriptionUpsertBulk {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.AddUsageMultiplier(v)
+	})
+}
+
+// UpdateUsageMultiplier sets the "usage_multiplier" field to the value that was provided on create.
+func (u *UserSubscriptionUpsertBulk) UpdateUsageMultiplier() *UserSubscriptionUpsertBulk {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.UpdateUsageMultiplier()
+	})
+}
+
+// SetPlanName sets the "plan_name" field.
+func (u *UserSubscriptionUpsertBulk) SetPlanName(v string) *UserSubscriptionUpsertBulk {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.SetPlanName(v)
+	})
+}
+
+// UpdatePlanName sets the "plan_name" field to the value that was provided on create.
+func (u *UserSubscriptionUpsertBulk) UpdatePlanName() *UserSubscriptionUpsertBulk {
+	return u.Update(func(s *UserSubscriptionUpsert) {
+		s.UpdatePlanName()
 	})
 }
 

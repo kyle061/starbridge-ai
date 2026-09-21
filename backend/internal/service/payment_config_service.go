@@ -163,33 +163,37 @@ type UpdateProviderInstanceRequest struct {
 	AllowUserRefund *bool             `json:"allow_user_refund"`
 }
 type CreatePlanRequest struct {
-	GroupID       int64    `json:"group_id"`
-	Name          string   `json:"name"`
-	Description   string   `json:"description"`
-	Price         float64  `json:"price"`
-	OriginalPrice *float64 `json:"original_price"`
-	Currency      string   `json:"currency"`
-	ValidityDays  int      `json:"validity_days"`
-	ValidityUnit  string   `json:"validity_unit"`
-	Features      string   `json:"features"`
-	ProductName   string   `json:"product_name"`
-	ForSale       bool     `json:"for_sale"`
-	SortOrder     int      `json:"sort_order"`
+	GroupID         int64    `json:"group_id"`
+	Name            string   `json:"name"`
+	Description     string   `json:"description"`
+	Price           float64  `json:"price"`
+	OriginalPrice   *float64 `json:"original_price"`
+	Currency        string   `json:"currency"`
+	ValidityDays    int      `json:"validity_days"`
+	ValidityUnit    string   `json:"validity_unit"`
+	Features        string   `json:"features"`
+	ProductName     string   `json:"product_name"`
+	ForSale         bool     `json:"for_sale"`
+	SortOrder       int      `json:"sort_order"`
+	QuotaMultiplier float64  `json:"quota_multiplier"`
+	UsageMultiplier float64  `json:"usage_multiplier"`
 }
 
 type UpdatePlanRequest struct {
-	GroupID       *int64   `json:"group_id"`
-	Name          *string  `json:"name"`
-	Description   *string  `json:"description"`
-	Price         *float64 `json:"price"`
-	OriginalPrice *float64 `json:"original_price"`
-	Currency      *string  `json:"currency"`
-	ValidityDays  *int     `json:"validity_days"`
-	ValidityUnit  *string  `json:"validity_unit"`
-	Features      *string  `json:"features"`
-	ProductName   *string  `json:"product_name"`
-	ForSale       *bool    `json:"for_sale"`
-	SortOrder     *int     `json:"sort_order"`
+	GroupID         *int64   `json:"group_id"`
+	Name            *string  `json:"name"`
+	Description     *string  `json:"description"`
+	Price           *float64 `json:"price"`
+	OriginalPrice   *float64 `json:"original_price"`
+	Currency        *string  `json:"currency"`
+	ValidityDays    *int     `json:"validity_days"`
+	ValidityUnit    *string  `json:"validity_unit"`
+	Features        *string  `json:"features"`
+	ProductName     *string  `json:"product_name"`
+	ForSale         *bool    `json:"for_sale"`
+	SortOrder       *int     `json:"sort_order"`
+	QuotaMultiplier *float64 `json:"quota_multiplier"`
+	UsageMultiplier *float64 `json:"usage_multiplier"`
 }
 
 // PaymentConfigService manages payment configuration and CRUD for
@@ -240,12 +244,12 @@ func (s *PaymentConfigService) GetPaymentConfig(ctx context.Context) (*PaymentCo
 
 func (s *PaymentConfigService) parsePaymentConfig(vals map[string]string) *PaymentConfig {
 	cfg := &PaymentConfig{
-		Enabled:                   vals[SettingPaymentEnabled] == "true",
-		MinAmount:                 pcParseFloat(vals[SettingMinRechargeAmount], 0.5),
-		MaxAmount:                 pcParseFloat(vals[SettingMaxRechargeAmount], 0),
-		DailyLimit:                pcParseFloat(vals[SettingDailyRechargeLimit], 0),
-		OrderTimeoutMin:           pcParseInt(vals[SettingOrderTimeoutMinutes], defaultOrderTimeoutMin),
-		MaxPendingOrders:          pcParseInt(vals[SettingMaxPendingOrders], defaultMaxPendingOrders),
+		Enabled:          vals[SettingPaymentEnabled] == "true",
+		MinAmount:        pcParseFloat(vals[SettingMinRechargeAmount], 0.5),
+		MaxAmount:        pcParseFloat(vals[SettingMaxRechargeAmount], 0),
+		DailyLimit:       pcParseFloat(vals[SettingDailyRechargeLimit], 0),
+		OrderTimeoutMin:  pcParseInt(vals[SettingOrderTimeoutMinutes], defaultOrderTimeoutMin),
+		MaxPendingOrders: pcParseInt(vals[SettingMaxPendingOrders], defaultMaxPendingOrders),
 		// Balance recharge is available by default; only an explicit true disables it.
 		BalanceDisabled:           vals[SettingBalancePayDisabled] == "true",
 		BalanceRechargeMultiplier: normalizeBalanceRechargeMultiplier(pcParseFloat(vals[SettingBalanceRechargeMult], defaultBalanceRechargeMultiplier)),

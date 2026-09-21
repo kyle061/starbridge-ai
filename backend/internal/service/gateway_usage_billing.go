@@ -142,7 +142,8 @@ func postUsageBilling(ctx context.Context, p *postUsageBillingParams, deps *bill
 		// Subscription usage tracked by ActualCost so group rate multiplier
 		// consumes the quota at the expected speed.
 		if cost.ActualCost > 0 {
-			if err := deps.userSubRepo.IncrementUsage(billingCtx, p.Subscription.ID, cost.ActualCost); err != nil {
+			subscriptionCost := subscriptionUsageCost(p.Subscription, cost.ActualCost)
+			if err := deps.userSubRepo.IncrementUsage(billingCtx, p.Subscription.ID, subscriptionCost); err != nil {
 				slog.Error("increment subscription usage failed", "subscription_id", p.Subscription.ID, "error", err)
 			}
 		}
@@ -201,6 +202,16 @@ func postUsageBilling(ctx context.Context, p *postUsageBillingParams, deps *bill
 	// cache updates. The legacy path does DB writes directly; the finalize path
 	// does cache queue + notifications. Notifications are dispatched separately
 	// by the caller after recording the usage log.
+}
+
+func subscriptionUsageCost(subscription *UserSubscription, rawCost float64) float64 {
+	if rawCost <= 0 {
+		return rawCost
+	}
+	if subscription == nil {
+		return rawCost
+	}
+	return rawCost * subscription.EffectiveUsageMultiplier()
 }
 
 func resolveUsageBillingRequestID(ctx context.Context, upstreamRequestID string) string {
@@ -312,7 +323,7 @@ func buildUsageBillingCommand(requestID string, usageLog *UsageLog, p *postUsage
 	// on "> 0" still correctly skip free subscriptions (RateMultiplier == 0).
 	if p.IsSubscriptionBill && p.Subscription != nil && p.Cost.TotalCost > 0 {
 		cmd.SubscriptionID = &p.Subscription.ID
-		cmd.SubscriptionCost = p.Cost.ActualCost
+		cmd.SubscriptionCost = subscriptionUsageCost(p.Subscription, p.Cost.ActualCost)
 	} else if p.Cost.ActualCost > 0 {
 		cmd.BalanceCost = p.Cost.ActualCost
 	}
@@ -372,7 +383,7 @@ func finalizePostUsageBilling(ctx context.Context, p *postUsageBillingParams, de
 
 	if p.IsSubscriptionBill {
 		if p.Cost.ActualCost > 0 && p.User != nil && p.APIKey != nil && p.APIKey.GroupID != nil {
-			deps.billingCacheService.QueueUpdateSubscriptionUsage(p.User.ID, *p.APIKey.GroupID, p.Cost.ActualCost)
+			deps.billingCacheService.QueueUpdateSubscriptionUsage(p.User.ID, *p.APIKey.GroupID, subscriptionUsageCost(p.Subscription, p.Cost.ActualCost))
 		}
 	} else if p.Cost.ActualCost > 0 && p.User != nil {
 		syncBalanceCacheAfterDeduction(ctx, p, deps, result)

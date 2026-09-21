@@ -40,12 +40,16 @@ var (
 
 // subscriptionCacheData 订阅缓存数据结构（内部使用）
 type subscriptionCacheData struct {
-	Status       string
-	ExpiresAt    time.Time
-	DailyUsage   float64
-	WeeklyUsage  float64
-	MonthlyUsage float64
-	Version      int64
+	Status          string
+	ExpiresAt       time.Time
+	DailyUsage      float64
+	WeeklyUsage     float64
+	MonthlyUsage    float64
+	QuotaUSD        float64
+	QuotaUsedUSD    float64
+	UsageMultiplier float64
+	PlanName        string
+	Version         int64
 }
 
 // 缓存写入任务类型
@@ -442,23 +446,31 @@ func (s *BillingCacheService) GetSubscriptionStatus(ctx context.Context, userID,
 
 func (s *BillingCacheService) convertFromPortsData(data *SubscriptionCacheData) *subscriptionCacheData {
 	return &subscriptionCacheData{
-		Status:       data.Status,
-		ExpiresAt:    data.ExpiresAt,
-		DailyUsage:   data.DailyUsage,
-		WeeklyUsage:  data.WeeklyUsage,
-		MonthlyUsage: data.MonthlyUsage,
-		Version:      data.Version,
+		Status:          data.Status,
+		ExpiresAt:       data.ExpiresAt,
+		DailyUsage:      data.DailyUsage,
+		WeeklyUsage:     data.WeeklyUsage,
+		MonthlyUsage:    data.MonthlyUsage,
+		QuotaUSD:        data.QuotaUSD,
+		QuotaUsedUSD:    data.QuotaUsedUSD,
+		UsageMultiplier: data.UsageMultiplier,
+		PlanName:        data.PlanName,
+		Version:         data.Version,
 	}
 }
 
 func (s *BillingCacheService) convertToPortsData(data *subscriptionCacheData) *SubscriptionCacheData {
 	return &SubscriptionCacheData{
-		Status:       data.Status,
-		ExpiresAt:    data.ExpiresAt,
-		DailyUsage:   data.DailyUsage,
-		WeeklyUsage:  data.WeeklyUsage,
-		MonthlyUsage: data.MonthlyUsage,
-		Version:      data.Version,
+		Status:          data.Status,
+		ExpiresAt:       data.ExpiresAt,
+		DailyUsage:      data.DailyUsage,
+		WeeklyUsage:     data.WeeklyUsage,
+		MonthlyUsage:    data.MonthlyUsage,
+		QuotaUSD:        data.QuotaUSD,
+		QuotaUsedUSD:    data.QuotaUsedUSD,
+		UsageMultiplier: data.UsageMultiplier,
+		PlanName:        data.PlanName,
+		Version:         data.Version,
 	}
 }
 
@@ -470,12 +482,16 @@ func (s *BillingCacheService) getSubscriptionFromDB(ctx context.Context, userID,
 	}
 
 	return &subscriptionCacheData{
-		Status:       sub.Status,
-		ExpiresAt:    sub.ExpiresAt,
-		DailyUsage:   sub.DailyUsageUSD,
-		WeeklyUsage:  sub.WeeklyUsageUSD,
-		MonthlyUsage: sub.MonthlyUsageUSD,
-		Version:      sub.UpdatedAt.Unix(),
+		Status:          sub.Status,
+		ExpiresAt:       sub.ExpiresAt,
+		DailyUsage:      sub.DailyUsageUSD,
+		WeeklyUsage:     sub.WeeklyUsageUSD,
+		MonthlyUsage:    sub.MonthlyUsageUSD,
+		QuotaUSD:        sub.QuotaUSD,
+		QuotaUsedUSD:    sub.QuotaUsedUSD,
+		UsageMultiplier: sub.UsageMultiplier,
+		PlanName:        sub.PlanName,
+		Version:         sub.UpdatedAt.Unix(),
 	}, nil
 }
 
@@ -957,6 +973,9 @@ func (s *BillingCacheService) checkSubscriptionEligibility(ctx context.Context, 
 
 	if group.HasMonthlyLimit() && subData.MonthlyUsage >= *group.MonthlyLimitUSD {
 		return ErrMonthlyLimitExceeded
+	}
+	if subData.QuotaUSD > 0 && subData.QuotaUsedUSD >= subData.QuotaUSD {
+		return ErrSubscriptionQuotaExceeded
 	}
 
 	return nil

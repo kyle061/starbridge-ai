@@ -87,6 +87,20 @@ func (PaymentOrder) Fields() []ent.Field {
 		field.Int("subscription_days").
 			Optional().
 			Nillable(),
+		// Subscription entitlements are copied into the order so later plan
+		// edits cannot change an already-created payment order.
+		field.Float("subscription_quota_usd").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,10)"}),
+		field.Float("subscription_usage_multiplier").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,4)"}),
+		field.String("subscription_plan_name").
+			Optional().
+			Nillable().
+			MaxLen(100),
 		field.String("provider_instance_id").
 			Optional().
 			Nillable().

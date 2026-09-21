@@ -170,6 +170,24 @@ func TestValidatePlanPatch_ValidPrice(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestValidatePlanPatch_RejectsInvalidEntitlementMultipliers(t *testing.T) {
+	zero := 0.0
+	negative := -1.0
+
+	require.Error(t, validatePlanPatch(UpdatePlanRequest{QuotaMultiplier: &zero}))
+	require.Error(t, validatePlanPatch(UpdatePlanRequest{UsageMultiplier: &negative}))
+}
+
+func TestValidatePlanPatch_AllowsEntitlementMultipliers(t *testing.T) {
+	quota := 10.0
+	usage := 12.0
+
+	require.NoError(t, validatePlanPatch(UpdatePlanRequest{
+		QuotaMultiplier: &quota,
+		UsageMultiplier: &usage,
+	}))
+}
+
 func TestValidatePlanPatch_ZeroValidityDays(t *testing.T) {
 	err := validatePlanPatch(UpdatePlanRequest{ValidityDays: ptrInt(0)})
 	require.Error(t, err)

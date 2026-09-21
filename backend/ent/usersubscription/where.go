@@ -125,6 +125,26 @@ func MonthlyUsageUsd(v float64) predicate.UserSubscription {
 	return predicate.UserSubscription(sql.FieldEQ(FieldMonthlyUsageUsd, v))
 }
 
+// QuotaUsd applies equality check predicate on the "quota_usd" field. It's identical to QuotaUsdEQ.
+func QuotaUsd(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldEQ(FieldQuotaUsd, v))
+}
+
+// QuotaUsedUsd applies equality check predicate on the "quota_used_usd" field. It's identical to QuotaUsedUsdEQ.
+func QuotaUsedUsd(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldEQ(FieldQuotaUsedUsd, v))
+}
+
+// UsageMultiplier applies equality check predicate on the "usage_multiplier" field. It's identical to UsageMultiplierEQ.
+func UsageMultiplier(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldEQ(FieldUsageMultiplier, v))
+}
+
+// PlanName applies equality check predicate on the "plan_name" field. It's identical to PlanNameEQ.
+func PlanName(v string) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldEQ(FieldPlanName, v))
+}
+
 // AssignedBy applies equality check predicate on the "assigned_by" field. It's identical to AssignedByEQ.
 func AssignedBy(v int64) predicate.UserSubscription {
 	return predicate.UserSubscription(sql.FieldEQ(FieldAssignedBy, v))
@@ -723,6 +743,191 @@ func MonthlyUsageUsdLT(v float64) predicate.UserSubscription {
 // MonthlyUsageUsdLTE applies the LTE predicate on the "monthly_usage_usd" field.
 func MonthlyUsageUsdLTE(v float64) predicate.UserSubscription {
 	return predicate.UserSubscription(sql.FieldLTE(FieldMonthlyUsageUsd, v))
+}
+
+// QuotaUsdEQ applies the EQ predicate on the "quota_usd" field.
+func QuotaUsdEQ(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldEQ(FieldQuotaUsd, v))
+}
+
+// QuotaUsdNEQ applies the NEQ predicate on the "quota_usd" field.
+func QuotaUsdNEQ(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldNEQ(FieldQuotaUsd, v))
+}
+
+// QuotaUsdIn applies the In predicate on the "quota_usd" field.
+func QuotaUsdIn(vs ...float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldIn(FieldQuotaUsd, vs...))
+}
+
+// QuotaUsdNotIn applies the NotIn predicate on the "quota_usd" field.
+func QuotaUsdNotIn(vs ...float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldNotIn(FieldQuotaUsd, vs...))
+}
+
+// QuotaUsdGT applies the GT predicate on the "quota_usd" field.
+func QuotaUsdGT(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldGT(FieldQuotaUsd, v))
+}
+
+// QuotaUsdGTE applies the GTE predicate on the "quota_usd" field.
+func QuotaUsdGTE(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldGTE(FieldQuotaUsd, v))
+}
+
+// QuotaUsdLT applies the LT predicate on the "quota_usd" field.
+func QuotaUsdLT(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldLT(FieldQuotaUsd, v))
+}
+
+// QuotaUsdLTE applies the LTE predicate on the "quota_usd" field.
+func QuotaUsdLTE(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldLTE(FieldQuotaUsd, v))
+}
+
+// QuotaUsedUsdEQ applies the EQ predicate on the "quota_used_usd" field.
+func QuotaUsedUsdEQ(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldEQ(FieldQuotaUsedUsd, v))
+}
+
+// QuotaUsedUsdNEQ applies the NEQ predicate on the "quota_used_usd" field.
+func QuotaUsedUsdNEQ(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldNEQ(FieldQuotaUsedUsd, v))
+}
+
+// QuotaUsedUsdIn applies the In predicate on the "quota_used_usd" field.
+func QuotaUsedUsdIn(vs ...float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldIn(FieldQuotaUsedUsd, vs...))
+}
+
+// QuotaUsedUsdNotIn applies the NotIn predicate on the "quota_used_usd" field.
+func QuotaUsedUsdNotIn(vs ...float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldNotIn(FieldQuotaUsedUsd, vs...))
+}
+
+// QuotaUsedUsdGT applies the GT predicate on the "quota_used_usd" field.
+func QuotaUsedUsdGT(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldGT(FieldQuotaUsedUsd, v))
+}
+
+// QuotaUsedUsdGTE applies the GTE predicate on the "quota_used_usd" field.
+func QuotaUsedUsdGTE(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldGTE(FieldQuotaUsedUsd, v))
+}
+
+// QuotaUsedUsdLT applies the LT predicate on the "quota_used_usd" field.
+func QuotaUsedUsdLT(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldLT(FieldQuotaUsedUsd, v))
+}
+
+// QuotaUsedUsdLTE applies the LTE predicate on the "quota_used_usd" field.
+func QuotaUsedUsdLTE(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldLTE(FieldQuotaUsedUsd, v))
+}
+
+// UsageMultiplierEQ applies the EQ predicate on the "usage_multiplier" field.
+func UsageMultiplierEQ(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldEQ(FieldUsageMultiplier, v))
+}
+
+// UsageMultiplierNEQ applies the NEQ predicate on the "usage_multiplier" field.
+func UsageMultiplierNEQ(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldNEQ(FieldUsageMultiplier, v))
+}
+
+// UsageMultiplierIn applies the In predicate on the "usage_multiplier" field.
+func UsageMultiplierIn(vs ...float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldIn(FieldUsageMultiplier, vs...))
+}
+
+// UsageMultiplierNotIn applies the NotIn predicate on the "usage_multiplier" field.
+func UsageMultiplierNotIn(vs ...float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldNotIn(FieldUsageMultiplier, vs...))
+}
+
+// UsageMultiplierGT applies the GT predicate on the "usage_multiplier" field.
+func UsageMultiplierGT(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldGT(FieldUsageMultiplier, v))
+}
+
+// UsageMultiplierGTE applies the GTE predicate on the "usage_multiplier" field.
+func UsageMultiplierGTE(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldGTE(FieldUsageMultiplier, v))
+}
+
+// UsageMultiplierLT applies the LT predicate on the "usage_multiplier" field.
+func UsageMultiplierLT(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldLT(FieldUsageMultiplier, v))
+}
+
+// UsageMultiplierLTE applies the LTE predicate on the "usage_multiplier" field.
+func UsageMultiplierLTE(v float64) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldLTE(FieldUsageMultiplier, v))
+}
+
+// PlanNameEQ applies the EQ predicate on the "plan_name" field.
+func PlanNameEQ(v string) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldEQ(FieldPlanName, v))
+}
+
+// PlanNameNEQ applies the NEQ predicate on the "plan_name" field.
+func PlanNameNEQ(v string) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldNEQ(FieldPlanName, v))
+}
+
+// PlanNameIn applies the In predicate on the "plan_name" field.
+func PlanNameIn(vs ...string) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldIn(FieldPlanName, vs...))
+}
+
+// PlanNameNotIn applies the NotIn predicate on the "plan_name" field.
+func PlanNameNotIn(vs ...string) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldNotIn(FieldPlanName, vs...))
+}
+
+// PlanNameGT applies the GT predicate on the "plan_name" field.
+func PlanNameGT(v string) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldGT(FieldPlanName, v))
+}
+
+// PlanNameGTE applies the GTE predicate on the "plan_name" field.
+func PlanNameGTE(v string) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldGTE(FieldPlanName, v))
+}
+
+// PlanNameLT applies the LT predicate on the "plan_name" field.
+func PlanNameLT(v string) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldLT(FieldPlanName, v))
+}
+
+// PlanNameLTE applies the LTE predicate on the "plan_name" field.
+func PlanNameLTE(v string) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldLTE(FieldPlanName, v))
+}
+
+// PlanNameContains applies the Contains predicate on the "plan_name" field.
+func PlanNameContains(v string) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldContains(FieldPlanName, v))
+}
+
+// PlanNameHasPrefix applies the HasPrefix predicate on the "plan_name" field.
+func PlanNameHasPrefix(v string) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldHasPrefix(FieldPlanName, v))
+}
+
+// PlanNameHasSuffix applies the HasSuffix predicate on the "plan_name" field.
+func PlanNameHasSuffix(v string) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldHasSuffix(FieldPlanName, v))
+}
+
+// PlanNameEqualFold applies the EqualFold predicate on the "plan_name" field.
+func PlanNameEqualFold(v string) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldEqualFold(FieldPlanName, v))
+}
+
+// PlanNameContainsFold applies the ContainsFold predicate on the "plan_name" field.
+func PlanNameContainsFold(v string) predicate.UserSubscription {
+	return predicate.UserSubscription(sql.FieldContainsFold(FieldPlanName, v))
 }
 
 // AssignedByEQ applies the EQ predicate on the "assigned_by" field.

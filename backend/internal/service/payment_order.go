@@ -210,7 +210,12 @@ func (s *PaymentService) createOrderInTx(ctx context.Context, req CreateOrderReq
 		b.SetProviderSnapshot(providerSnapshot)
 	}
 	if plan != nil {
-		b.SetPlanID(plan.ID).SetSubscriptionGroupID(plan.GroupID).SetSubscriptionDays(psComputeValidityDays(plan.ValidityDays, plan.ValidityUnit))
+		b.SetPlanID(plan.ID).
+			SetSubscriptionGroupID(plan.GroupID).
+			SetSubscriptionDays(psComputeValidityDays(plan.ValidityDays, plan.ValidityUnit)).
+			SetSubscriptionQuotaUsd(plan.Price * plan.QuotaMultiplier).
+			SetSubscriptionUsageMultiplier(plan.UsageMultiplier).
+			SetSubscriptionPlanName(plan.Name)
 	}
 	order, err := b.Save(ctx)
 	if err != nil {

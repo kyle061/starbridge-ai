@@ -25,6 +25,10 @@ type SubscriptionPlan struct {
 	Description string `json:"description,omitempty"`
 	// Price holds the value of the "price" field.
 	Price float64 `json:"price,omitempty"`
+	// QuotaMultiplier holds the value of the "quota_multiplier" field.
+	QuotaMultiplier float64 `json:"quota_multiplier,omitempty"`
+	// UsageMultiplier holds the value of the "usage_multiplier" field.
+	UsageMultiplier float64 `json:"usage_multiplier,omitempty"`
 	// OriginalPrice holds the value of the "original_price" field.
 	OriginalPrice *float64 `json:"original_price,omitempty"`
 	// Currency holds the value of the "currency" field.
@@ -55,7 +59,7 @@ func (*SubscriptionPlan) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case subscriptionplan.FieldForSale:
 			values[i] = new(sql.NullBool)
-		case subscriptionplan.FieldPrice, subscriptionplan.FieldOriginalPrice:
+		case subscriptionplan.FieldPrice, subscriptionplan.FieldQuotaMultiplier, subscriptionplan.FieldUsageMultiplier, subscriptionplan.FieldOriginalPrice:
 			values[i] = new(sql.NullFloat64)
 		case subscriptionplan.FieldID, subscriptionplan.FieldGroupID, subscriptionplan.FieldValidityDays, subscriptionplan.FieldSortOrder:
 			values[i] = new(sql.NullInt64)
@@ -107,6 +111,18 @@ func (_m *SubscriptionPlan) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field price", values[i])
 			} else if value.Valid {
 				_m.Price = value.Float64
+			}
+		case subscriptionplan.FieldQuotaMultiplier:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field quota_multiplier", values[i])
+			} else if value.Valid {
+				_m.QuotaMultiplier = value.Float64
+			}
+		case subscriptionplan.FieldUsageMultiplier:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field usage_multiplier", values[i])
+			} else if value.Valid {
+				_m.UsageMultiplier = value.Float64
 			}
 		case subscriptionplan.FieldOriginalPrice:
 			if value, ok := values[i].(*sql.NullFloat64); !ok {
@@ -216,6 +232,12 @@ func (_m *SubscriptionPlan) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("price=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Price))
+	builder.WriteString(", ")
+	builder.WriteString("quota_multiplier=")
+	builder.WriteString(fmt.Sprintf("%v", _m.QuotaMultiplier))
+	builder.WriteString(", ")
+	builder.WriteString("usage_multiplier=")
+	builder.WriteString(fmt.Sprintf("%v", _m.UsageMultiplier))
 	builder.WriteString(", ")
 	if v := _m.OriginalPrice; v != nil {
 		builder.WriteString("original_price=")

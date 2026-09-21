@@ -50,12 +50,16 @@ func billingSubKey(userID, groupID int64) string {
 }
 
 const (
-	subFieldStatus       = "status"
-	subFieldExpiresAt    = "expires_at"
-	subFieldDailyUsage   = "daily_usage"
-	subFieldWeeklyUsage  = "weekly_usage"
-	subFieldMonthlyUsage = "monthly_usage"
-	subFieldVersion      = "version"
+	subFieldStatus          = "status"
+	subFieldExpiresAt       = "expires_at"
+	subFieldDailyUsage      = "daily_usage"
+	subFieldWeeklyUsage     = "weekly_usage"
+	subFieldMonthlyUsage    = "monthly_usage"
+	subFieldQuota           = "quota_usd"
+	subFieldQuotaUsed       = "quota_used_usd"
+	subFieldUsageMultiplier = "usage_multiplier"
+	subFieldPlanName        = "plan_name"
+	subFieldVersion         = "version"
 )
 
 // billingRateLimitKey generates the Redis key for API key rate limit cache.
@@ -93,6 +97,10 @@ var (
 		redis.call('HINCRBYFLOAT', KEYS[1], 'daily_usage', cost)
 		redis.call('HINCRBYFLOAT', KEYS[1], 'weekly_usage', cost)
 		redis.call('HINCRBYFLOAT', KEYS[1], 'monthly_usage', cost)
+		local quota = tonumber(redis.call('HGET', KEYS[1], 'quota_usd') or 0)
+		if quota > 0 then
+			redis.call('HINCRBYFLOAT', KEYS[1], 'quota_used_usd', cost)
+		end
 		redis.call('EXPIRE', KEYS[1], ARGV[2])
 		return 1
 	`)
@@ -211,6 +219,16 @@ func (c *billingCache) parseSubscriptionCache(data map[string]string) (*service.
 	if monthlyStr, ok := data[subFieldMonthlyUsage]; ok {
 		result.MonthlyUsage, _ = strconv.ParseFloat(monthlyStr, 64)
 	}
+	if quotaStr, ok := data[subFieldQuota]; ok {
+		result.QuotaUSD, _ = strconv.ParseFloat(quotaStr, 64)
+	}
+	if quotaUsedStr, ok := data[subFieldQuotaUsed]; ok {
+		result.QuotaUsedUSD, _ = strconv.ParseFloat(quotaUsedStr, 64)
+	}
+	if multiplierStr, ok := data[subFieldUsageMultiplier]; ok {
+		result.UsageMultiplier, _ = strconv.ParseFloat(multiplierStr, 64)
+	}
+	result.PlanName = data[subFieldPlanName]
 
 	if versionStr, ok := data[subFieldVersion]; ok {
 		result.Version, _ = strconv.ParseInt(versionStr, 10, 64)
@@ -227,12 +245,16 @@ func (c *billingCache) SetSubscriptionCache(ctx context.Context, userID, groupID
 	key := billingSubKey(userID, groupID)
 
 	fields := map[string]any{
-		subFieldStatus:       data.Status,
-		subFieldExpiresAt:    data.ExpiresAt.Unix(),
-		subFieldDailyUsage:   data.DailyUsage,
-		subFieldWeeklyUsage:  data.WeeklyUsage,
-		subFieldMonthlyUsage: data.MonthlyUsage,
-		subFieldVersion:      data.Version,
+		subFieldStatus:          data.Status,
+		subFieldExpiresAt:       data.ExpiresAt.Unix(),
+		subFieldDailyUsage:      data.DailyUsage,
+		subFieldWeeklyUsage:     data.WeeklyUsage,
+		subFieldMonthlyUsage:    data.MonthlyUsage,
+		subFieldQuota:           data.QuotaUSD,
+		subFieldQuotaUsed:       data.QuotaUsedUSD,
+		subFieldUsageMultiplier: data.UsageMultiplier,
+		subFieldPlanName:        data.PlanName,
+		subFieldVersion:         data.Version,
 	}
 
 	pipe := c.rdb.Pipeline()

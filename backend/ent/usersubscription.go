@@ -47,6 +47,14 @@ type UserSubscription struct {
 	WeeklyUsageUsd float64 `json:"weekly_usage_usd,omitempty"`
 	// MonthlyUsageUsd holds the value of the "monthly_usage_usd" field.
 	MonthlyUsageUsd float64 `json:"monthly_usage_usd,omitempty"`
+	// QuotaUsd holds the value of the "quota_usd" field.
+	QuotaUsd float64 `json:"quota_usd,omitempty"`
+	// QuotaUsedUsd holds the value of the "quota_used_usd" field.
+	QuotaUsedUsd float64 `json:"quota_used_usd,omitempty"`
+	// UsageMultiplier holds the value of the "usage_multiplier" field.
+	UsageMultiplier float64 `json:"usage_multiplier,omitempty"`
+	// PlanName holds the value of the "plan_name" field.
+	PlanName string `json:"plan_name,omitempty"`
 	// AssignedBy holds the value of the "assigned_by" field.
 	AssignedBy *int64 `json:"assigned_by,omitempty"`
 	// AssignedAt holds the value of the "assigned_at" field.
@@ -121,11 +129,11 @@ func (*UserSubscription) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case usersubscription.FieldDailyUsageUsd, usersubscription.FieldWeeklyUsageUsd, usersubscription.FieldMonthlyUsageUsd:
+		case usersubscription.FieldDailyUsageUsd, usersubscription.FieldWeeklyUsageUsd, usersubscription.FieldMonthlyUsageUsd, usersubscription.FieldQuotaUsd, usersubscription.FieldQuotaUsedUsd, usersubscription.FieldUsageMultiplier:
 			values[i] = new(sql.NullFloat64)
 		case usersubscription.FieldID, usersubscription.FieldUserID, usersubscription.FieldGroupID, usersubscription.FieldAssignedBy:
 			values[i] = new(sql.NullInt64)
-		case usersubscription.FieldStatus, usersubscription.FieldNotes:
+		case usersubscription.FieldStatus, usersubscription.FieldPlanName, usersubscription.FieldNotes:
 			values[i] = new(sql.NullString)
 		case usersubscription.FieldCreatedAt, usersubscription.FieldUpdatedAt, usersubscription.FieldDeletedAt, usersubscription.FieldStartsAt, usersubscription.FieldExpiresAt, usersubscription.FieldDailyWindowStart, usersubscription.FieldWeeklyWindowStart, usersubscription.FieldMonthlyWindowStart, usersubscription.FieldAssignedAt:
 			values[i] = new(sql.NullTime)
@@ -237,6 +245,30 @@ func (_m *UserSubscription) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field monthly_usage_usd", values[i])
 			} else if value.Valid {
 				_m.MonthlyUsageUsd = value.Float64
+			}
+		case usersubscription.FieldQuotaUsd:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field quota_usd", values[i])
+			} else if value.Valid {
+				_m.QuotaUsd = value.Float64
+			}
+		case usersubscription.FieldQuotaUsedUsd:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field quota_used_usd", values[i])
+			} else if value.Valid {
+				_m.QuotaUsedUsd = value.Float64
+			}
+		case usersubscription.FieldUsageMultiplier:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field usage_multiplier", values[i])
+			} else if value.Valid {
+				_m.UsageMultiplier = value.Float64
+			}
+		case usersubscription.FieldPlanName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field plan_name", values[i])
+			} else if value.Valid {
+				_m.PlanName = value.String
 			}
 		case usersubscription.FieldAssignedBy:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -363,6 +395,18 @@ func (_m *UserSubscription) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("monthly_usage_usd=")
 	builder.WriteString(fmt.Sprintf("%v", _m.MonthlyUsageUsd))
+	builder.WriteString(", ")
+	builder.WriteString("quota_usd=")
+	builder.WriteString(fmt.Sprintf("%v", _m.QuotaUsd))
+	builder.WriteString(", ")
+	builder.WriteString("quota_used_usd=")
+	builder.WriteString(fmt.Sprintf("%v", _m.QuotaUsedUsd))
+	builder.WriteString(", ")
+	builder.WriteString("usage_multiplier=")
+	builder.WriteString(fmt.Sprintf("%v", _m.UsageMultiplier))
+	builder.WriteString(", ")
+	builder.WriteString("plan_name=")
+	builder.WriteString(_m.PlanName)
 	builder.WriteString(", ")
 	if v := _m.AssignedBy; v != nil {
 		builder.WriteString("assigned_by=")
