@@ -28,7 +28,7 @@
           <div class="flex items-baseline gap-1">
             <span class="text-xs text-gray-400 dark:text-dark-500">{{ planCurrencySymbol }}</span>
             <span :class="['text-2xl font-extrabold tracking-tight', textClass]">{{ plan.price }}</span>
-            <span v-if="plan.currency" class="text-xs font-medium text-gray-400 dark:text-dark-500">{{ plan.currency }}</span>
+            <span class="text-xs font-medium text-gray-400 dark:text-dark-500">{{ DEFAULT_PAYMENT_CURRENCY }}</span>
           </div>
           <div class="flex items-center justify-end gap-1">
             <span :class="['inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium', badgeLightClass]">
@@ -37,7 +37,7 @@
             <span class="text-[11px] text-gray-400 dark:text-dark-500">/ {{ validitySuffix }}</span>
           </div>
           <div v-if="plan.original_price" class="mt-0.5 flex items-center justify-end gap-1.5">
-            <span class="text-xs text-gray-400 line-through dark:text-dark-500">{{ planCurrencySymbol }}{{ plan.original_price }}<template v-if="plan.currency"> {{ plan.currency }}</template></span>
+            <span class="text-xs text-gray-400 line-through dark:text-dark-500">{{ planCurrencySymbol }}{{ plan.original_price }} {{ DEFAULT_PAYMENT_CURRENCY }}</span>
             <span :class="['rounded px-1 py-0.5 text-[10px] font-semibold', discountClass]">{{ discountText }}</span>
           </div>
         </div>
@@ -102,7 +102,7 @@ import { useI18n } from 'vue-i18n'
 import type { SubscriptionPlan } from '@/types/payment'
 import type { UserSubscription } from '@/types'
 import { planValiditySuffix } from './validity'
-import { currencySymbol } from '@/components/payment/currency'
+import { currencySymbol, DEFAULT_PAYMENT_CURRENCY } from '@/components/payment/currency'
 import {
   platformAccentBarClass,
   platformBadgeLightClass,
@@ -139,7 +139,9 @@ const discountText = computed(() => {
   return pct > 0 ? `-${pct}%` : ''
 })
 
-const planCurrencySymbol = computed(() => currencySymbol(props.plan.currency || 'USD'))
+// Keep customer-facing subscription prices in RMB even when legacy plans have
+// no currency field or still carry an internal USD label.
+const planCurrencySymbol = computed(() => currencySymbol(DEFAULT_PAYMENT_CURRENCY))
 
 const MODEL_SCOPE_LABELS: Record<string, string> = {
   claude: 'Claude',
