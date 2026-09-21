@@ -570,51 +570,6 @@
       </template>
     </BaseDialog>
 
-    <!-- CCS import fallback and diagnostic details -->
-    <BaseDialog
-      :show="showCcsImportFallback"
-      :title="t('keys.ccsImportFallback.title')"
-      width="narrow"
-      @close="closeCcsImportFallback"
-    >
-      <div class="space-y-3">
-        <p class="text-sm leading-5 text-gray-600 dark:text-gray-300">
-          {{ t('keys.ccsImportFallback.description') }}
-        </p>
-        <textarea
-          :value="ccsImportUrl"
-          rows="5"
-          readonly
-          spellcheck="false"
-          class="block w-full max-w-full resize-y break-all rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs leading-5 text-gray-700 outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-dark-600 dark:bg-dark-900 dark:text-gray-200"
-          :aria-label="t('keys.ccsImportFallback.linkLabel')"
-          @focus="selectCcsImportLink"
-          @click="selectCcsImportLink"
-        />
-        <p class="text-xs leading-5 text-amber-600 dark:text-amber-400">
-          {{ t('keys.ccsImportFallback.warning') }}
-        </p>
-      </div>
-      <template #footer>
-        <div class="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
-          <button
-            type="button"
-            class="btn btn-secondary w-full"
-            @click="copyCcsImportLink"
-          >
-            {{ t('keys.ccsImportFallback.copyLink') }}
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary w-full text-center"
-            @click="retryCcsImport"
-          >
-            {{ t('keys.ccsImportFallback.retry') }}
-          </button>
-        </div>
-      </template>
-    </BaseDialog>
-
     <!-- Group Selector Dropdown (Teleported to body to avoid overflow clipping) -->
     <Teleport to="body">
       <div
@@ -870,10 +825,8 @@ const showEditModal = ref(false)
 const showDeleteDialog = ref(false)
 const showUseKeyModal = ref(false)
 const showCcsClientSelect = ref(false)
-const showCcsImportFallback = ref(false)
 const showColumnDropdown = ref(false)
 const pendingCcsRow = ref<ApiKey | null>(null)
-const ccsImportUrl = ref('')
 const selectedKey = ref<ApiKey | null>(null)
 const copiedKeyId = ref<number | null>(null)
 const groupSelectorKeyId = ref<number | null>(null)
@@ -886,9 +839,6 @@ const prepaidStatusMessage = computed(() => !prepaidAccess.value?.has_purchased
   : prepaidAccess.value.requests_allowed ? 'keys.prepaidReady' : 'keys.prepaidPaused')
 let prepaidTimer: ReturnType<typeof setInterval> | null = null
 let prepaidController: AbortController | null = null
-let ccsImportTimer: number | null = null
-let ccsImportPollTimer: number | null = null
-let ccsImportWindow: Window | null = null
 
 const loadPrepaidAccess = async () => {
   prepaidController?.abort()
@@ -1312,78 +1262,10 @@ const importToCcswitch = (row: ApiKey) => {
   executeCcsImport(row, platform === 'gemini' ? 'gemini' : 'claude')
 }
 
-const clearCcsImportAttempt = () => {
-  if (ccsImportTimer !== null) {
-    window.clearTimeout(ccsImportTimer)
-    ccsImportTimer = null
-  }
-  if (ccsImportPollTimer !== null) {
-    window.clearInterval(ccsImportPollTimer)
-    ccsImportPollTimer = null
-  }
-  if (ccsImportWindow && !ccsImportWindow.closed) {
-    ccsImportWindow.close()
-  }
-  ccsImportWindow = null
-}
-
-const closeCcsImportFallback = () => {
-  clearCcsImportAttempt()
-  showCcsImportFallback.value = false
-  ccsImportUrl.value = ''
-}
-
-const selectCcsImportLink = (event: Event) => {
-  const target = event.currentTarget
-  if (target instanceof HTMLTextAreaElement) target.select()
-}
-
-const copyCcsImportLink = async () => {
-  if (!ccsImportUrl.value) return
-  await clipboardCopy(ccsImportUrl.value, t('keys.ccsImportFallback.linkCopied'))
-}
-
-const openCcsImportLink = (deeplink: string) => {
-  // Open the custom scheme from the user click so registered desktop handlers
-  // can take over. Keep the window reference to close an unhandled blank tab.
-  ccsImportWindow = window.open(deeplink, '_blank')
-}
-
 const launchCcsImport = (deeplink: string) => {
-  clearCcsImportAttempt()
-  ccsImportUrl.value = deeplink
-  showCcsImportFallback.value = false
-
-  let launchObserved = false
-  const markLaunchObserved = () => {
-    launchObserved = true
-    clearCcsImportAttempt()
-  }
-
-  try {
-    openCcsImportLink(deeplink)
-
-    ccsImportPollTimer = window.setInterval(() => {
-      if (ccsImportWindow?.closed) markLaunchObserved()
-    }, 100)
-
-    ccsImportTimer = window.setTimeout(() => {
-      ccsImportTimer = null
-      clearCcsImportAttempt()
-      if (!launchObserved) {
-        appStore.showError(t('keys.ccSwitchNotInstalled'))
-        showCcsImportFallback.value = true
-      }
-    }, 1200)
-  } catch (error) {
-    clearCcsImportAttempt()
-    appStore.showError(t('keys.ccSwitchNotInstalled'))
-    showCcsImportFallback.value = true
-  }
-}
-
-const retryCcsImport = () => {
-  if (ccsImportUrl.value) launchCcsImport(ccsImportUrl.value)
+  // The browser/OS handles the custom protocol. When CCS is not installed,
+  // the browser simply ignores the URL; no diagnostic dialog is shown.
+  window.open(deeplink, '_blank')
 }
 
 const executeCcsImport = (row: ApiKey, clientType: CcSwitchClientType) => {
@@ -1406,8 +1288,8 @@ const executeCcsImport = (row: ApiKey, clientType: CcSwitchClientType) => {
       };
     }
   })`
-  // Use the configured site name so imported profiles carry the operator's brand.
-  const providerName = (publicSettings.value?.site_name || 'Starbridge AI').trim() || 'Starbridge AI'
+  // Keep the imported provider name stable and recognizable in CC-Switch.
+  const providerName = 'starbridaeai'
   const deeplink = buildCcSwitchImportDeeplink({
     baseUrl,
     platform,
@@ -1445,7 +1327,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('focus', loadPrepaidAccess)
-  clearCcsImportAttempt()
   prepaidController?.abort()
   if (prepaidTimer) clearInterval(prepaidTimer)
   document.removeEventListener('click', closeGroupSelector)

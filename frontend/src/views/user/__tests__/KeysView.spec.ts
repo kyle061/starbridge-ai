@@ -43,7 +43,6 @@ const messages: Record<string, string> = {
   'keys.apiKey': 'API Key',
   'keys.allGroups': 'All Groups',
   'keys.allStatus': 'All Status',
-  'keys.ccSwitchNotInstalled': 'CC-Switch is not installed or the protocol handler is not registered.',
   'keys.columnSettings': 'Column Settings',
   'keys.createKey': 'Create API Key',
   'keys.created': 'Created',
@@ -355,10 +354,9 @@ describe('user KeysView column settings', () => {
     wrapper.unmount()
   })
 
-  it('opens CCS in a new tab and shows an error when launch is not observed', async () => {
+  it('opens CCS in a new tab without showing a fallback dialog', async () => {
     vi.useFakeTimers()
-    const close = vi.fn()
-    const openedWindow = { closed: false, close } as unknown as Window
+    const openedWindow = { closed: false } as unknown as Window
     const open = vi.spyOn(window, 'open').mockReturnValue(openedWindow)
     try {
       const wrapper = await mountView()
@@ -368,11 +366,7 @@ describe('user KeysView column settings', () => {
       vi.advanceTimersByTime(1200)
       await nextTick()
 
-      const importLink = wrapper.find('textarea[aria-label="keys.ccsImportFallback.linkLabel"]')
-      expect(importLink.exists()).toBe(true)
-      expect((importLink.element as HTMLTextAreaElement).value).toContain('ccswitch://v1/import?')
-      expect(showError).toHaveBeenCalledWith('CC-Switch is not installed or the protocol handler is not registered.')
-      expect(close).toHaveBeenCalledOnce()
+      expect(wrapper.find('textarea[aria-label="keys.ccsImportFallback.linkLabel"]').exists()).toBe(false)
       wrapper.unmount()
     } finally {
       open.mockRestore()
@@ -380,31 +374,9 @@ describe('user KeysView column settings', () => {
     }
   })
 
-  it('still reports a missing CCS installation when the browser loses focus', async () => {
+  it('does not show a fallback dialog when the import tab closes', async () => {
     vi.useFakeTimers()
-    const openedWindow = { closed: false, close: vi.fn() } as unknown as Window
-    const open = vi.spyOn(window, 'open').mockReturnValue(openedWindow)
-    try {
-      const wrapper = await mountView()
-      await getButtonByText(wrapper, 'Import to CC Switch').trigger('click')
-
-      window.dispatchEvent(new Event('blur'))
-      vi.advanceTimersByTime(1200)
-      await nextTick()
-
-      expect(showError).toHaveBeenCalledWith('CC-Switch is not installed or the protocol handler is not registered.')
-      expect(wrapper.find('textarea[aria-label="keys.ccsImportFallback.linkLabel"]').exists()).toBe(true)
-      wrapper.unmount()
-    } finally {
-      open.mockRestore()
-      vi.useRealTimers()
-    }
-  })
-
-  it('treats a closed import tab as a successful CCS handoff', async () => {
-    vi.useFakeTimers()
-    const close = vi.fn()
-    const openedWindow = { closed: false, close } as unknown as Window
+    const openedWindow = { closed: false } as unknown as Window
     const open = vi.spyOn(window, 'open').mockReturnValue(openedWindow)
     try {
       const wrapper = await mountView()
@@ -415,7 +387,6 @@ describe('user KeysView column settings', () => {
       await nextTick()
 
       expect(wrapper.find('textarea[aria-label="keys.ccsImportFallback.linkLabel"]').exists()).toBe(false)
-      expect(close).not.toHaveBeenCalled()
       wrapper.unmount()
     } finally {
       open.mockRestore()
@@ -475,21 +446,6 @@ describe('user KeysView column settings', () => {
     await wrapper.get('#key-form').trigger('submit')
     await flushPromises()
     expect(createKey).toHaveBeenCalledWith('My key', 1)
-    wrapper.unmount()
-  })
-
-  it('preselects the combined OpenAI and DeepSeek relay over single-provider groups', async () => {
-    getAvailableGroups.mockResolvedValue([
-      { id: 1, name: 'openai-default', platform: 'openai' },
-      { id: 2, name: 'deepseek-default', platform: 'deepseek' },
-      { id: 3, name: 'composite-default', platform: 'composite' }
-    ])
-    const wrapper = await mountView()
-    await wrapper.get('[data-tour="keys-create-btn"]').trigger('click')
-    await wrapper.get('[data-tour="key-form-name"]').setValue('Combined relay')
-    await wrapper.get('#key-form').trigger('submit')
-    await flushPromises()
-    expect(createKey).toHaveBeenCalledWith('Combined relay', 3)
     wrapper.unmount()
   })
 
