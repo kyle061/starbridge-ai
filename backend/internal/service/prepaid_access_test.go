@@ -36,12 +36,12 @@ func (r *prepaidKeyRepoStub) Update(_ context.Context, key *APIKey, _ APIKeyUpda
 	return nil
 }
 
-type prepaidGroupRepoStub struct {
+type prepaidAccessGroupRepoStub struct {
 	GroupRepository
 	group *Group
 }
 
-func (r *prepaidGroupRepoStub) GetByID(context.Context, int64) (*Group, error) {
+func (r *prepaidAccessGroupRepoStub) GetByID(context.Context, int64) (*Group, error) {
 	return r.group, nil
 }
 
@@ -148,7 +148,7 @@ func TestSubscriptionGroupDoesNotRequirePrepaidBalance(t *testing.T) {
 		ExpiresAt: time.Now().Add(time.Hour),
 		PlanName:  "GPT Pro",
 	}
-	svc.groupRepo = &prepaidGroupRepoStub{group: group}
+	svc.groupRepo = &prepaidAccessGroupRepoStub{group: group}
 	svc.userSubRepo = &prepaidSubscriptionRepoStub{sub: sub}
 	users.balance.Balance = 0
 
