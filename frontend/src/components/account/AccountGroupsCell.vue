@@ -1,7 +1,7 @@
 <template>
-  <div v-if="groups && groups.length > 0" class="relative max-w-56">
-    <!-- 分组容器：固定最大宽度，最多显示2行 -->
-    <div class="flex flex-wrap gap-1 max-h-14 overflow-hidden">
+  <div v-if="groups && groups.length > 0" class="relative min-w-0 w-72 max-w-full" data-testid="account-groups-cell">
+    <!-- 分组预览允许自然换行，避免底部标签被固定高度裁掉。 -->
+    <div class="flex min-w-0 flex-wrap items-center gap-1.5" data-testid="account-groups-preview">
       <GroupBadge
         v-for="group in displayGroups"
         :key="group.id"
@@ -10,13 +10,17 @@
         :subscription-type="group.subscription_type"
         :rate-multiplier="group.rate_multiplier"
         :show-rate="false"
-        class="max-w-24"
+        :title="group.name"
+        class="max-w-40"
       />
       <!-- 更多数量徽章 -->
       <button
         v-if="hiddenCount > 0"
         ref="moreButtonRef"
         @click.stop="showPopover = !showPopover"
+        :aria-expanded="showPopover"
+        :aria-label="t('admin.accounts.groupCountTotal', { count: groups.length })"
+        :title="t('admin.accounts.groupCountTotal', { count: groups.length })"
         class="inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-dark-600 dark:text-gray-300 dark:hover:bg-dark-500 transition-colors cursor-pointer whitespace-nowrap"
       >
         <span>+{{ hiddenCount }}</span>
@@ -36,7 +40,8 @@
         <div
           v-if="showPopover"
           ref="popoverRef"
-          class="fixed z-50 min-w-48 max-w-96 rounded-lg border border-gray-200 bg-white p-3 shadow-lg dark:border-dark-600 dark:bg-dark-800"
+          class="fixed z-[60] w-[min(28rem,calc(100vw-1rem))] min-w-0 rounded-lg border border-gray-200 bg-white p-3 shadow-lg dark:border-dark-600 dark:bg-dark-800"
+          data-testid="account-groups-popover"
           :style="popoverStyle"
         >
           <div class="mb-2 flex items-center justify-between">
@@ -52,7 +57,7 @@
               </svg>
             </button>
           </div>
-          <div class="flex flex-wrap gap-1.5 max-h-64 overflow-y-auto">
+          <div class="flex max-h-72 flex-wrap gap-1.5 overflow-y-auto">
             <GroupBadge
               v-for="group in groups"
               :key="group.id"
@@ -61,6 +66,8 @@
               :subscription-type="group.subscription_type"
               :rate-multiplier="group.rate_multiplier"
               :show-rate="false"
+              :title="group.name"
+              class="max-w-full"
             />
           </div>
         </div>
@@ -122,18 +129,18 @@ const popoverStyle = computed(() => {
   const viewportHeight = window.innerHeight
   const viewportWidth = window.innerWidth
 
+  const popoverWidth = Math.min(448, Math.max(0, viewportWidth - 16))
+  const popoverHeight = 360
   let top = rect.bottom + 8
   let left = rect.left
 
   // 如果下方空间不足，显示在上方
-  if (top + 280 > viewportHeight) {
-    top = Math.max(8, rect.top - 280)
+  if (top + popoverHeight > viewportHeight) {
+    top = Math.max(8, rect.top - popoverHeight)
   }
 
   // 如果右侧空间不足，向左偏移
-  if (left + 384 > viewportWidth) {
-    left = Math.max(8, viewportWidth - 392)
-  }
+  left = Math.min(Math.max(8, left), Math.max(8, viewportWidth - popoverWidth - 8))
 
   return {
     top: `${top}px`,

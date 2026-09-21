@@ -4,11 +4,12 @@
       'inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
       badgeClass
     ]"
+    :title="name"
   >
     <!-- Platform logo -->
     <PlatformIcon v-if="platform" :platform="platform" size="sm" />
     <!-- Group name -->
-    <span class="truncate">{{ name }}</span>
+    <span class="min-w-0 truncate">{{ name }}</span>
     <!-- Right side label -->
     <span v-if="showLabel" class="shrink-0 whitespace-nowrap" :class="labelClass">
       <template v-if="hasCustomRate">
