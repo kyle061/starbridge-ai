@@ -450,6 +450,9 @@ func (s *APIKeyService) incrementAPIKeyErrorCount(ctx context.Context, userID in
 func (s *APIKeyService) canUserBindGroup(ctx context.Context, user *User, group *Group) bool {
 	// 订阅类型分组：需要有效订阅
 	if group.IsSubscriptionType() {
+		if s.userSubRepo == nil {
+			return false
+		}
 		_, err := s.userSubRepo.GetActiveByUserIDAndGroupID(ctx, user.ID, group.ID)
 		return err == nil // 有有效订阅则允许
 	}
@@ -468,8 +471,16 @@ func (s *APIKeyService) Create(ctx context.Context, userID int64, req CreateAPIK
 		return nil, fmt.Errorf("get user: %w", err)
 	}
 
-	// 先确认支付到账与可用余额
-	if s.RequiresBalancePurchase(user) {
+	var group *Group
+	if req.GroupID != nil {
+		group, err = s.groupRepo.GetByID(ctx, *req.GroupID)
+		if err != nil {
+			return nil, fmt.Errorf("get group: %w", err)
+		}
+	}
+
+	// 标准分组使用账户余额；订阅分组使用已购订阅，不要求额外充值余额。
+	if s.RequiresBalancePurchase(user) && (group == nil || !group.IsSubscriptionType()) {
 		if err := checkPrepaidBalance(ctx, s.userRepo, user, nil); err != nil {
 			return nil, err
 		}
@@ -491,16 +502,8 @@ func (s *APIKeyService) Create(ctx context.Context, userID int64, req CreateAPIK
 	}
 
 	// 验证分组权限（如果指定了分组）
-	if req.GroupID != nil {
-		group, err := s.groupRepo.GetByID(ctx, *req.GroupID)
-		if err != nil {
-			return nil, fmt.Errorf("get group: %w", err)
-		}
-
+	if group != nil {
 		// 检查用户是否可以绑定该分组
-		if s.RequiresBalancePurchase(user) && group.IsSubscriptionType() {
-			return nil, ErrPrepaidGroupRequired
-		}
 		if !s.canUserBindGroup(ctx, user, group) {
 			return nil, ErrGroupNotAllowed
 		}
@@ -824,9 +827,6 @@ func (s *APIKeyService) Update(ctx context.Context, id int64, userID int64, req 
 			return nil, ErrGroupNotAllowed
 		}
 
-		if s.RequiresBalancePurchase(user) && group.IsSubscriptionType() {
-			return nil, ErrPrepaidGroupRequired
-		}
 		apiKey.GroupID = req.GroupID
 		fields.GroupID = true
 	}
@@ -1059,9 +1059,6 @@ func (s *APIKeyService) GetAvailableGroups(ctx context.Context, userID int64) ([
 	// 过滤出用户有权限的分组
 	availableGroups := make([]Group, 0)
 	for _, group := range allGroups {
-		if s.RequiresBalancePurchase(user) && group.IsSubscriptionType() {
-			continue
-		}
 		if s.canUserBindGroupInternal(user, &group, subscribedGroupIDs) {
 			availableGroups = append(availableGroups, group)
 		}

@@ -130,6 +130,7 @@ export default {
     namePlaceholder: '我的 API 密钥',
     groupLabel: '分组',
     selectGroup: '选择分组',
+    groupSelectionHint: '订阅套餐已在订阅页面购买，请选择该套餐对应的订阅分组。普通分组需要账户余额。',
     statusLabel: '状态',
     selectStatus: '选择状态',
     saving: '保存中...',

@@ -498,6 +498,7 @@
               />
             </template>
           </Select>
+          <p class="input-hint">{{ t('keys.groupSelectionHint') }}</p>
         </div>
 
         <div v-if="showEditModal">
@@ -704,6 +705,7 @@
 	import { useI18n } from 'vue-i18n'
 	import { useAppStore } from '@/stores/app'
 	import { useOnboardingStore } from '@/stores/onboarding'
+	import { useSubscriptionStore } from '@/stores/subscriptions'
 	import { useClipboard } from '@/composables/useClipboard'
 import { getPersistedPageSize } from '@/composables/usePersistedPageSize'
 
@@ -739,6 +741,7 @@ interface GroupOption {
   value: number
   label: string
   description: string | null
+  subscriptionPlanName: string | null
   subscriptionType: SubscriptionType
   platform: GroupPlatform
   rateMultiplier: number
@@ -761,6 +764,7 @@ const rateLimitWindows: RateLimitWindow[] = [
 
 const appStore = useAppStore()
 const onboardingStore = useOnboardingStore()
+const subscriptionStore = useSubscriptionStore()
 const { copyToClipboard: clipboardCopy } = useClipboard()
 
 const allColumns = computed<Column[]>(() => [
@@ -876,6 +880,9 @@ const handleBulkUpdated = (succeededIds: number[]) => {
 
 const groups = ref<Group[]>([])
 const userGroupRates = ref<Record<number, number>>({})
+const hasSubscriptionGroup = computed(() =>
+  groups.value.some((group) => group.subscription_type === 'subscription')
+)
 const loading = ref(false)
 const submitting = ref(false)
 const usageStats = ref<Record<string, BatchApiKeyUsageStats>>({})
@@ -951,7 +958,10 @@ const groupSelectorKeyId = ref<number | null>(null)
 const publicSettings = ref<PublicSettings | null>(null)
 const prepaidAccess = ref<PrepaidAccess | null>(null)
 const prepaidAccessError = ref(false)
-const canCreateKey = computed(() => !prepaidAccessError.value && !!prepaidAccess.value?.can_create_key)
+const canCreateKey = computed(() => {
+  if (prepaidAccessError.value || !prepaidAccess.value) return false
+  return prepaidAccess.value.can_create_key || hasSubscriptionGroup.value
+})
 const prepaidStatusMessage = computed(() => !prepaidAccess.value?.has_purchased
   ? 'keys.prepaidPurchaseRequired'
   : prepaidAccess.value.requests_allowed ? 'keys.prepaidReady' : 'keys.prepaidPaused')
@@ -1043,20 +1053,32 @@ const onStatusFilterChange = (value: string | number | boolean | null) => {
 
 // Convert available groups to user-facing options
 const groupOptions = computed(() =>
-  groups.value.map((group) => ({
-    value: group.id,
-    label: group.name,
-    description: group.description,
-    subscriptionType: group.subscription_type,
-    platform: group.platform,
-    rateMultiplier: group.rate_multiplier,
-    userRateMultiplier: userGroupRates.value[group.id] ?? null
-  }))
+  groups.value.map((group) => {
+    const subscription = subscriptionStore.activeSubscriptions.find((item) => item.group_id === group.id)
+    const subscriptionPlanName = group.subscription_type === 'subscription'
+      ? (subscription?.plan_name?.trim() || null)
+      : null
+    return {
+      value: group.id,
+      label: subscriptionPlanName ? `${group.name} - ${subscriptionPlanName}` : group.name,
+      description: group.description,
+      subscriptionPlanName,
+      subscriptionType: group.subscription_type,
+      platform: group.platform,
+      rateMultiplier: group.rate_multiplier,
+      userRateMultiplier: userGroupRates.value[group.id] ?? null
+    }
+  })
 )
 
 // The default relay group already contains the OpenAI + DeepSeek account pool.
 // Prefer it for new keys so users do not need to switch groups manually.
 const preferredGroupId = computed<number | null>(() => {
+  if (!prepaidAccess.value?.can_create_key) {
+    const subscriptionGroup = groupOptions.value.find((group) => group.subscriptionType === 'subscription')
+    if (subscriptionGroup) return subscriptionGroup.value
+  }
+
   const compositeDefault = groupOptions.value.find((group) =>
     group.platform === 'composite' && group.label.toLowerCase() === 'composite-default'
   )
@@ -1450,6 +1472,9 @@ onMounted(() => {
   loadSavedColumns()
   loadApiKeys()
   loadGroups()
+  subscriptionStore.fetchActiveSubscriptions().catch((error) => {
+    console.error('Failed to load active subscriptions:', error)
+  })
   loadPublicSettings()
   document.addEventListener('click', closeGroupSelector)
   window.addEventListener('focus', loadPrepaidAccess)

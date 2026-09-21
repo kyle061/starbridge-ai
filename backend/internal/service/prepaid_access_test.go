@@ -36,6 +36,25 @@ func (r *prepaidKeyRepoStub) Update(_ context.Context, key *APIKey, _ APIKeyUpda
 	return nil
 }
 
+type prepaidGroupRepoStub struct {
+	GroupRepository
+	group *Group
+}
+
+func (r *prepaidGroupRepoStub) GetByID(context.Context, int64) (*Group, error) {
+	return r.group, nil
+}
+
+type prepaidSubscriptionRepoStub struct {
+	UserSubscriptionRepository
+	sub *UserSubscription
+	err error
+}
+
+func (r *prepaidSubscriptionRepoStub) GetActiveByUserIDAndGroupID(context.Context, int64, int64) (*UserSubscription, error) {
+	return r.sub, r.err
+}
+
 func prepaidTestService() (*APIKeyService, *prepaidUserRepoStub, *prepaidKeyRepoStub) {
 	users := &prepaidUserRepoStub{owner: &User{ID: 7, Role: RoleUser, Status: StatusActive}, balance: PrepaidBalance{Balance: 20, HasPurchased: true}}
 	keys := &prepaidKeyRepoStub{}
@@ -117,6 +136,36 @@ func TestPrepaidGroupGateAndEditsPreserveAdminExpiration(t *testing.T) {
 	require.Equal(t, &expiration, key.ExpiresAt)
 	require.Equal(t, "Renamed", key.Name)
 	require.Equal(t, "same-key", key.Key)
+}
+
+func TestSubscriptionGroupDoesNotRequirePrepaidBalance(t *testing.T) {
+	svc, users, keys := prepaidTestService()
+	group := &Group{ID: 42, SubscriptionType: SubscriptionTypeSubscription}
+	sub := &UserSubscription{
+		UserID:    users.owner.ID,
+		GroupID:   group.ID,
+		Status:    SubscriptionStatusActive,
+		ExpiresAt: time.Now().Add(time.Hour),
+		PlanName:  "GPT Pro",
+	}
+	svc.groupRepo = &prepaidGroupRepoStub{group: group}
+	svc.userSubRepo = &prepaidSubscriptionRepoStub{sub: sub}
+	users.balance.Balance = 0
+
+	groupID := group.ID
+	key, err := svc.Create(context.Background(), users.owner.ID, CreateAPIKeyRequest{
+		Name:    "subscription key",
+		GroupID: &groupID,
+	})
+	require.NoError(t, err)
+	require.Equal(t, group.ID, *key.GroupID)
+	require.Same(t, key, keys.key)
+	require.NoError(t, svc.CheckPrepaidAccess(context.Background(), users.owner, group))
+
+	billing := &BillingCacheService{cfg: svc.cfg, userRepo: users, subRepo: svc.userSubRepo}
+	require.NoError(t, billing.CheckBillingEligibility(
+		context.Background(), users.owner, key, group, sub, "openai",
+	))
 }
 
 func TestPrepaidRechecksBalanceForQueuedAndWebSocketRequests(t *testing.T) {

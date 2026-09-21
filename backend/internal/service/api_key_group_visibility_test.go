@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -59,6 +60,7 @@ func TestGetUserGroupVisibilityIncludesActiveSubscriptions(t *testing.T) {
 				userRepo:    &visibilityUserRepo{user: &User{ID: 1, AllowedGroups: []int64{7}, RestrictPublicGroups: restricted}},
 				userSubRepo: subs,
 				groupRepo:   &visibilityGroupRepo{groups: []Group{{ID: 42, IsExclusive: true, SubscriptionType: "subscription"}}},
+				cfg:         &config.Config{Billing: config.BillingConfig{RequireBalancePurchase: true}},
 			}
 			available, err := svc.GetAvailableGroups(context.Background(), 1)
 			require.NoError(t, err)

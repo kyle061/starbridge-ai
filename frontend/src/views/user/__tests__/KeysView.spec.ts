@@ -14,6 +14,8 @@ const {
   getDashboardApiKeysUsage,
   getAvailableGroups,
   getUserGroupRates,
+  activeSubscriptions,
+  fetchActiveSubscriptions,
   showError,
   showSuccess,
   copyToClipboard,
@@ -28,6 +30,8 @@ const {
   getDashboardApiKeysUsage: vi.fn(),
   getAvailableGroups: vi.fn(),
   getUserGroupRates: vi.fn(),
+  activeSubscriptions: [] as Array<{ group_id: number; plan_name?: string }>,
+  fetchActiveSubscriptions: vi.fn(),
   showError: vi.fn(),
   showSuccess: vi.fn(),
   copyToClipboard: vi.fn(),
@@ -48,6 +52,7 @@ const messages: Record<string, string> = {
   'keys.created': 'Created',
   'keys.expiresAt': 'Expires',
   'keys.group': 'Group',
+  'keys.groupSelectionHint': 'Choose the group included with your subscription.',
   'keys.id': 'ID',
   'keys.importToCcSwitch': 'Import to CC Switch',
   'keys.currentConcurrency': 'Current Concurrency',
@@ -103,6 +108,13 @@ vi.mock('@/stores/onboarding', () => ({
   useOnboardingStore: () => ({
     isCurrentStep,
     nextStep,
+  }),
+}))
+
+vi.mock('@/stores/subscriptions', () => ({
+  useSubscriptionStore: () => ({
+    activeSubscriptions,
+    fetchActiveSubscriptions,
   }),
 }))
 
@@ -299,6 +311,8 @@ describe('user KeysView column settings', () => {
     getDashboardApiKeysUsage.mockReset()
     getAvailableGroups.mockReset()
     getUserGroupRates.mockReset()
+    activeSubscriptions.length = 0
+    fetchActiveSubscriptions.mockReset().mockResolvedValue([])
     showError.mockReset()
     showSuccess.mockReset()
     copyToClipboard.mockReset()
@@ -357,6 +371,34 @@ describe('user KeysView column settings', () => {
     expect(wrapper.get('[data-tour="keys-create-btn"]').attributes('disabled')).toBeDefined()
     expect(wrapper.get('[data-test="prepaid-access"]').text()).toContain('keys.prepaidPurchaseRequired')
     expect(wrapper.get('[data-test="prepaid-access"] a').attributes('href')).toBe('/redeem')
+    wrapper.unmount()
+  })
+
+  it('shows the purchased subscription plan and allows a key without prepaid balance', async () => {
+    getAccess.mockResolvedValue({ enabled: true, has_purchased: false, balance: 0, can_create_key: false, requests_allowed: false })
+    activeSubscriptions.push({ group_id: 42, plan_name: 'GPT Pro' })
+    getAvailableGroups.mockResolvedValue([{
+      id: 42,
+      name: 'OpenAI Subscription',
+      description: null,
+      platform: 'openai',
+      rate_multiplier: 1,
+      subscription_type: 'subscription',
+    }])
+
+    const wrapper = await mountView()
+    expect(wrapper.get('[data-tour="keys-create-btn"]').attributes('disabled')).toBeUndefined()
+    await wrapper.get('[data-tour="keys-create-btn"]').trigger('click')
+
+    const groupSelect = wrapper.findAllComponents({ name: 'Select' })
+      .find(select => select.attributes('data-tour') === 'key-form-group')!
+    expect(groupSelect.props('options')[0].label).toBe('OpenAI Subscription - GPT Pro')
+
+    await wrapper.get('[data-tour="key-form-name"]').setValue('Subscription key')
+    await wrapper.get('#key-form').trigger('submit')
+    await flushPromises()
+    expect(createKey).toHaveBeenCalledWith('Subscription key', 42)
+    expect(fetchActiveSubscriptions).toHaveBeenCalled()
     wrapper.unmount()
   })
 

@@ -81,6 +81,15 @@ func (s *APIKeyService) CheckPrepaidAccess(ctx context.Context, user *User, grou
 	if !s.RequiresBalancePurchase(user) {
 		return nil
 	}
+	if group != nil && group.IsSubscriptionType() {
+		if s.userSubRepo == nil {
+			return ErrPrepaidGroupRequired
+		}
+		if _, err := s.userSubRepo.GetActiveByUserIDAndGroupID(ctx, user.ID, group.ID); err != nil {
+			return ErrPrepaidGroupRequired
+		}
+		return nil
+	}
 	if err := checkPrepaidBalance(ctx, s.userRepo, user, group); err != nil {
 		return err
 	}

@@ -130,6 +130,7 @@ export default {
     namePlaceholder: 'My API Key',
     groupLabel: 'Group',
     selectGroup: 'Select a group',
+    groupSelectionHint: 'Subscription plans are purchased on the Subscriptions page. Select the group included with your plan; standard groups require account balance.',
     statusLabel: 'Status',
     selectStatus: 'Select status',
     saving: 'Saving...',

@@ -763,8 +763,18 @@ func (s *BillingCacheService) CheckBillingEligibility(ctx context.Context, user 
 	// administrator-owned keys so every key shares one account-wide allowance.
 	prepaid := s.cfg != nil && s.cfg.Billing.RequireBalancePurchase && user != nil
 	if prepaid {
-		if err := checkPrepaidBalance(ctx, s.userRepo, user, group); err != nil {
-			return err
+		if group != nil && group.IsSubscriptionType() {
+			// A subscription key is authorized by its active subscription, not by
+			// the account-wide prepaid balance. The middleware normally loads this
+			// object before billing; reject missing data instead of silently
+			// falling through to an unmetered request.
+			if subscription == nil {
+				return ErrPrepaidGroupRequired
+			}
+		} else {
+			if err := checkPrepaidBalance(ctx, s.userRepo, user, group); err != nil {
+				return err
+			}
 		}
 		if group == nil {
 			return ErrPrepaidGroupRequired
