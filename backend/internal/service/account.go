@@ -91,7 +91,7 @@ type Account struct {
 
 // DefaultAccountConcurrency is the default request concurrency for newly
 // created upstream accounts when the caller does not provide an override.
-const DefaultAccountConcurrency = 10
+const DefaultAccountConcurrency = 5
 
 type OpenAIEndpointCapability string
 

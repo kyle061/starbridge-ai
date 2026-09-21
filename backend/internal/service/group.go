@@ -114,6 +114,10 @@ type Group struct {
 	// RPMLimit 分组级每分钟请求数上限（0 = 不限制）。
 	// 一旦设置即接管该分组用户的限流（覆盖用户级 rpm_limit），可被 user-group rpm_override 进一步覆盖。
 	RPMLimit int
+	// ConcurrencyLimit is the independent group-wide concurrency ceiling.
+	// The effective capacity is min(ConcurrencyLimit, schedulable account capacity sum).
+	// A non-positive value keeps legacy behavior (account capacity sum only).
+	ConcurrencyLimit int
 
 	// MaxReasoningEffort limits the effective Anthropic/OpenAI reasoning effort.
 	// Empty means unlimited; supported values are minimal/low/medium/high/xhigh/max.
