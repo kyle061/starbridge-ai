@@ -41,6 +41,10 @@ jobs:
           src/views/__tests__/HomeView.compact.spec.ts
           src/views/__tests__/KeyUsageView.spec.ts
           src/views/user/__tests__/PaymentView.spec.ts
+          src/components/payment/__tests__/SubscriptionPlanCard.spec.ts
+          src/views/admin/orders/__tests__/PlanModelsDialog.spec.ts
+          src/views/admin/orders/__tests__/PlanEditDialog.spec.ts
+          src/views/admin/orders/__tests__/AdminPaymentPlansView.spec.ts
           src/views/user/__tests__/RedeemView.spec.ts
           src/components/keys/__tests__/BulkEditKeysModal.spec.ts
           src/components/admin/user/__tests__/ApiKeyLimitsForm.spec.ts
@@ -65,6 +69,10 @@ jobs:
       - run: >-
           go test -tags unit ./internal/service
           -run 'TestCompositeGPT6|TestAdminService_PreviewCompositeRoute|TestGatewayService_SelectAccountForModelWithExclusions_FallsBackAcrossCompositePlatforms'
+        working-directory: backend
+      - run: >-
+          go test ./internal/handler/admin ./internal/server/middleware
+          -run 'TestAdminSubscriptionPlansForResponse|TestGroupModelAllowlist'
         working-directory: backend
       - run: go test ./internal/service -run '^TestOpenAIGatewayServiceRecordUsage_'
         working-directory: backend

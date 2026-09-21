@@ -3,7 +3,7 @@
     <div class="space-y-4">
       <!-- Actions -->
       <div class="flex items-center justify-end gap-2">
-        <button @click="loadPlans" :disabled="plansLoading" class="btn btn-secondary" :title="t('common.refresh')">
+        <button @click="reloadPlans" :disabled="plansLoading" class="btn btn-secondary" :title="t('common.refresh')">
           <Icon name="refresh" size="md" :class="plansLoading ? 'animate-spin' : ''" />
         </button>
         <button @click="openPlanEdit(null)" class="btn btn-primary">{{ t('payment.admin.createPlan') }}</button>
@@ -26,6 +26,9 @@
             :rate-multiplier="getGroup(value)!.rate_multiplier"
           />
           <span v-else class="text-sm text-gray-400">-</span>
+        </template>
+        <template #cell-model_allowlist="{ row }">
+          <PlanModelList class="max-w-xs" :allowlist="row.model_allowlist" :platform="row.group_platform" :scopes="row.supported_model_scopes" />
         </template>
         <template #cell-price="{ value, row }">
           <div class="text-sm">
@@ -64,6 +67,10 @@
               <Icon name="edit" size="sm" />
               <span class="text-xs">{{ t('common.edit') }}</span>
             </button>
+            <button @click="modelPlan = row" class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-500 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20">
+              <Icon name="brain" size="sm" />
+              <span class="whitespace-nowrap text-xs">{{ t('payment.admin.configureModels') }}</span>
+            </button>
             <button @click="confirmDeletePlan(row)" class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400">
               <Icon name="trash" size="sm" />
               <span class="text-xs">{{ t('common.delete') }}</span>
@@ -74,7 +81,9 @@
     </div>
 
     <!-- Plan Edit Dialog -->
-    <PlanEditDialog :show="showPlanDialog" :plan="editingPlan" :groups="groups" :payment-config="paymentConfig" @close="showPlanDialog = false" @saved="loadPlans" />
+    <PlanEditDialog :show="showPlanDialog" :plan="editingPlan" :groups="groups" :payment-config="paymentConfig" @close="showPlanDialog = false" @saved="reloadPlans" />
+
+    <PlanModelsDialog :show="!!modelPlan" :plan="modelPlan" :plans="plans" @close="modelPlan = null" @saved="reloadPlans" />
 
     <ConfirmDialog :show="showDeletePlanDialog" :title="t('payment.admin.deletePlan')" :message="t('payment.admin.deletePlanConfirm')" :confirm-text="t('common.delete')" danger @confirm="handleDeletePlan" @cancel="showDeletePlanDialog = false" />
   </AppLayout>
@@ -97,6 +106,8 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Icon from '@/components/icons/Icon.vue'
 import GroupBadge from '@/components/common/GroupBadge.vue'
 import PlanEditDialog from './PlanEditDialog.vue'
+import PlanModelsDialog from './PlanModelsDialog.vue'
+import PlanModelList from '@/components/payment/PlanModelList.vue'
 import { currencySymbol } from '@/components/payment/currency'
 import { platformTextClass } from '@/utils/platformColors'
 
@@ -141,6 +152,9 @@ function getPlanNameClass(groupId: number): string {
 
 // ==================== Plans ====================
 
+const modelPlan = ref<SubscriptionPlan | null>(null)
+async function reloadPlans() { await Promise.all([loadPlans(), loadGroups()]) }
+
 const plansLoading = ref(false)
 const plans = ref<SubscriptionPlan[]>([])
 const showPlanDialog = ref(false)
@@ -152,6 +166,7 @@ const planColumns = computed((): Column[] => [
   { key: 'id', label: 'ID' },
   { key: 'name', label: t('payment.admin.planName') },
   { key: 'group_id', label: t('payment.admin.group') },
+  { key: 'model_allowlist', label: t('payment.planCard.models') },
   { key: 'price', label: t('payment.admin.price') },
   { key: 'quota_multiplier', label: t('payment.admin.entitlements') },
   { key: 'validity_days', label: t('payment.admin.validity') },

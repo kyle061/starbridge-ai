@@ -294,30 +294,31 @@ func (h *PaymentHandler) ListPlans(c *gin.Context) {
 }
 
 type AdminSubscriptionPlanResult struct {
-	ID              int64     `json:"id"`
-	GroupID         int64     `json:"group_id"`
-	GroupPlatform   string    `json:"group_platform,omitempty"`
-	GroupName       string    `json:"group_name,omitempty"`
-	RateMultiplier  float64   `json:"rate_multiplier,omitempty"`
-	DailyLimitUSD   *float64  `json:"daily_limit_usd,omitempty"`
-	WeeklyLimitUSD  *float64  `json:"weekly_limit_usd,omitempty"`
-	MonthlyLimitUSD *float64  `json:"monthly_limit_usd,omitempty"`
-	ModelScopes     []string  `json:"supported_model_scopes,omitempty"`
-	Name            string    `json:"name"`
-	Description     string    `json:"description"`
-	Price           float64   `json:"price"`
-	OriginalPrice   *float64  `json:"original_price,omitempty"`
-	Currency        string    `json:"currency,omitempty"`
-	ValidityDays    int       `json:"validity_days"`
-	ValidityUnit    string    `json:"validity_unit"`
-	Features        string    `json:"features"`
-	ProductName     string    `json:"product_name"`
-	ForSale         bool      `json:"for_sale"`
-	SortOrder       int       `json:"sort_order"`
-	QuotaMultiplier float64   `json:"quota_multiplier"`
-	UsageMultiplier float64   `json:"usage_multiplier"`
-	CreatedAt       time.Time `json:"created_at,omitempty"`
-	UpdatedAt       time.Time `json:"updated_at,omitempty"`
+	ID              int64                       `json:"id"`
+	GroupID         int64                       `json:"group_id"`
+	GroupPlatform   string                      `json:"group_platform,omitempty"`
+	GroupName       string                      `json:"group_name,omitempty"`
+	RateMultiplier  float64                     `json:"rate_multiplier,omitempty"`
+	DailyLimitUSD   *float64                    `json:"daily_limit_usd,omitempty"`
+	WeeklyLimitUSD  *float64                    `json:"weekly_limit_usd,omitempty"`
+	MonthlyLimitUSD *float64                    `json:"monthly_limit_usd,omitempty"`
+	ModelScopes     []string                    `json:"supported_model_scopes,omitempty"`
+	ModelAllowlist  service.GroupModelAllowlist `json:"model_allowlist"`
+	Name            string                      `json:"name"`
+	Description     string                      `json:"description"`
+	Price           float64                     `json:"price"`
+	OriginalPrice   *float64                    `json:"original_price,omitempty"`
+	Currency        string                      `json:"currency,omitempty"`
+	ValidityDays    int                         `json:"validity_days"`
+	ValidityUnit    string                      `json:"validity_unit"`
+	Features        string                      `json:"features"`
+	ProductName     string                      `json:"product_name"`
+	ForSale         bool                        `json:"for_sale"`
+	SortOrder       int                         `json:"sort_order"`
+	QuotaMultiplier float64                     `json:"quota_multiplier"`
+	UsageMultiplier float64                     `json:"usage_multiplier"`
+	CreatedAt       time.Time                   `json:"created_at,omitempty"`
+	UpdatedAt       time.Time                   `json:"updated_at,omitempty"`
 }
 
 func adminSubscriptionPlansForResponse(plans []*dbent.SubscriptionPlan, groupInfo map[int64]service.PlanGroupInfo) []AdminSubscriptionPlanResult {
@@ -337,6 +338,7 @@ func adminSubscriptionPlansForResponse(plans []*dbent.SubscriptionPlan, groupInf
 			WeeklyLimitUSD:  gi.WeeklyLimitUSD,
 			MonthlyLimitUSD: gi.MonthlyLimitUSD,
 			ModelScopes:     gi.ModelScopes,
+			ModelAllowlist:  gi.ModelAllowlist,
 			Name:            p.Name,
 			Description:     p.Description,
 			Price:           p.Price,

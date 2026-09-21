@@ -1,7 +1,7 @@
 <template>
   <BaseDialog :show="show" :title="plan ? t('payment.admin.editPlan') : t('payment.admin.createPlan')" width="wide" @close="emit('close')">
     <form id="plan-form" @submit.prevent="handleSavePlan" class="space-y-4">
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label class="input-label">{{ t('payment.admin.planName') }} <span class="text-red-500">*</span></label>
           <input v-model="planForm.name" type="text" class="input" required />
@@ -20,6 +20,7 @@
           </Select>
         </div>
       </div>
+      <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.planModelsHint') }}</p>
       <!-- Group Info Preview -->
       <div v-if="selectedGroupInfo" class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-dark-600 dark:bg-dark-800">
         <div class="mb-2 flex items-center gap-2">
@@ -33,7 +34,7 @@
       </div>
 
       <div><label class="input-label">{{ t('payment.admin.planDescription') }} <span class="text-red-500">*</span></label><textarea v-model="planForm.description" rows="2" class="input" required></textarea></div>
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label class="input-label">{{ t('payment.admin.price') }} <span class="text-red-500">*</span></label>
           <input v-model.number="planForm.price" type="number" step="0.01" min="0.01" class="input" required />
@@ -46,7 +47,7 @@
         </div>
         <div><label class="input-label">{{ t('payment.admin.originalPrice') }}</label><input v-model.number="planForm.original_price" type="number" step="0.01" min="0" class="input" /></div>
       </div>
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label class="input-label">{{ t('payment.admin.quotaMultiplier') }}</label>
           <input v-model.number="planForm.quota_multiplier" type="number" step="0.01" min="0.01" class="input" required />
@@ -58,11 +59,11 @@
           <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.usageMultiplierHint') }}</p>
         </div>
       </div>
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div><label class="input-label">{{ t('payment.admin.validity') }} <span class="text-red-500">*</span></label><input v-model.number="planForm.validity_days" type="number" min="1" class="input" required /></div>
         <div><label class="input-label">{{ t('payment.admin.validityUnit') }} <span class="text-red-500">*</span></label><Select v-model="planForm.validity_unit" :options="validityUnitOptions" /></div>
       </div>
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div><label class="input-label">{{ t('payment.admin.sortOrder') }}</label><input v-model.number="planForm.sort_order" type="number" min="0" class="input" /></div>
         <div>
           <label class="input-label">{{ t('payment.admin.currency') }}</label>

@@ -128,7 +128,7 @@
                       <span class="font-semibold text-gray-800 dark:text-gray-200">¥{{ subscriptionQuota.toFixed(2) }}</span>
                     </div>
                     <div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                      {{ t('payment.planCard.usageRate') }} {{ selectedPlan.usage_multiplier || 12 }}x · {{ t('payment.planCard.validityBound') }} {{ planValiditySuffix }}
+                      {{ t('payment.planCard.validityBound') }} {{ planValiditySuffix }}
                     </div>
                   </div>
                   <div v-if="selectedPlan.daily_limit_usd != null">
@@ -143,10 +143,7 @@
                     <span class="text-xs text-gray-400 dark:text-gray-500">{{ t('payment.planCard.monthlyLimit') }}</span>
                     <div class="text-lg font-semibold text-gray-800 dark:text-gray-200">${{ selectedPlan.monthly_limit_usd }}</div>
                   </div>
-                  <div v-if="selectedPlan.daily_limit_usd == null && selectedPlan.weekly_limit_usd == null && selectedPlan.monthly_limit_usd == null">
-                    <span class="text-xs text-gray-400 dark:text-gray-500">{{ t('payment.planCard.quota') }}</span>
-                    <div class="text-lg font-semibold text-gray-800 dark:text-gray-200">{{ t('payment.planCard.unlimited') }}</div>
-                  </div>
+                  <PlanModelList class="col-span-2" :allowlist="selectedPlan.model_allowlist" :platform="selectedPlan.group_platform" :scopes="selectedPlan.supported_model_scopes" />
                 </div>
               </div>
               <div v-if="paymentEnabled && enabledMethods.length >= 1" class="card p-6">
@@ -206,7 +203,7 @@
                         <span :class="['shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-medium', platformBadgeLightClass(sub.group?.platform || '')]">{{ platformLabel(sub.group?.platform || '') }}</span>
                       </div>
                       <div class="flex flex-wrap gap-x-3 text-[11px] text-gray-400 dark:text-gray-500">
-                        <span v-if="sub.group?.daily_limit_usd == null && sub.group?.weekly_limit_usd == null && sub.group?.monthly_limit_usd == null">{{ t('payment.planCard.quota') }}: {{ t('payment.planCard.unlimited') }}</span>
+                        <span v-if="sub.quota_usd > 0">{{ t('payment.planCard.remainingQuota') }}: ¥{{ Math.max(0, sub.quota_usd - (sub.quota_used_usd || 0)).toFixed(2) }} / ¥{{ sub.quota_usd.toFixed(2) }}</span>
                         <span v-if="sub.expires_at">{{ t('userSubscriptions.daysRemaining', { days: getDaysRemaining(sub.expires_at) }) }}</span>
                         <span v-else>{{ t('userSubscriptions.noExpiration') }}</span>
                       </div>
@@ -294,6 +291,7 @@ import {
 } from '@/components/payment/paymentFlow'
 import { platformAccentBarClass, platformBadgeLightClass, platformBadgeClass, platformTextClass, platformLabel } from '@/utils/platformColors'
 import SubscriptionPlanCard from '@/components/payment/SubscriptionPlanCard.vue'
+import PlanModelList from '@/components/payment/PlanModelList.vue'
 import PaymentStatusPanel from '@/components/payment/PaymentStatusPanel.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { DEFAULT_PAYMENT_CURRENCY, formatPaymentAmount, normalizePaymentCurrency } from '@/components/payment/currency'

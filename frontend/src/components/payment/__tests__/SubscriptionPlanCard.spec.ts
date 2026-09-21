@@ -52,6 +52,23 @@ const mountPlanCard = (groupPlatform: string, overrides: Partial<SubscriptionPla
   });
 
 describe("SubscriptionPlanCard", () => {
+  it("shows the purchased quota without an unlimited claim or usage multiplier", () => {
+    const text = mountPlanCard("composite", { price: 5, quota_multiplier: 10, usage_multiplier: 12 }).text();
+    expect(text).toContain("¥50.00");
+    expect(text).not.toContain("12.00x");
+    expect(text).not.toContain("payment.planCard.usageRate");
+    expect(text).not.toContain("payment.planCard.unlimited");
+  });
+
+  it("shows only the actual allowed models for a composite subscription", () => {
+    const text = mountPlanCard("composite", {
+      model_allowlist: { enabled: true, models: ["deepseek-v4-pro", "gpt-5.6-sol"] },
+    }).text();
+    expect(text).toContain("deepseek-v4-pro");
+    expect(text).toContain("gpt-5.6-sol");
+    expect(text).not.toContain("gpt-6-astra");
+  });
+
   it("does not show Antigravity model scopes for OpenAI plans", () => {
     const text = mountPlanCard("openai").text();
 

@@ -76,6 +76,7 @@ func TestAdminSubscriptionPlansForResponseIncludesCompositeGroupInfo(t *testing.
 			RateMultiplier: 1.5,
 			WeeklyLimitUSD: &weekly,
 			ModelScopes:    []string{"openai", "claude", "gemini", "grok"},
+			ModelAllowlist: service.GroupModelAllowlist{Enabled: true, Models: []string{"deepseek-v4-pro"}},
 		},
 	}
 
@@ -95,6 +96,9 @@ func TestAdminSubscriptionPlansForResponseIncludesCompositeGroupInfo(t *testing.
 	}
 	if strings.Join(got[0].ModelScopes, ",") != "openai,claude,gemini,grok" {
 		t.Fatalf("expected model scopes to be preserved, got %#v", got[0].ModelScopes)
+	}
+	if !got[0].ModelAllowlist.Enabled || strings.Join(got[0].ModelAllowlist.Models, ",") != "deepseek-v4-pro" {
+		t.Fatalf("expected actual model policy, got %#v", got[0].ModelAllowlist)
 	}
 	// 投影必须保留 ent 原始响应的全部套餐字段：currency 丢失曾导致编辑保存时
 	// 静默清空套餐货币（PlanEditDialog 回传空串 → SetCurrency("")）。

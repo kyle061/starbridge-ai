@@ -57,16 +57,15 @@
               </span>
             </div>
 
-            <!-- Progress bars or Unlimited badge -->
+            <!-- Progress bars or legacy entitlement -->
             <div class="space-y-1.5">
-              <!-- Unlimited subscription badge -->
+              <!-- Legacy subscription entitlement -->
               <div
                 v-if="isUnlimited(subscription)"
                 class="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 px-2.5 py-1.5 dark:from-emerald-900/20 dark:to-teal-900/20"
               >
-                <span class="text-lg text-emerald-600 dark:text-emerald-400">∞</span>
                 <span class="text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                  {{ t('subscriptionProgress.unlimited') }}
+                  {{ t('payment.planCard.entitlementBased') }}
                 </span>
               </div>
 

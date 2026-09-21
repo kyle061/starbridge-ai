@@ -108,9 +108,7 @@
               <div class="relative h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-dark-600">
                 <div class="absolute inset-y-0 left-0 rounded-full bg-primary-500 transition-all duration-300" :style="{ width: getProgressWidth(subscription.quota_used_usd, subscription.quota_usd) }" />
               </div>
-              <p class="text-xs text-gray-500 dark:text-dark-400">
-                {{ t('userSubscriptions.usageRate') }} {{ (subscription.usage_multiplier || 1).toFixed(2) }}x
-              </p>
+
             </div>
 
             <!-- Daily Usage -->
@@ -232,28 +230,9 @@
               </p>
             </div>
 
-            <!-- No limits configured - Unlimited badge -->
-            <div
-              v-if="
-                !subscription.group?.daily_limit_usd &&
-                !subscription.group?.weekly_limit_usd &&
-                !subscription.group?.monthly_limit_usd &&
-                !(subscription.quota_usd > 0)
-              "
-              class="flex items-center justify-center rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 py-6 dark:from-emerald-900/20 dark:to-teal-900/20"
-            >
-              <div class="flex items-center gap-3">
-                <span class="text-4xl text-emerald-600 dark:text-emerald-400">∞</span>
-                <div>
-                  <p class="text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                    {{ t('userSubscriptions.unlimited') }}
-                  </p>
-                  <p class="text-xs text-emerald-600/70 dark:text-emerald-400/70">
-                    {{ t('userSubscriptions.unlimitedDesc') }}
-                  </p>
-                </div>
-              </div>
-            </div>
+            <p v-if="!(subscription.quota_usd > 0) && !subscription.group?.daily_limit_usd && !subscription.group?.weekly_limit_usd && !subscription.group?.monthly_limit_usd" class="text-sm text-gray-500 dark:text-dark-400">
+              {{ t('payment.planCard.entitlementBased') }}
+            </p>
           </div>
         </div>
       </div>
