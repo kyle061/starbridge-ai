@@ -7,6 +7,7 @@ export interface ParsedWechatResumeRoute {
   orderType: 'balance' | 'subscription'
   paymentType: string
   planId?: number
+  quantity?: number
   openid?: string
   wechatResumeToken?: string
 }
@@ -40,6 +41,8 @@ export function parseWechatResumeRoute(
   const paymentType = normalizeVisibleMethod(readQueryString(query, 'payment_type')) || 'wxpay'
   const planId = Number.parseInt(readQueryString(query, 'plan_id'), 10)
   const hasPlanId = Number.isFinite(planId) && planId > 0
+  const quantity = Number.parseInt(readQueryString(query, 'quantity'), 10)
+  const hasQuantity = Number.isFinite(quantity) && quantity > 0
   const orderType = readQueryString(query, 'order_type') === 'subscription' || hasPlanId
     ? 'subscription'
     : 'balance'
@@ -51,6 +54,7 @@ export function parseWechatResumeRoute(
       orderType,
       orderAmount: 0,
       planId: hasPlanId ? planId : undefined,
+    quantity: hasQuantity ? quantity : undefined,
     }
   }
 
@@ -72,6 +76,7 @@ export function parseWechatResumeRoute(
     orderType,
     orderAmount,
     planId: hasPlanId ? planId : undefined,
+    quantity: hasQuantity ? quantity : undefined,
   }
 }
 
@@ -86,5 +91,6 @@ export function stripWechatResumeQuery(query: LocationQuery): LocationQueryRaw {
   delete nextQuery.amount
   delete nextQuery.order_type
   delete nextQuery.plan_id
+  delete nextQuery.quantity
   return nextQuery
 }

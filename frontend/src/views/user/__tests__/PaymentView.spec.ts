@@ -483,6 +483,50 @@ describe('PaymentView recharge rate preview', () => {
 })
 
 describe('PaymentView subscription confirmation amounts', () => {
+  it('prices daily plans by selected days using fifteen-day discount tiers', async () => {
+    const wrapper = await mountSubscriptionConfirm({
+      method: { currency: 'CNY' },
+      plan: {
+        price: 10,
+        validity_days: 1,
+        validity_unit: 'day',
+        daily_limit_usd: 100,
+        quota_multiplier: 10,
+      },
+    })
+
+    const input = wrapper.get('[data-testid="subscription-days"]')
+    await input.setValue(30)
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain(formatPaymentAmount(270, 'CNY'))
+    expect(wrapper.text()).toContain('payment.multiDayDiscount')
+    expect(wrapper.text()).toContain('3000.00')
+
+    createOrder.mockResolvedValueOnce({
+      order_id: 730,
+      amount: 270,
+      pay_amount: 270,
+      fee_rate: 0,
+      expires_at: '2099-01-01T00:10:00.000Z',
+      payment_type: 'wxpay',
+      qr_code: 'weixin://wxpay/bizpayurl?pr=daily-plan',
+      out_trade_no: 'daily-plan-730',
+    })
+    const submit = wrapper.findAll('button').find(button => button.text().includes('payment.createOrder'))
+    expect(submit).toBeDefined()
+    await submit!.trigger('click')
+    await flushPromises()
+
+    expect(createOrder).toHaveBeenCalledWith(expect.objectContaining({
+      amount: 270,
+      order_type: 'subscription',
+      plan_id: 7,
+      quantity: 30,
+    }), expect.any(String))
+  })
+
   it('shows converted CNY pay amount using the subscription rate, not the balance multiplier', async () => {
     const wrapper = await mountSubscriptionConfirm({
       checkout: {
@@ -812,6 +856,7 @@ describe('PaymentView WeChat JSAPI flow', () => {
       payment_type: 'wxpay_direct',
       order_type: 'subscription',
       plan_id: '7',
+      quantity: '30',
     }
     getCheckoutInfo.mockResolvedValue(checkoutInfoWithPlansFixture())
     createOrder.mockResolvedValue(oauthOrderFixture())
@@ -844,11 +889,12 @@ describe('PaymentView WeChat JSAPI flow', () => {
       payment_type: 'wxpay',
       order_type: 'subscription',
       plan_id: 7,
+      quantity: 30,
       wechat_resume_token: 'resume-subscription-7',
     }), expect.any(String))
     expect(locationState.href).toContain('/api/v1/auth/oauth/wechat/payment/start?')
     expect(new URL(locationState.href, 'http://localhost').searchParams.get('redirect')).toBe(
-      '/purchase?from=wechat&payment_type=wxpay&order_type=subscription&plan_id=7',
+      '/purchase?from=wechat&payment_type=wxpay&order_type=subscription&plan_id=7&quantity=30',
     )
 
     Object.defineProperty(window, 'location', {

@@ -39,6 +39,7 @@ func TestApplyWeChatPaymentResumeClaims(t *testing.T) {
 		Amount:      "12.50",
 		OrderType:   payment.OrderTypeSubscription,
 		PlanID:      7,
+		Quantity:    30,
 	})
 	if err != nil {
 		t.Fatalf("applyWeChatPaymentResumeClaims returned error: %v", err)
@@ -54,6 +55,9 @@ func TestApplyWeChatPaymentResumeClaims(t *testing.T) {
 	}
 	if req.PlanID != 7 {
 		t.Fatalf("plan_id = %d, want 7", req.PlanID)
+	}
+	if req.Quantity != 30 {
+		t.Fatalf("quantity = %d, want 30", req.Quantity)
 	}
 }
 

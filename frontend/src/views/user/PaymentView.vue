@@ -110,16 +110,34 @@
                 </div>
                 <!-- Price -->
                 <div class="flex items-baseline gap-2">
-                  <span v-if="selectedPlan.original_price" class="text-sm text-gray-400 line-through dark:text-gray-500">
-                    {{ formatSelectedSubscriptionPaymentAmount(selectedPlan.original_price) }}
+                  <span v-if="subscriptionDisplayOriginalAmount > subscriptionBaseAmount" class="text-sm text-gray-400 line-through dark:text-gray-500">
+                    {{ formatSelectedSubscriptionPaymentAmount(subscriptionDisplayOriginalAmount) }}
                   </span>
-                  <span :class="['text-3xl font-bold', planTextClass]">{{ formatSelectedSubscriptionPaymentAmount(selectedPlan.price) }}</span>
-                  <span class="text-sm text-gray-500 dark:text-gray-400">/ {{ planValiditySuffix }}</span>
+                  <span :class="['text-3xl font-bold', planTextClass]">{{ formatSelectedSubscriptionPaymentAmount(subscriptionBaseAmount) }}</span>
+                  <span class="text-sm text-gray-500 dark:text-gray-400">/ {{ selectedValidityLabel }}</span>
                 </div>
                 <!-- Description -->
                 <p v-if="selectedPlan.description" class="mt-2 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
                   {{ selectedPlan.description }}
                 </p>
+                <div v-if="isDailyPlan" class="mt-4 rounded-lg border border-gray-200 px-3 py-3 dark:border-dark-600">
+                  <div class="flex items-center justify-between gap-4">
+                    <div>
+                      <p class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ t('payment.purchaseDays') }}</p>
+                      <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ t('payment.dailyResetAtMidnight') }}</p>
+                    </div>
+                    <div class="flex h-10 shrink-0 items-stretch overflow-hidden rounded-md border border-gray-300 dark:border-dark-600">
+                      <button type="button" class="flex w-10 items-center justify-center text-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:text-gray-300 dark:hover:bg-dark-700" :aria-label="t('payment.decreaseDays')" :disabled="selectedDays <= 1" @click="selectedDays--">-</button>
+                      <input v-model.number="selectedDays" data-testid="subscription-days" type="number" min="1" max="365" class="w-16 border-x border-gray-300 bg-white text-center text-sm font-semibold text-gray-900 outline-none dark:border-dark-600 dark:bg-dark-800 dark:text-white" @change="normalizeSelectedDays" />
+                      <button type="button" class="flex w-10 items-center justify-center text-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:text-gray-300 dark:hover:bg-dark-700" :aria-label="t('payment.increaseDays')" :disabled="selectedDays >= 365" @click="selectedDays++">+</button>
+                    </div>
+                  </div>
+                  <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3 text-sm dark:border-dark-700">
+                    <span class="text-gray-500 dark:text-gray-400">{{ t('payment.subscriptionValidity') }}</span>
+                    <span class="font-medium text-gray-900 dark:text-white">{{ t('payment.dayCount', { days: selectedDays }) }}</span>
+                    <span v-if="subscriptionDiscountPercent > 0" class="rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-950/40 dark:text-green-300">{{ t('payment.multiDayDiscount', { discount: subscriptionDiscountPercent }) }}</span>
+                  </div>
+                </div>
                 <!-- Limits grid -->
                 <div class="mt-3 grid grid-cols-2 gap-3">
                   <div class="col-span-2 rounded-lg bg-gray-50 px-3 py-2 dark:bg-dark-700/50">
@@ -128,7 +146,7 @@
                       <span class="font-semibold text-gray-800 dark:text-gray-200">¥{{ subscriptionQuota.toFixed(2) }}</span>
                     </div>
                     <div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                      {{ t('payment.planCard.validityBound') }} {{ planValiditySuffix }}
+                      {{ t('payment.planCard.validityBound') }} {{ selectedValidityLabel }}
                     </div>
                   </div>
                   <div v-if="selectedPlan.daily_limit_usd != null">
@@ -153,17 +171,17 @@
                   @select="selectedMethod = $event"
                 />
               </div>
-              <div v-if="feeRate > 0 && selectedPlan.price > 0" class="card p-6">
+              <div v-if="selectedPlan.price > 0" class="card p-6">
                 <div class="space-y-2 text-sm">
                   <div class="flex justify-between">
                     <span class="text-gray-500 dark:text-gray-400">{{ t('payment.amountLabel') }}</span>
                     <span class="text-gray-900 dark:text-white">{{ formatSelectedPaymentAmount(subPaymentAmount) }}</span>
                   </div>
-                  <div class="flex justify-between">
+                  <div v-if="feeRate > 0" class="flex justify-between">
                     <span class="text-gray-500 dark:text-gray-400">{{ t('payment.fee') }} ({{ feeRate }}%)</span>
                     <span class="text-gray-900 dark:text-white">{{ formatSelectedPaymentAmount(subFeeAmount) }}</span>
                   </div>
-                  <div class="flex justify-between border-t border-gray-200 pt-2 dark:border-dark-600">
+                  <div v-if="feeRate > 0" class="flex justify-between border-t border-gray-200 pt-2 dark:border-dark-600">
                     <span class="font-medium text-gray-700 dark:text-gray-300">{{ t('payment.actualPay') }}</span>
                     <span class="text-lg font-bold text-primary-600 dark:text-primary-400">{{ formatSelectedPaymentAmount(subTotalAmount) }}</span>
                   </div>
@@ -328,6 +346,7 @@ const activeTab = ref<'recharge' | 'subscription'>('recharge')
 const amount = ref<number | null>(null)
 const selectedMethod = ref('')
 const selectedPlan = ref<SubscriptionPlan | null>(null)
+const selectedDays = ref(1)
 const previewImage = ref('')
 
 const paymentPhase = ref<'select' | 'paying'>('select')
@@ -450,7 +469,7 @@ async function redirectToPaymentResult(state: PaymentRecoverySnapshot): Promise<
 
 function buildWechatOAuthAuthorizeUrl(
   authorizeUrl: string,
-  context: { paymentType: string; orderType: OrderType; planId?: number; orderAmount: number },
+  context: { paymentType: string; orderType: OrderType; planId?: number; quantity?: number; orderAmount: number },
 ): string {
   const normalizedUrl = authorizeUrl.trim()
   if (!normalizedUrl || typeof window === 'undefined') {
@@ -470,6 +489,11 @@ function buildWechatOAuthAuthorizeUrl(
       redirectUrl.searchParams.set('plan_id', String(context.planId))
     } else {
       redirectUrl.searchParams.delete('plan_id')
+    }
+    if (context.quantity && context.quantity > 0) {
+      redirectUrl.searchParams.set('quantity', String(context.quantity))
+    } else {
+      redirectUrl.searchParams.delete('quantity')
     }
 
     if (context.orderAmount > 0) {
@@ -683,9 +707,49 @@ const canSubmit = computed(() =>
     && selectedLimit.value?.available !== false
 )
 
-const subPaymentAmount = computed(() => {
+function planValidityDays(plan: SubscriptionPlan | null): number {
+  if (!plan) return 0
+  const unit = String(plan.validity_unit || 'day').trim().toLowerCase().replace(/s$/, '')
+  if (unit === 'week') return plan.validity_days * 7
+  if (unit === 'month') return plan.validity_days * 30
+  return plan.validity_days
+}
+
+const isDailyPlan = computed(() => planValidityDays(selectedPlan.value) === 1)
+
+function subscriptionDiscountFactor(days: number): number {
+  if (days >= 60) return 0.80
+  if (days >= 45) return 0.85
+  if (days >= 30) return 0.90
+  if (days >= 15) return 0.95
+  return 1
+}
+
+const subscriptionDiscountPercent = computed(() => Math.round((1 - subscriptionDiscountFactor(selectedDays.value)) * 100))
+const subscriptionBaseAmount = computed(() => {
   const price = selectedPlan.value?.price ?? 0
-  return subscriptionPaymentAmountForCurrency(price, selectedCurrency.value)
+  if (!isDailyPlan.value) return price
+  return Math.round(price * selectedDays.value * subscriptionDiscountFactor(selectedDays.value) * 100) / 100
+})
+const subscriptionDisplayOriginalAmount = computed(() => {
+  const plan = selectedPlan.value
+  if (!plan) return 0
+  const unitOriginalPrice = plan.original_price && plan.original_price > plan.price
+    ? plan.original_price
+    : plan.price
+  return Math.round(unitOriginalPrice * (isDailyPlan.value ? selectedDays.value : 1) * 100) / 100
+})
+const selectedValidityLabel = computed(() => isDailyPlan.value
+  ? t('payment.dayCount', { days: selectedDays.value })
+  : planValiditySuffix.value)
+
+function normalizeSelectedDays() {
+  const normalized = Number.isFinite(selectedDays.value) ? Math.trunc(selectedDays.value) : 1
+  selectedDays.value = Math.min(365, Math.max(1, normalized))
+}
+
+const subPaymentAmount = computed(() => {
+  return subscriptionPaymentAmountForCurrency(subscriptionBaseAmount.value, selectedCurrency.value)
 })
 
 const subFeeAmount = computed(() => {
@@ -707,7 +771,7 @@ function subscriptionTotalAmountForCurrency(value: number, currency: string): nu
 
 // Subscription-specific: method options based on gateway pay amount
 const subMethodOptions = computed<PaymentMethodOption[]>(() => {
-  const price = selectedPlan.value?.price ?? 0
+  const price = subscriptionBaseAmount.value
   return enabledMethods.value.map((type) => {
     const ml = visibleMethods.value[type]
     const currency = normalizePaymentCurrency(ml?.currency)
@@ -763,11 +827,13 @@ const planValiditySuffix = computed(() => {
 
 const subscriptionQuota = computed(() => {
   if (!selectedPlan.value) return 0
-  return selectedPlan.value.price * (selectedPlan.value.quota_multiplier || 10)
+  const quantity = isDailyPlan.value ? selectedDays.value : 1
+  return selectedPlan.value.price * quantity * (selectedPlan.value.quota_multiplier || 10)
 })
 
 function selectPlan(plan: SubscriptionPlan) {
   selectedPlan.value = plan
+  selectedDays.value = 1
   errorMessage.value = ''
 }
 
@@ -775,6 +841,7 @@ function selectPlanFromModal(plan: SubscriptionPlan) {
   showRenewalModal.value = false
   renewGroupId.value = null
   selectedPlan.value = plan
+  selectedDays.value = 1
   errorMessage.value = ''
 }
 
@@ -791,10 +858,10 @@ async function handleSubmitRecharge() {
 async function confirmSubscribe() {
   const plan = selectedPlan.value
   if (!canSubmitSubscription.value || submitting.value || !plan) return
-  await createOrder(plan.price, 'subscription', plan.id)
+  await createOrder(subscriptionBaseAmount.value, 'subscription', plan.id, {}, isDailyPlan.value ? selectedDays.value : undefined)
 }
 
-async function createOrder(orderAmount: number, orderType: OrderType, planId?: number, options: CreateOrderOptions = {}) {
+async function createOrder(orderAmount: number, orderType: OrderType, planId?: number, options: CreateOrderOptions = {}, quantity?: number) {
   submitting.value = true
   errorMessage.value = ''
   errorHintMessage.value = ''
@@ -805,6 +872,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
       paymentType: requestType,
       orderType,
       planId,
+      quantity,
       origin: typeof window !== 'undefined' ? window.location.origin : '',
       isMobile: isMobileDevice(),
       isWechatBrowser: typeof window !== 'undefined' && /MicroMessenger/i.test(window.navigator.userAgent),
@@ -869,6 +937,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
         paymentType: visibleMethod,
         orderType,
         planId,
+        quantity,
         orderAmount,
       })
       return
@@ -910,6 +979,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
               orderAmount,
               orderType,
               planId,
+              quantity,
               paymentType: visibleMethod,
               attempted: options.mobileQrFallbackAttempted === true,
             },
@@ -928,6 +998,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
           orderAmount,
           orderType,
           planId,
+          quantity,
           paymentType: visibleMethod,
           attempted: options.mobileQrFallbackAttempted === true,
         })
@@ -957,6 +1028,7 @@ async function createOrder(orderAmount: number, orderType: OrderType, planId?: n
       orderAmount,
       orderType,
       planId,
+      quantity,
       paymentType: requestType,
       attempted: options.mobileQrFallbackAttempted === true,
     })) {
@@ -984,6 +1056,7 @@ interface MobileQrFallbackContext {
   orderAmount: number
   orderType: OrderType
   planId?: number
+  quantity?: number
   paymentType: string
   attempted: boolean
 }
@@ -1033,6 +1106,7 @@ async function attemptMobileQrFallback(err: unknown, context: MobileQrFallbackCo
       paymentType: visibleMethod,
       orderType: context.orderType,
       planId: context.planId,
+      quantity: context.quantity,
       origin: typeof window !== 'undefined' ? window.location.origin : '',
       isMobile: false,
       isWechatBrowser: false,
@@ -1104,6 +1178,7 @@ async function resumeWechatPaymentFromQuery() {
   }
   if (resume.orderType === 'subscription' && resume.planId) {
     selectedPlan.value = checkout.value.plans.find(plan => plan.id === resume.planId) ?? null
+    selectedDays.value = resume.quantity ?? 1
   }
 
   await router.replace({ path: route.path, query: stripWechatResumeQuery(route.query) })
@@ -1113,7 +1188,7 @@ async function resumeWechatPaymentFromQuery() {
       wechatResumeToken: resume.wechatResumeToken,
       paymentType: resume.paymentType,
       isResume: true,
-    })
+    }, resume.quantity)
     return
   }
 
@@ -1122,7 +1197,7 @@ async function resumeWechatPaymentFromQuery() {
       openid: resume.openid,
       paymentType: resume.paymentType,
       isResume: true,
-    })
+    }, resume.quantity)
   }
 }
 

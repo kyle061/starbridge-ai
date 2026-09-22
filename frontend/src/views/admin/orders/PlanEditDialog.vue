@@ -63,6 +63,7 @@
         <div><label class="input-label">{{ t('payment.admin.validity') }} <span class="text-red-500">*</span></label><input v-model.number="planForm.validity_days" type="number" min="1" class="input" required /></div>
         <div><label class="input-label">{{ t('payment.admin.validityUnit') }} <span class="text-red-500">*</span></label><Select v-model="planForm.validity_unit" :options="validityUnitOptions" /></div>
       </div>
+      <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('payment.admin.dailyPlanHint') }}</p>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div><label class="input-label">{{ t('payment.admin.sortOrder') }}</label><input v-model.number="planForm.sort_order" type="number" min="0" class="input" /></div>
         <div>

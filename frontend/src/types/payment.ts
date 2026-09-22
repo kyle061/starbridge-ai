@@ -172,6 +172,7 @@ export interface CreateOrderRequest {
   payment_type: string
   order_type: string
   plan_id?: number
+  quantity?: number
   return_url?: string
   payment_source?: string
   openid?: string

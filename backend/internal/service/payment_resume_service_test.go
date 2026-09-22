@@ -299,6 +299,7 @@ func TestWeChatPaymentResumeTokenRoundTrip(t *testing.T) {
 		Amount:      "12.50",
 		OrderType:   payment.OrderTypeSubscription,
 		PlanID:      7,
+		Quantity:    30,
 		RedirectTo:  "/purchase?from=wechat",
 		Scope:       "snsapi_base",
 		IssuedAt:    1234567890,
@@ -314,7 +315,7 @@ func TestWeChatPaymentResumeTokenRoundTrip(t *testing.T) {
 	if claims.OpenID != "openid-123" || claims.PaymentType != payment.TypeWxpay {
 		t.Fatalf("claims mismatch: %+v", claims)
 	}
-	if claims.Amount != "12.50" || claims.OrderType != payment.OrderTypeSubscription || claims.PlanID != 7 {
+	if claims.Amount != "12.50" || claims.OrderType != payment.OrderTypeSubscription || claims.PlanID != 7 || claims.Quantity != 30 {
 		t.Fatalf("claims payment context mismatch: %+v", claims)
 	}
 	if claims.RedirectTo != "/purchase?from=wechat" || claims.Scope != "snsapi_base" {

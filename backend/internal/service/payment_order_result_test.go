@@ -331,6 +331,87 @@ func TestComputeValidityDaysSupportsSingularAndPluralUnits(t *testing.T) {
 	}
 }
 
+func TestSubscriptionDayDiscountFactorUsesFifteenDayTiers(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		days int
+		want float64
+	}{
+		{days: 1, want: 1},
+		{days: 14, want: 1},
+		{days: 15, want: 0.95},
+		{days: 29, want: 0.95},
+		{days: 30, want: 0.90},
+		{days: 44, want: 0.90},
+		{days: 45, want: 0.85},
+		{days: 59, want: 0.85},
+		{days: 60, want: 0.80},
+		{days: maxSubscriptionPurchaseDays, want: 0.80},
+	}
+
+	for _, tt := range tests {
+		if got := subscriptionDayDiscountFactor(tt.days); got != tt.want {
+			t.Fatalf("subscriptionDayDiscountFactor(%d) = %v, want %v", tt.days, got, tt.want)
+		}
+	}
+}
+
+func TestCalculateSubscriptionOrderTermsScalesDailyPlan(t *testing.T) {
+	t.Parallel()
+
+	plan := &dbent.SubscriptionPlan{
+		Price:           10,
+		QuotaMultiplier: 10,
+		ValidityDays:    1,
+		ValidityUnit:    "days",
+	}
+	terms, err := calculateSubscriptionOrderTerms(plan, 30)
+	if err != nil {
+		t.Fatalf("calculateSubscriptionOrderTerms returned error: %v", err)
+	}
+	if terms.Quantity != 30 || terms.ValidityDays != 30 {
+		t.Fatalf("quantity/days = %d/%d, want 30/30", terms.Quantity, terms.ValidityDays)
+	}
+	if terms.DiscountFactor != 0.90 || terms.Amount != 270 {
+		t.Fatalf("discount/amount = %v/%v, want 0.90/270", terms.DiscountFactor, terms.Amount)
+	}
+	if terms.QuotaUSD != 3000 {
+		t.Fatalf("quota = %v, want 3000", terms.QuotaUSD)
+	}
+}
+
+func TestCalculateSubscriptionOrderTermsDefaultsLegacyRequestToOneUnit(t *testing.T) {
+	t.Parallel()
+
+	plan := &dbent.SubscriptionPlan{Price: 12.5, QuotaMultiplier: 10, ValidityDays: 30, ValidityUnit: "days"}
+	terms, err := calculateSubscriptionOrderTerms(plan, 0)
+	if err != nil {
+		t.Fatalf("calculateSubscriptionOrderTerms returned error: %v", err)
+	}
+	if terms.Quantity != 1 || terms.ValidityDays != 30 || terms.Amount != 12.5 || terms.QuotaUSD != 125 {
+		t.Fatalf("unexpected terms: %+v", terms)
+	}
+}
+
+func TestCalculateSubscriptionOrderTermsRejectsInvalidQuantity(t *testing.T) {
+	t.Parallel()
+
+	daily := &dbent.SubscriptionPlan{Price: 10, QuotaMultiplier: 10, ValidityDays: 1, ValidityUnit: "day"}
+	for _, quantity := range []int{-1, maxSubscriptionPurchaseDays + 1} {
+		_, err := calculateSubscriptionOrderTerms(daily, quantity)
+		if appErr := infraerrors.FromError(err); err == nil || appErr.Reason != "INVALID_SUBSCRIPTION_DAYS" {
+			t.Fatalf("quantity %d error = %v, want INVALID_SUBSCRIPTION_DAYS", quantity, err)
+		}
+	}
+
+	monthly := &dbent.SubscriptionPlan{Price: 10, QuotaMultiplier: 10, ValidityDays: 30, ValidityUnit: "days"}
+	_, err := calculateSubscriptionOrderTerms(monthly, 2)
+	if appErr := infraerrors.FromError(err); err == nil || appErr.Reason != "PLAN_NOT_DAILY" {
+		t.Fatalf("non-daily plan error = %v, want PLAN_NOT_DAILY", err)
+	}
+}
+
 func TestBuildPaymentSubjectAppliesAffixToSubscriptionPlanProductName(t *testing.T) {
 	t.Parallel()
 
@@ -409,6 +490,26 @@ func TestMaybeBuildWeChatOAuthRequiredResponse(t *testing.T) {
 	}
 	if resp.OAuth.AuthorizeURL != "/api/v1/auth/oauth/wechat/payment/start?amount=12.5&order_type=balance&payment_type=wxpay&redirect=%2Fpurchase%3Ffrom%3Dwechat&scope=snsapi_base" {
 		t.Fatalf("authorize_url = %q", resp.OAuth.AuthorizeURL)
+	}
+}
+
+func TestBuildWeChatPaymentOAuthStartURLPreservesSubscriptionQuantity(t *testing.T) {
+	t.Parallel()
+
+	got, err := buildWeChatPaymentOAuthStartURL(CreateOrderRequest{
+		Amount:      270,
+		PaymentType: payment.TypeWxpay,
+		OrderType:   payment.OrderTypeSubscription,
+		PlanID:      7,
+		Quantity:    30,
+		SrcURL:      "https://merchant.example/purchase?from=wechat",
+	}, "snsapi_base")
+	if err != nil {
+		t.Fatalf("buildWeChatPaymentOAuthStartURL returned error: %v", err)
+	}
+	want := "/api/v1/auth/oauth/wechat/payment/start?amount=270&order_type=subscription&payment_type=wxpay&plan_id=7&quantity=30&redirect=%2Fpurchase%3Ffrom%3Dwechat&scope=snsapi_base"
+	if got != want {
+		t.Fatalf("oauth start URL = %q, want %q", got, want)
 	}
 }
 

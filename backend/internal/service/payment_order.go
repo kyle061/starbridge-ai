@@ -20,6 +20,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+const maxSubscriptionPurchaseDays = 365
+
 // --- Order Creation ---
 
 func (s *PaymentService) CreateOrder(ctx context.Context, req CreateOrderRequest) (*CreateOrderResponse, error) {
@@ -50,7 +52,8 @@ func (s *PaymentService) CreateOrder(ctx context.Context, req CreateOrderRequest
 	if user.Status != payment.EntityStatusActive {
 		return nil, infraerrors.Forbidden("USER_INACTIVE", "user account is disabled")
 	}
-	if s.apiKeyService != nil && s.apiKeyService.RequiresBalancePurchase(user) && req.OrderType != payment.OrderTypeBalance {
+	if s.apiKeyService != nil && s.apiKeyService.RequiresBalancePurchase(user) &&
+		req.OrderType != payment.OrderTypeBalance && req.OrderType != payment.OrderTypeSubscription {
 		return nil, ErrPrepaidGroupRequired
 	}
 	if s.notificationEmailService != nil {
@@ -59,8 +62,13 @@ func (s *PaymentService) CreateOrder(ctx context.Context, req CreateOrderRequest
 	orderAmount := req.Amount
 	limitAmount := req.Amount
 	if plan != nil {
-		orderAmount = plan.Price
-		limitAmount = plan.Price
+		terms, err := calculateSubscriptionOrderTerms(plan, req.Quantity)
+		if err != nil {
+			return nil, err
+		}
+		req.Quantity = terms.Quantity
+		orderAmount = terms.Amount
+		limitAmount = terms.Amount
 	} else if req.OrderType == payment.OrderTypeBalance {
 		orderAmount = calculateCreditedBalance(req.Amount, cfg.BalanceRechargeMultiplier)
 	}
@@ -149,7 +157,78 @@ func (s *PaymentService) validateSubOrder(ctx context.Context, req CreateOrderRe
 	if !group.IsSubscriptionType() {
 		return nil, infraerrors.BadRequest("GROUP_TYPE_MISMATCH", "group is not a subscription type")
 	}
+	if _, err := calculateSubscriptionOrderTerms(plan, req.Quantity); err != nil {
+		return nil, err
+	}
 	return plan, nil
+}
+
+type subscriptionOrderTerms struct {
+	Quantity       int
+	ValidityDays   int
+	DiscountFactor float64
+	Amount         float64
+	QuotaUSD       float64
+}
+
+// subscriptionDayDiscountFactor applies the public multi-day pricing tiers.
+// Daily plans are charged at full price for 1-14 days, then move to a new tier
+// every 15 days, with an 80% floor from 60 days onward.
+func subscriptionDayDiscountFactor(quantity int) float64 {
+	switch {
+	case quantity >= 60:
+		return 0.80
+	case quantity >= 45:
+		return 0.85
+	case quantity >= 30:
+		return 0.90
+	case quantity >= 15:
+		return 0.95
+	default:
+		return 1
+	}
+}
+
+func calculateSubscriptionOrderTerms(plan *dbent.SubscriptionPlan, requestedQuantity int) (subscriptionOrderTerms, error) {
+	if plan == nil {
+		return subscriptionOrderTerms{}, infraerrors.BadRequest("PLAN_NOT_AVAILABLE", "subscription plan is required")
+	}
+	quantity := requestedQuantity
+	if quantity == 0 {
+		quantity = 1
+	}
+	if quantity < 1 || quantity > maxSubscriptionPurchaseDays {
+		return subscriptionOrderTerms{}, infraerrors.BadRequest("INVALID_SUBSCRIPTION_DAYS", "subscription purchase days must be between 1 and 365")
+	}
+
+	unitValidityDays := psComputeValidityDays(plan.ValidityDays, plan.ValidityUnit)
+	if quantity > 1 && unitValidityDays != 1 {
+		return subscriptionOrderTerms{}, infraerrors.BadRequest("PLAN_NOT_DAILY", "only one-day subscription plans support selecting multiple days")
+	}
+	discountFactor := 1.0
+	if unitValidityDays == 1 {
+		discountFactor = subscriptionDayDiscountFactor(quantity)
+	}
+	quantityDecimal := decimal.NewFromInt(int64(quantity))
+	unitPrice := decimal.NewFromFloat(plan.Price)
+	amount := unitPrice.
+		Mul(quantityDecimal).
+		Mul(decimal.NewFromFloat(discountFactor)).
+		Round(2).
+		InexactFloat64()
+	quotaUSD := unitPrice.
+		Mul(quantityDecimal).
+		Mul(decimal.NewFromFloat(plan.QuotaMultiplier)).
+		Round(10).
+		InexactFloat64()
+
+	return subscriptionOrderTerms{
+		Quantity:       quantity,
+		ValidityDays:   unitValidityDays * quantity,
+		DiscountFactor: discountFactor,
+		Amount:         amount,
+		QuotaUSD:       quotaUSD,
+	}, nil
 }
 
 func (s *PaymentService) createOrderInTx(ctx context.Context, req CreateOrderRequest, user *User, plan *dbent.SubscriptionPlan, cfg *PaymentConfig, orderAmount, limitAmount, feeRate, payAmount float64, sel *payment.InstanceSelection) (*dbent.PaymentOrder, error) {
@@ -210,10 +289,14 @@ func (s *PaymentService) createOrderInTx(ctx context.Context, req CreateOrderReq
 		b.SetProviderSnapshot(providerSnapshot)
 	}
 	if plan != nil {
+		terms, err := calculateSubscriptionOrderTerms(plan, req.Quantity)
+		if err != nil {
+			return nil, err
+		}
 		b.SetPlanID(plan.ID).
 			SetSubscriptionGroupID(plan.GroupID).
-			SetSubscriptionDays(psComputeValidityDays(plan.ValidityDays, plan.ValidityUnit)).
-			SetSubscriptionQuotaUsd(plan.Price * plan.QuotaMultiplier).
+			SetSubscriptionDays(terms.ValidityDays).
+			SetSubscriptionQuotaUsd(terms.QuotaUSD).
 			SetSubscriptionUsageMultiplier(plan.UsageMultiplier).
 			SetSubscriptionPlanName(plan.Name)
 	}
@@ -777,6 +860,9 @@ func buildWeChatPaymentOAuthStartURL(req CreateOrderRequest, scope string) (stri
 	}
 	if req.PlanID > 0 {
 		q.Set("plan_id", strconv.FormatInt(req.PlanID, 10))
+	}
+	if req.Quantity > 0 {
+		q.Set("quantity", strconv.Itoa(req.Quantity))
 	}
 	if scope = strings.TrimSpace(scope); scope != "" {
 		q.Set("scope", scope)
