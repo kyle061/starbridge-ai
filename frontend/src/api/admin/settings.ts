@@ -498,6 +498,10 @@ export interface SystemSettings {
   smtp_from_email: string;
   smtp_from_name: string;
   smtp_use_tls: boolean;
+  resend_fallback_enabled: boolean;
+  resend_api_key_configured: boolean;
+  resend_from_email: string;
+  resend_from_name: string;
   // Cloudflare Turnstile settings
   turnstile_enabled: boolean;
   turnstile_site_key: string;
@@ -842,6 +846,10 @@ export interface UpdateSettingsRequest {
   smtp_from_email?: string;
   smtp_from_name?: string;
   smtp_use_tls?: boolean;
+  resend_fallback_enabled?: boolean;
+  resend_api_key?: string;
+  resend_from_email?: string;
+  resend_from_name?: string;
   turnstile_enabled?: boolean;
   turnstile_site_key?: string;
   turnstile_secret_key?: string;
@@ -1128,6 +1136,23 @@ export async function sendTestEmail(
 ): Promise<{ message: string }> {
   const { data } = await apiClient.post<{ message: string }>(
     "/admin/settings/send-test-email",
+    request,
+  );
+  return data;
+}
+
+export interface SendTestResendEmailRequest {
+  email: string;
+  resend_api_key?: string;
+  resend_from_email: string;
+  resend_from_name: string;
+}
+
+export async function sendTestResendEmail(
+  request: SendTestResendEmailRequest,
+): Promise<{ message: string }> {
+  const { data } = await apiClient.post<{ message: string }>(
+    "/admin/settings/send-test-resend",
     request,
   );
   return data;
@@ -1573,6 +1598,7 @@ export const settingsAPI = {
   updateSettings,
   testSmtpConnection,
   sendTestEmail,
+  sendTestResendEmail,
   getEmailTemplates,
   getEmailTemplate,
   updateEmailTemplate,

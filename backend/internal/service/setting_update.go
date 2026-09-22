@@ -203,6 +203,12 @@ func (s *SettingService) buildSystemSettingsUpdates(ctx context.Context, setting
 	updates[SettingKeySMTPFrom] = settings.SMTPFrom
 	updates[SettingKeySMTPFromName] = settings.SMTPFromName
 	updates[SettingKeySMTPUseTLS] = strconv.FormatBool(settings.SMTPUseTLS)
+	updates[SettingKeyResendFallbackEnabled] = strconv.FormatBool(settings.ResendFallbackEnabled)
+	if settings.ResendAPIKey != "" {
+		updates[SettingKeyResendAPIKey] = settings.ResendAPIKey
+	}
+	updates[SettingKeyResendFrom] = settings.ResendFrom
+	updates[SettingKeyResendFromName] = settings.ResendFromName
 
 	// Cloudflare Turnstile 设置（只有非空才更新密钥）
 	updates[SettingKeyTurnstileEnabled] = strconv.FormatBool(settings.TurnstileEnabled)

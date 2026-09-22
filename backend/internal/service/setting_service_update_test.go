@@ -225,6 +225,57 @@ func TestSettingService_AffiliateAdminRechargeSetting(t *testing.T) {
 	})
 }
 
+func TestSettingServiceResendFallbackSettings(t *testing.T) {
+	t.Run("values are parsed without exposing the key through configured state", func(t *testing.T) {
+		svc := NewSettingService(&settingGetAllRepoStub{values: map[string]string{
+			SettingKeyResendFallbackEnabled: "true",
+			SettingKeyResendAPIKey:          "re_saved_key",
+			SettingKeyResendFrom:            "no-reply@mail.example.com",
+			SettingKeyResendFromName:        "Backup Sender",
+		}}, &config.Config{})
+
+		settings, err := svc.GetAllSettings(context.Background())
+		require.NoError(t, err)
+		require.True(t, settings.ResendFallbackEnabled)
+		require.True(t, settings.ResendAPIKeyConfigured)
+		require.Equal(t, "re_saved_key", settings.ResendAPIKey)
+		require.Equal(t, "no-reply@mail.example.com", settings.ResendFrom)
+		require.Equal(t, "Backup Sender", settings.ResendFromName)
+	})
+
+	t.Run("values are persisted", func(t *testing.T) {
+		repo := &settingUpdateRepoStub{}
+		svc := NewSettingService(repo, &config.Config{})
+
+		err := svc.UpdateSettings(context.Background(), &SystemSettings{
+			ResendFallbackEnabled:     true,
+			ResendAPIKey:              "re_new_key",
+			ResendFrom:                "no-reply@mail.example.com",
+			ResendFromName:            "Backup Sender",
+			CustomerBillingMultiplier: 1,
+		})
+		require.NoError(t, err)
+		require.Equal(t, "true", repo.updates[SettingKeyResendFallbackEnabled])
+		require.Equal(t, "re_new_key", repo.updates[SettingKeyResendAPIKey])
+		require.Equal(t, "no-reply@mail.example.com", repo.updates[SettingKeyResendFrom])
+		require.Equal(t, "Backup Sender", repo.updates[SettingKeyResendFromName])
+	})
+
+	t.Run("empty key leaves the stored key untouched", func(t *testing.T) {
+		repo := &settingUpdateRepoStub{}
+		svc := NewSettingService(repo, &config.Config{})
+
+		err := svc.UpdateSettings(context.Background(), &SystemSettings{
+			ResendFallbackEnabled:     true,
+			ResendFrom:                "no-reply@mail.example.com",
+			CustomerBillingMultiplier: 1,
+		})
+		require.NoError(t, err)
+		_, wroteKey := repo.updates[SettingKeyResendAPIKey]
+		require.False(t, wroteKey)
+	})
+}
+
 func (s *defaultSubGroupReaderStub) GetByID(ctx context.Context, id int64) (*Group, error) {
 	s.calls = append(s.calls, id)
 	if err, ok := s.errBy[id]; ok {

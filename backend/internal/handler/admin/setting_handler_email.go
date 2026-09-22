@@ -2,6 +2,7 @@ package admin
 
 import (
 	"html"
+	"net/mail"
 	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
@@ -192,6 +193,78 @@ func (h *SettingHandler) SendTestEmail(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{"message": "Test email sent successfully"})
+}
+
+// SendTestResendEmailRequest sends directly through the configured backup
+// channel without waiting for a primary SMTP failure.
+type SendTestResendEmailRequest struct {
+	Email          string `json:"email" binding:"required,email"`
+	ResendAPIKey   string `json:"resend_api_key"`
+	ResendFrom     string `json:"resend_from_email"`
+	ResendFromName string `json:"resend_from_name"`
+}
+
+// SendTestResendEmail tests the Resend backup configuration.
+// POST /api/v1/admin/settings/send-test-resend
+func (h *SettingHandler) SendTestResendEmail(c *gin.Context) {
+	var req SendTestResendEmailRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	savedConfig, err := h.emailService.GetResendConfig(c.Request.Context())
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	apiKey := strings.TrimSpace(req.ResendAPIKey)
+	if apiKey == "" {
+		apiKey = savedConfig.APIKey
+	}
+	from := strings.TrimSpace(req.ResendFrom)
+	if from == "" {
+		from = savedConfig.From
+	}
+	fromName := strings.TrimSpace(req.ResendFromName)
+	if fromName == "" {
+		fromName = savedConfig.FromName
+	}
+	if apiKey == "" {
+		response.BadRequest(c, "Resend API key is required")
+		return
+	}
+	if apiKey == "re_xxxxxxxxx" {
+		response.BadRequest(c, "Replace re_xxxxxxxxx with your real Resend API key")
+		return
+	}
+	address, parseErr := mail.ParseAddress(from)
+	if parseErr != nil || address.Address != from {
+		response.BadRequest(c, "A valid Resend sender email is required")
+		return
+	}
+
+	siteName := h.settingService.GetSiteName(c.Request.Context())
+	subject := "[" + siteName + "] Resend Backup Test"
+	body := `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f5;margin:0;padding:20px">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden">
+    <div style="background:#111827;color:#fff;padding:30px;text-align:center"><h1>` + html.EscapeString(siteName) + `</h1></div>
+    <div style="padding:40px 30px;text-align:center"><h2>Resend backup is working</h2><p>This test was sent directly through the backup email channel.</p></div>
+  </div>
+</body>
+</html>`
+
+	config := &service.ResendConfig{APIKey: apiKey, From: from, FromName: fromName}
+	if err := h.emailService.SendEmailWithResendConfig(c.Request.Context(), config, req.Email, subject, body); err != nil {
+		response.BadRequest(c, "Failed to send Resend test email: "+err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{"message": "Resend backup test email sent successfully"})
 }
 
 // ListEmailTemplates returns all editable notification email templates.

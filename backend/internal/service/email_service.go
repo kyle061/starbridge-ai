@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"math/big"
 	"net"
+	"net/mail"
 	"net/smtp"
 	"net/url"
 	"strconv"
@@ -20,6 +21,7 @@ import (
 	"time"
 
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+	"github.com/resend/resend-go/v4"
 )
 
 var (
@@ -95,11 +97,22 @@ type SMTPConfig struct {
 	UseTLS   bool
 }
 
+// ResendConfig configures the API-based fallback used only after SMTP fails.
+type ResendConfig struct {
+	Enabled  bool
+	APIKey   string
+	From     string
+	FromName string
+}
+
+type resendSendFunc func(context.Context, string, *resend.SendEmailRequest) error
+
 // EmailService 邮件服务
 type EmailService struct {
 	settingRepo              SettingRepository
 	cache                    EmailCache
 	notificationEmailService *NotificationEmailService
+	resendSend               resendSendFunc
 }
 
 // NewEmailService 创建邮件服务实例
@@ -107,7 +120,14 @@ func NewEmailService(settingRepo SettingRepository, cache EmailCache) *EmailServ
 	return &EmailService{
 		settingRepo: settingRepo,
 		cache:       cache,
+		resendSend:  sendWithResendSDK,
 	}
+}
+
+func sendWithResendSDK(ctx context.Context, apiKey string, params *resend.SendEmailRequest) error {
+	client := resend.NewClient(apiKey)
+	_, err := client.Emails.SendWithContext(ctx, params)
+	return err
 }
 
 func (s *EmailService) SetNotificationEmailService(notificationEmailService *NotificationEmailService) {
@@ -174,13 +194,77 @@ func (s *EmailService) GetSMTPConfig(ctx context.Context) (*SMTPConfig, error) {
 	}, nil
 }
 
+// GetResendConfig returns the optional API fallback configuration.
+func (s *EmailService) GetResendConfig(ctx context.Context) (*ResendConfig, error) {
+	settings, err := s.settingRepo.GetMultiple(ctx, []string{
+		SettingKeyResendFallbackEnabled,
+		SettingKeyResendAPIKey,
+		SettingKeyResendFrom,
+		SettingKeyResendFromName,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get resend settings: %w", err)
+	}
+
+	return &ResendConfig{
+		Enabled:  settings[SettingKeyResendFallbackEnabled] == "true",
+		APIKey:   strings.TrimSpace(settings[SettingKeyResendAPIKey]),
+		From:     strings.TrimSpace(settings[SettingKeyResendFrom]),
+		FromName: strings.TrimSpace(settings[SettingKeyResendFromName]),
+	}, nil
+}
+
 // SendEmail 发送邮件（使用数据库中保存的配置）
 func (s *EmailService) SendEmail(ctx context.Context, to, subject, body string) error {
-	config, err := s.GetSMTPConfig(ctx)
-	if err != nil {
-		return err
+	smtpConfig, smtpErr := s.GetSMTPConfig(ctx)
+	if smtpErr == nil {
+		smtpErr = s.SendEmailWithConfig(smtpConfig, to, subject, body)
+		if smtpErr == nil {
+			return nil
+		}
 	}
-	return s.SendEmailWithConfig(config, to, subject, body)
+
+	resendConfig, resendConfigErr := s.GetResendConfig(ctx)
+	if resendConfigErr != nil {
+		return fmt.Errorf("primary SMTP failed: %v; load Resend fallback: %w", smtpErr, resendConfigErr)
+	}
+	if !resendConfig.Enabled {
+		return smtpErr
+	}
+	if err := s.SendEmailWithResendConfig(ctx, resendConfig, to, subject, body); err != nil {
+		return fmt.Errorf("primary SMTP failed: %v; Resend fallback failed: %w", smtpErr, err)
+	}
+
+	slog.WarnContext(ctx, "email delivered through Resend fallback", "smtp_error", smtpErr)
+	return nil
+}
+
+// SendEmailWithResendConfig sends directly through Resend. It is also used by
+// the admin test endpoint, so the Enabled switch is intentionally checked by
+// SendEmail rather than here.
+func (s *EmailService) SendEmailWithResendConfig(ctx context.Context, config *ResendConfig, to, subject, body string) error {
+	if config == nil || strings.TrimSpace(config.APIKey) == "" || strings.TrimSpace(config.From) == "" {
+		return ErrEmailNotConfigured
+	}
+
+	from := strings.TrimSpace(config.From)
+	if name := strings.TrimSpace(config.FromName); name != "" {
+		from = (&mail.Address{Name: name, Address: from}).String()
+	}
+	params := &resend.SendEmailRequest{
+		From:    from,
+		To:      []string{strings.TrimSpace(to)},
+		Subject: subject,
+		Html:    body,
+	}
+	send := s.resendSend
+	if send == nil {
+		send = sendWithResendSDK
+	}
+	if err := send(ctx, strings.TrimSpace(config.APIKey), params); err != nil {
+		return fmt.Errorf("resend send: %w", err)
+	}
+	return nil
 }
 
 const smtpDialTimeout = 10 * time.Second

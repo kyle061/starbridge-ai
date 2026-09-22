@@ -66,6 +66,38 @@ func TestUpdateSettingsSMTPFromAliasIsWritable(t *testing.T) {
 	require.Equal(t, "new@example.com", repo.values[service.SettingKeySMTPFrom])
 }
 
+func TestUpdateSettingsRejectsPlaceholderResendAPIKey(t *testing.T) {
+	h, _ := newStepUpSwitchTestHandler(t, map[string]string{})
+
+	rec := doUpdateSettings(t, h, map[string]any{
+		"resend_fallback_enabled": true,
+		"resend_api_key":          "re_xxxxxxxxx",
+		"resend_from_email":       "no-reply@mail.example.com",
+	}, nil)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Contains(t, rec.Body.String(), "real Resend API key")
+}
+
+func TestUpdateSettingsRetainsStoredResendAPIKeyWhenInputIsEmpty(t *testing.T) {
+	h, repo := newStepUpSwitchTestHandler(t, map[string]string{
+		service.SettingKeyResendAPIKey: "re_stored_key",
+		service.SettingKeyResendFrom:   "no-reply@mail.example.com",
+	})
+
+	rec := doUpdateSettings(t, h, map[string]any{
+		"resend_fallback_enabled": true,
+		"resend_api_key":          "",
+		"resend_from_email":       "no-reply@mail.example.com",
+	}, nil)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, "re_stored_key", repo.values[service.SettingKeyResendAPIKey])
+	require.Equal(t, "true", repo.values[service.SettingKeyResendFallbackEnabled])
+	require.NotContains(t, rec.Body.String(), "re_stored_key")
+	require.Contains(t, rec.Body.String(), `"resend_api_key_configured":true`)
+}
+
 func TestUpdateSettingsGrokDefaultBaseURLModeIsWritable(t *testing.T) {
 	h, repo := newStepUpSwitchTestHandler(t, map[string]string{
 		service.SettingKeyGrokDefaultBaseURLMode: service.GrokDefaultBaseURLModeCLI,

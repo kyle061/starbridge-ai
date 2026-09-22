@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/mail"
 	"reflect"
 	"strconv"
 	"strings"
@@ -49,6 +50,11 @@ type UpdateSettingsRequest struct {
 	SMTPFrom     string `json:"smtp_from_email"`
 	SMTPFromName string `json:"smtp_from_name"`
 	SMTPUseTLS   bool   `json:"smtp_use_tls"`
+
+	ResendFallbackEnabled bool   `json:"resend_fallback_enabled"`
+	ResendAPIKey          string `json:"resend_api_key"`
+	ResendFrom            string `json:"resend_from_email"`
+	ResendFromName        string `json:"resend_from_name"`
 
 	// Cloudflare Turnstile 设置
 	TurnstileEnabled   bool   `json:"turnstile_enabled"`
@@ -477,6 +483,7 @@ func omittedSettingKeys(sentFields map[string]json.RawMessage) service.OmittedSe
 }
 
 func settingsAuditRequest(req UpdateSettingsRequest) UpdateSettingsRequest {
+	req.ResendAPIKey = strings.TrimSpace(req.ResendAPIKey)
 	req.TencentCaptchaAppSecretKey = strings.TrimSpace(req.TencentCaptchaAppSecretKey)
 	req.TencentCaptchaCloudSecretID = strings.TrimSpace(req.TencentCaptchaCloudSecretID)
 	req.TencentCaptchaCloudSecretKey = strings.TrimSpace(req.TencentCaptchaCloudSecretKey)
@@ -616,6 +623,9 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 	req.SMTPPassword = strings.TrimSpace(req.SMTPPassword)
 	req.SMTPFrom = strings.TrimSpace(req.SMTPFrom)
 	req.SMTPFromName = strings.TrimSpace(req.SMTPFromName)
+	req.ResendAPIKey = strings.TrimSpace(req.ResendAPIKey)
+	req.ResendFrom = strings.TrimSpace(req.ResendFrom)
+	req.ResendFromName = strings.TrimSpace(req.ResendFromName)
 	req.TencentCaptchaAppID = strings.TrimSpace(req.TencentCaptchaAppID)
 	req.TencentCaptchaAppSecretKey = strings.TrimSpace(req.TencentCaptchaAppSecretKey)
 	req.TencentCaptchaCloudSecretID = strings.TrimSpace(req.TencentCaptchaCloudSecretID)
@@ -639,6 +649,34 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		req.SMTPFrom = previousSettings.SMTPFrom
 		req.SMTPFromName = previousSettings.SMTPFromName
 		req.SMTPUseTLS = previousSettings.SMTPUseTLS
+	}
+
+	resendFallbackEnabled := previousSettings.ResendFallbackEnabled
+	if _, sent := sentFields["resend_fallback_enabled"]; sent {
+		resendFallbackEnabled = req.ResendFallbackEnabled
+	}
+	resendAPIKey := req.ResendAPIKey
+	if resendAPIKey == "" {
+		resendAPIKey = previousSettings.ResendAPIKey
+	}
+	resendFrom := req.ResendFrom
+	if _, sent := sentFields["resend_from_email"]; !sent {
+		resendFrom = previousSettings.ResendFrom
+	}
+	if resendFallbackEnabled {
+		if resendAPIKey == "" {
+			response.BadRequest(c, "Resend API key is required when fallback is enabled")
+			return
+		}
+		if resendAPIKey == "re_xxxxxxxxx" {
+			response.BadRequest(c, "Replace re_xxxxxxxxx with your real Resend API key")
+			return
+		}
+		address, parseErr := mail.ParseAddress(resendFrom)
+		if parseErr != nil || address.Address != resendFrom {
+			response.BadRequest(c, "A valid Resend sender email is required when fallback is enabled")
+			return
+		}
 	}
 
 	turnstileEnabled := req.TurnstileEnabled
@@ -1536,6 +1574,10 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		SMTPFrom:                            req.SMTPFrom,
 		SMTPFromName:                        req.SMTPFromName,
 		SMTPUseTLS:                          req.SMTPUseTLS,
+		ResendFallbackEnabled:               resendFallbackEnabled,
+		ResendAPIKey:                        req.ResendAPIKey,
+		ResendFrom:                          req.ResendFrom,
+		ResendFromName:                      req.ResendFromName,
 		TurnstileEnabled:                    req.TurnstileEnabled,
 		TurnstileSiteKey:                    req.TurnstileSiteKey,
 		TurnstileSecretKey:                  req.TurnstileSecretKey,
@@ -2191,6 +2233,10 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		SMTPFrom:                                               updatedSettings.SMTPFrom,
 		SMTPFromName:                                           updatedSettings.SMTPFromName,
 		SMTPUseTLS:                                             updatedSettings.SMTPUseTLS,
+		ResendFallbackEnabled:                                  updatedSettings.ResendFallbackEnabled,
+		ResendAPIKeyConfigured:                                 updatedSettings.ResendAPIKeyConfigured,
+		ResendFrom:                                             updatedSettings.ResendFrom,
+		ResendFromName:                                         updatedSettings.ResendFromName,
 		TurnstileEnabled:                                       updatedSettings.TurnstileEnabled,
 		TurnstileSiteKey:                                       updatedSettings.TurnstileSiteKey,
 		TurnstileSecretKeyConfigured:                           updatedSettings.TurnstileSecretKeyConfigured,

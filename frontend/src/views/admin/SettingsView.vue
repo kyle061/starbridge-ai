@@ -8586,6 +8586,94 @@
             </div>
           </div>
 
+          <!-- Resend fallback - Only show when email verification is enabled -->
+          <div v-if="form.email_verify_enabled" class="card">
+            <div
+              class="border-b border-gray-100 px-6 py-4 dark:border-dark-700"
+            >
+              <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                {{ t("admin.settings.resend.title") }}
+              </h2>
+              <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {{ t("admin.settings.resend.description") }}
+              </p>
+            </div>
+            <div class="space-y-5 p-6">
+              <div class="flex items-center justify-between gap-6">
+                <div>
+                  <label class="font-medium text-gray-900 dark:text-white">
+                    {{ t("admin.settings.resend.enabled") }}
+                  </label>
+                  <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ t("admin.settings.resend.enabledHint") }}
+                  </p>
+                </div>
+                <Toggle v-model="form.resend_fallback_enabled" />
+              </div>
+
+              <div
+                class="grid grid-cols-1 gap-6 border-t border-gray-100 pt-5 md:grid-cols-2 dark:border-dark-700"
+              >
+                <div class="md:col-span-2">
+                  <label
+                    class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    {{ t("admin.settings.resend.apiKey") }}
+                  </label>
+                  <input
+                    v-model="form.resend_api_key"
+                    type="password"
+                    class="input"
+                    autocomplete="new-password"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    :placeholder="
+                      form.resend_api_key_configured
+                        ? t('admin.settings.resend.apiKeyConfiguredPlaceholder')
+                        : t('admin.settings.resend.apiKeyPlaceholder')
+                    "
+                  />
+                  <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{
+                      form.resend_api_key_configured
+                        ? t("admin.settings.resend.apiKeyConfiguredHint")
+                        : t("admin.settings.resend.apiKeyHint")
+                    }}
+                  </p>
+                </div>
+                <div>
+                  <label
+                    class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    {{ t("admin.settings.resend.fromEmail") }}
+                  </label>
+                  <input
+                    v-model="form.resend_from_email"
+                    type="email"
+                    class="input"
+                    :placeholder="t('admin.settings.resend.fromEmailPlaceholder')"
+                  />
+                </div>
+                <div>
+                  <label
+                    class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    {{ t("admin.settings.resend.fromName") }}
+                  </label>
+                  <input
+                    v-model="form.resend_from_name"
+                    type="text"
+                    class="input"
+                    :placeholder="t('admin.settings.resend.fromNamePlaceholder')"
+                  />
+                </div>
+              </div>
+              <p class="text-xs text-amber-600 dark:text-amber-400">
+                {{ t("admin.settings.resend.senderHint") }}
+              </p>
+            </div>
+          </div>
+
           <!-- Send Test Email - Only show when email verification is enabled -->
           <div v-if="form.email_verify_enabled" class="card">
             <div
@@ -8599,7 +8687,7 @@
               </p>
             </div>
             <div class="p-6">
-              <div class="flex items-end gap-4">
+              <div class="flex flex-col items-stretch gap-4 sm:flex-row sm:items-end">
                 <div class="flex-1">
                   <label
                     class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
@@ -8615,40 +8703,47 @@
                     "
                   />
                 </div>
-                <button
-                  type="button"
-                  @click="sendTestEmail"
-                  :disabled="
-                    sendingTestEmail || !testEmailAddress || loadFailed
-                  "
-                  class="btn btn-secondary"
-                >
-                  <svg
-                    v-if="sendingTestEmail"
-                    class="h-4 w-4 animate-spin"
-                    fill="none"
-                    viewBox="0 0 24 24"
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    @click="sendTestEmail"
+                    :disabled="
+                      sendingTestEmail || !testEmailAddress || loadFailed
+                    "
+                    class="btn btn-secondary"
                   >
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                    ></circle>
-                    <path
-                      class="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  {{
-                    sendingTestEmail
-                      ? t("admin.settings.testEmail.sending")
-                      : t("admin.settings.testEmail.sendTestEmail")
-                  }}
-                </button>
+                    <span
+                      v-if="sendingTestEmail"
+                      class="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent"
+                    ></span>
+                    {{
+                      sendingTestEmail
+                        ? t("admin.settings.testEmail.sending")
+                        : t("admin.settings.testEmail.sendTestEmail")
+                    }}
+                  </button>
+                  <button
+                    type="button"
+                    @click="sendTestResendEmail"
+                    :disabled="
+                      sendingTestResendEmail ||
+                      !testEmailAddress ||
+                      loadFailed ||
+                      (!form.resend_api_key && !form.resend_api_key_configured)
+                    "
+                    class="btn btn-secondary"
+                  >
+                    <span
+                      v-if="sendingTestResendEmail"
+                      class="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent"
+                    ></span>
+                    {{
+                      sendingTestResendEmail
+                        ? t("admin.settings.resend.testing")
+                        : t("admin.settings.resend.testEmail")
+                    }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -9101,6 +9196,7 @@ const loadFailed = ref(false);
 const saving = ref(false);
 const testingSmtp = ref(false);
 const sendingTestEmail = ref(false);
+const sendingTestResendEmail = ref(false);
 const smtpPasswordManuallyEdited = ref(false);
 const testEmailAddress = ref("");
 const registrationEmailSuffixWhitelistTags = ref<string[]>([]);
@@ -9644,6 +9740,7 @@ type SettingsForm = Omit<
   channel_monitor_show_quota: boolean;
   channel_monitor_hide_user_ranking: boolean;
   smtp_password: string;
+  resend_api_key: string;
   turnstile_secret_key: string;
   tencent_captcha_app_secret_key: string;
   tencent_captcha_cloud_secret_id: string;
@@ -9789,6 +9886,11 @@ const form = reactive<SettingsForm>({
   smtp_from_email: "",
   smtp_from_name: "",
   smtp_use_tls: true,
+  resend_fallback_enabled: false,
+  resend_api_key: "",
+  resend_api_key_configured: false,
+  resend_from_email: "no-reply@mail.starbridaeai.top",
+  resend_from_name: "Starbridge AI",
   // Cloudflare Turnstile
   turnstile_enabled: false,
   turnstile_site_key: "",
@@ -11064,6 +11166,7 @@ async function loadSettings() {
     );
     registrationEmailSuffixWhitelistDraft.value = "";
     form.smtp_password = "";
+    form.resend_api_key = "";
     smtpPasswordManuallyEdited.value = false;
     form.turnstile_secret_key = "";
     form.tencent_captcha_app_secret_key = "";
@@ -11473,6 +11576,10 @@ async function saveSettings() {
       smtp_from_email: form.smtp_from_email,
       smtp_from_name: form.smtp_from_name,
       smtp_use_tls: form.smtp_use_tls,
+      resend_fallback_enabled: form.resend_fallback_enabled,
+      resend_api_key: form.resend_api_key || undefined,
+      resend_from_email: form.resend_from_email,
+      resend_from_name: form.resend_from_name,
       turnstile_enabled: form.turnstile_enabled,
       turnstile_site_key: form.turnstile_site_key,
       turnstile_secret_key: form.turnstile_secret_key || undefined,
@@ -11948,6 +12055,32 @@ async function sendTestEmail() {
     );
   } finally {
     sendingTestEmail.value = false;
+  }
+}
+
+async function sendTestResendEmail() {
+  if (!testEmailAddress.value) {
+    appStore.showError(t("admin.settings.testEmail.enterRecipientHint"));
+    return;
+  }
+
+  sendingTestResendEmail.value = true;
+  try {
+    const result = await adminAPI.settings.sendTestResendEmail({
+      email: testEmailAddress.value,
+      resend_api_key: form.resend_api_key || undefined,
+      resend_from_email: form.resend_from_email,
+      resend_from_name: form.resend_from_name,
+    });
+    appStore.showSuccess(
+      result.message || t("admin.settings.resend.testEmailSent"),
+    );
+  } catch (error: unknown) {
+    appStore.showError(
+      extractApiErrorMessage(error, t("admin.settings.resend.testEmailFailed")),
+    );
+  } finally {
+    sendingTestResendEmail.value = false;
   }
 }
 
