@@ -1696,6 +1696,26 @@ func (h *GatewayHandler) usageQuotaLimited(c *gin.Context, ctx context.Context, 
 		resp["unit"] = "USD"
 	}
 
+	// A subscription is shared across keys; never report a key's larger balance as
+	// spendable when the subscription's total or periodic allowance is lower.
+	if apiKey.Group != nil && apiKey.Group.IsSubscriptionType() {
+		if subscription, ok := middleware2.GetSubscriptionFromContext(c); ok {
+			subscriptionRemaining := h.calculateSubscriptionRemaining(apiKey.Group, subscription)
+			if subscriptionRemaining >= 0 {
+				remaining := subscriptionRemaining
+				if apiKey.Quota > 0 && apiKey.GetQuotaRemaining() < remaining {
+					remaining = apiKey.GetQuotaRemaining()
+				}
+				resp["remaining"] = remaining
+				resp["unit"] = "USD"
+			}
+			resp["subscription"] = gin.H{
+				"quota_usd":      subscription.QuotaUSD,
+				"quota_used_usd": subscription.QuotaUsedUSD,
+			}
+		}
+	}
+
 	// 速率限制信息（从 DB 获取实时用量）
 	if apiKey.HasRateLimits() && h.apiKeyService != nil {
 		rateLimitData, err := h.apiKeyService.GetRateLimitData(ctx, apiKey.ID)
@@ -1792,8 +1812,12 @@ func (h *GatewayHandler) usageUnrestricted(c *gin.Context, ctx context.Context, 
 		subscription, ok := middleware2.GetSubscriptionFromContext(c)
 		if ok {
 			remaining := h.calculateSubscriptionRemaining(apiKey.Group, subscription)
-			resp["remaining"] = remaining
+			if remaining >= 0 {
+				resp["remaining"] = remaining
+			}
 			resp["subscription"] = gin.H{
+				"quota_usd":           subscription.QuotaUSD,
+				"quota_used_usd":      subscription.QuotaUsedUSD,
 				"daily_usage_usd":     subscription.DailyUsageUSD,
 				"weekly_usage_usd":    subscription.WeeklyUsageUSD,
 				"monthly_usage_usd":   subscription.MonthlyUsageUSD,
@@ -1837,7 +1861,7 @@ func (h *GatewayHandler) usageUnrestricted(c *gin.Context, ctx context.Context, 
 		"mode":            "unrestricted",
 		"isValid":         true,
 		"planName":        "钱包余额",
-		"remaining":       latestUser.Balance,
+		"remaining":       max(0, latestUser.Balance),
 		"unit":            "USD",
 		"balance":         latestUser.Balance,
 		"account_balance": latestUser.Balance,
@@ -1859,10 +1883,13 @@ func (h *GatewayHandler) usageUnrestricted(c *gin.Context, ctx context.Context, 
 
 // calculateSubscriptionRemaining 计算订阅剩余可用额度
 // 逻辑：
-// 1. 如果日/周/月任一限额达到100%，返回0
-// 2. 否则返回所有已配置周期中剩余额度的最小值
+// 1. 订阅总额度和日/周/月限额都参与计算，取最小剩余值
+// 2. 所有限额都未配置时返回 -1，表示没有金额上限（不是负余额）
 func (h *GatewayHandler) calculateSubscriptionRemaining(group *service.Group, sub *service.UserSubscription) float64 {
 	var remainingValues []float64
+	if sub.QuotaUSD > 0 {
+		remainingValues = append(remainingValues, sub.RemainingQuotaUSD())
+	}
 
 	// 检查日限额
 	if group.HasDailyLimit() {

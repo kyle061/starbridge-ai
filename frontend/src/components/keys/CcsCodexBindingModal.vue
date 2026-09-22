@@ -38,8 +38,7 @@
       </template>
       <div class="flex flex-wrap gap-2">
         <button type="button" class="btn btn-primary min-h-11" :disabled="!source.trim() || generating" @click="generate">{{ t('keys.ccsCodex.generate') }}</button>
-        <button v-if="updated" type="button" class="btn btn-primary min-h-11" @click="copyAndOpenCcs">{{ t('keys.ccsCodex.copyAndOpenCcs') }}</button>
-        <button v-if="updated" type="button" class="btn btn-secondary min-h-11" @click="copyToClipboard(updated)">{{ t('keys.ccsCodex.copyResult') }}</button>
+        <button v-if="updated" type="button" class="btn btn-primary min-h-11" @click="copyMergedConfig">{{ t('keys.ccsCodex.copyAndOpenCcs') }}</button>
       </div>
       </template>
     </div>
@@ -54,7 +53,7 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useClipboard } from '@/composables/useClipboard'
 
 const props = defineProps<{ show: boolean; apiKey: string; endpoint: string }>()
-const emit = defineEmits<{ (event: 'close'): void; (event: 'import-new'): void; (event: 'open-ccs'): void }>()
+const emit = defineEmits<{ (event: 'close'): void; (event: 'import-new'): void }>()
 const { t } = useI18n()
 const { copyToClipboard } = useClipboard()
 const source = ref('')
@@ -72,12 +71,12 @@ watch([source, mode, () => props.apiKey, () => props.endpoint, () => props.show]
   if (!props.show) mode.value = 'preserve'
 })
 
-async function copyAndOpenCcs() {
-  if (!updated.value) return
-  // Open the CCS protocol from the click handler before awaiting clipboard APIs,
-  // otherwise browsers may treat the later window.open as a blocked popup.
-  emit('open-ccs')
-  await copyToClipboard(updated.value, t('keys.ccsCodex.mergedCopied'))
+async function copyMergedConfig() {
+  // Capture the result before an async clipboard operation. CCS deeplinks
+  // rebuild Codex config and cannot carry arbitrary existing TOML settings.
+  const merged = updated.value
+  if (!merged) return
+  await copyToClipboard(merged, t('keys.ccsCodex.mergedCopied'))
 }
 
 async function generate() {

@@ -2,9 +2,9 @@
   <div class="space-y-2" data-testid="subscription-quota-summary">
     <template v-if="quota > 0">
       <div class="grid grid-cols-3 gap-2 text-xs">
-        <div><p class="text-gray-500">{{ t('userSubscriptions.totalQuota') }}</p><p class="break-all font-medium">¥{{ formatSubscriptionQuota(quota) }}</p></div>
-        <div><p class="text-gray-500">{{ t('userSubscriptions.usedQuota') }}</p><p class="break-all font-medium">¥{{ formatSubscriptionQuota(used) }}</p></div>
-        <div><p class="text-gray-500">{{ t('userSubscriptions.remainingQuota') }}</p><p class="break-all font-medium text-primary-600 dark:text-primary-400">¥{{ formatSubscriptionQuota(Math.max(0, quota - used)) }}</p></div>
+        <div><p class="text-gray-500">{{ t('userSubscriptions.totalQuota') }}</p><p class="break-all font-medium">${{ formatSubscriptionQuota(quota) }}</p></div>
+        <div><p class="text-gray-500">{{ t('userSubscriptions.usedQuota') }}</p><p class="break-all font-medium">${{ formatSubscriptionQuota(used) }}</p></div>
+        <div><p class="text-gray-500">{{ t('userSubscriptions.remainingQuota') }}</p><p class="break-all font-medium text-primary-600 dark:text-primary-400">${{ formatSubscriptionQuota(Math.max(0, quota - used)) }}</p></div>
       </div>
       <div class="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-dark-600" role="progressbar" :aria-label="t('userSubscriptions.subscriptionQuota')" :aria-valuenow="percentage" aria-valuemin="0" aria-valuemax="100">
         <div class="h-full rounded-full transition-all" :class="percentage >= 100 ? 'bg-red-500' : 'bg-primary-500'" :style="{ width: `${percentage}%` }" />

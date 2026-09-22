@@ -8,9 +8,9 @@ vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
 describe('subscription quota visibility', () => {
   it('shows small deductions and their exact remaining amount', () => {
     const wrapper = mount(SubscriptionQuotaSummary, { props: { quota: 50, used: 0.000024 } })
-    expect(wrapper.text()).toContain('¥50.00')
-    expect(wrapper.text()).toContain('¥0.000024')
-    expect(wrapper.text()).toContain('¥49.999976')
+    expect(wrapper.text()).toContain('$50.00')
+    expect(wrapper.text()).toContain('$0.000024')
+    expect(wrapper.text()).toContain('$49.999976')
     expect(wrapper.text()).not.toContain('quotaNotConfigured')
   })
 

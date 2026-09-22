@@ -30,7 +30,7 @@ const {
   getDashboardApiKeysUsage: vi.fn(),
   getAvailableGroups: vi.fn(),
   getUserGroupRates: vi.fn(),
-  activeSubscriptions: [] as Array<{ group_id: number; plan_name?: string }>,
+  activeSubscriptions: [] as Array<{ group_id: number; plan_name?: string; quota_usd?: number; quota_used_usd?: number }>,
   fetchActiveSubscriptions: vi.fn(),
   showError: vi.fn(),
   showSuccess: vi.fn(),
@@ -74,6 +74,8 @@ const messages: Record<string, string> = {
   'keys.total': 'Last 30d',
   'keys.requestCount': '{count} requests',
   'keys.usageUnavailable': 'Usage unavailable. Refresh to retry.',
+  'keys.sharedSubscriptionQuota': 'Current shared subscription quota (all keys)',
+  'keys.sharedSubscriptionRemaining': 'Subscription remaining',
 }
 
 vi.mock('@/api', () => ({
@@ -460,7 +462,7 @@ describe('user KeysView column settings', () => {
     } finally { open.mockRestore() }
   })
 
-  it('copies the merged Codex config before opening the CCS import entry', async () => {
+  it('copies the merged Codex config without importing a default CCS provider', async () => {
     const row = { ...createApiKey(), group: { platform: 'openai' } } as ApiKey
     listKeys.mockResolvedValue({ items: [row], total: 1, page: 1, page_size: 20 })
     const open = vi.spyOn(window, 'open').mockReturnValue(null)
@@ -487,7 +489,8 @@ supports_websockets = true`)
 
       await getButtonByText(wrapper, 'keys.ccsCodex.copyAndOpenCcs').trigger('click')
       expect(copyToClipboard).toHaveBeenCalledWith(merged, 'keys.ccsCodex.mergedCopied')
-      expect(open).toHaveBeenCalledWith(expect.stringContaining('ccswitch://v1/import?'), '_blank')
+      expect(open).not.toHaveBeenCalled()
+      expect((wrapper.get('#ccs-updated-config').element as HTMLTextAreaElement).value).toBe(merged)
       wrapper.unmount()
     } finally { open.mockRestore() }
   })
@@ -511,6 +514,12 @@ supports_websockets = true`)
       expect(params.get('name')).toBe('starbridaeai')
       expect(params.get('apiKey')).toBe(row.key)
       expect(params.get('endpoint')).toBe(`${window.location.origin}/v1`)
+      const usageScript = atob(params.get('usageScript') || '')
+      const extract = new Function('response', `return ${usageScript}.extractor(response)`) as
+        (response: unknown) => { remaining: number | null; unit: string }
+      expect(extract({ remaining: 6.6, subscription: { quota_usd: 10 }, unit: 'USD' }).remaining).toBe(6.6)
+      expect(extract({ remaining: -1, subscription: { quota_usd: 0 } }).remaining).toBeNull()
+      expect(extract({ remaining: -2.5, balance: -2.5 }).remaining).toBe(0)
       expect(wrapper.find('textarea[aria-label="keys.ccsImportFallback.linkLabel"]').exists()).toBe(false)
       await getButtonByText(wrapper, 'Import to CC Switch').trigger('click')
       expect(wrapper.find('#ccs-existing-config').exists()).toBe(true)
@@ -556,6 +565,30 @@ supports_websockets = true`)
       open.mockRestore()
       vi.useRealTimers()
     }
+  })
+
+  it('shows the same shared subscription balance as the subscription page alongside per-key usage', async () => {
+    activeSubscriptions.push({ group_id: 42, quota_usd: 10, quota_used_usd: 3.4 })
+    listKeys.mockResolvedValue({ items: [
+      { ...createApiKey(), id: 1, group_id: 42 },
+      { ...createApiKey(), id: 2, group_id: 42 },
+    ], total: 2, page: 1, page_size: 20, pages: 1 })
+    getDashboardApiKeysUsage.mockResolvedValue({ stats: {
+      1: { today_actual_cost: 0, total_actual_cost: 1, today_requests: 0, today_tokens: 0, total_requests: 1, total_tokens: 5 },
+      2: { today_actual_cost: 0, total_actual_cost: 2, today_requests: 0, today_tokens: 0, total_requests: 2, total_tokens: 7 },
+    } })
+    const wrapper = await mountView()
+    const usage = wrapper.findAll('[data-test="key-usage"]')
+    expect(usage).toHaveLength(2)
+    for (const cell of usage) {
+      expect(cell.text()).toContain('Current shared subscription quota (all keys)')
+      expect(cell.text()).toContain('$3.40 / $10.00')
+      expect(cell.text()).toContain('Subscription remaining: $6.60')
+    }
+    expect(usage[0].text()).toContain('$1.0000')
+    expect(usage[1].text()).toContain('$2.0000')
+    expect(fetchActiveSubscriptions).toHaveBeenCalledWith(true)
+    wrapper.unmount()
   })
 
   it('shows measured tokens and requests even when dollar amounts are tiny', async () => {

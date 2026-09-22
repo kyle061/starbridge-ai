@@ -230,6 +230,15 @@
           </template>
 
           <template #cell-usage="{ row }">
+            <div v-if="(subscriptionForKey(row)?.quota_usd ?? 0) > 0" class="mb-1.5 text-xs tabular-nums">
+              <div class="text-gray-500 dark:text-gray-400">{{ t('keys.sharedSubscriptionQuota') }}</div>
+              <div class="font-medium text-gray-900 dark:text-white">
+                ${{ formatSubscriptionQuota(subscriptionForKey(row)!.quota_used_usd) }} / ${{ formatSubscriptionQuota(subscriptionForKey(row)!.quota_usd) }}
+              </div>
+              <div class="text-gray-500 dark:text-gray-400">
+                {{ t('keys.sharedSubscriptionRemaining') }}: ${{ formatSubscriptionQuota(Math.max(0, subscriptionForKey(row)!.quota_usd - subscriptionForKey(row)!.quota_used_usd)) }}
+              </div>
+            </div>
             <span v-if="usageLoading" class="text-xs text-gray-400" role="status">{{ t('common.loading') }}</span>
             <span v-else-if="usageLoadFailed || !usageStats[row.id]" class="text-xs text-amber-600 dark:text-amber-400" role="status">
               {{ t('keys.usageUnavailable') }}
@@ -592,7 +601,6 @@
       :endpoint="ccsCodexEndpoint"
       @close="closeCcsCodexBinding"
       @import-new="importNewCcsCodexConfig"
-      @open-ccs="openCcsWithPreservedConfig"
     />
 
     <!-- CCS Client Selection Dialog for Antigravity -->
@@ -733,6 +741,7 @@ import BulkEditKeysModal from '@/components/keys/BulkEditKeysModal.vue'
 	import Icon from '@/components/icons/Icon.vue'
 	import UseKeyModal from '@/components/keys/UseKeyModal.vue'
 import CcsCodexBindingModal from '@/components/keys/CcsCodexBindingModal.vue'
+import { formatSubscriptionQuota } from '@/utils/subscriptionQuota'
 	import EndpointPopover from '@/components/keys/EndpointPopover.vue'
 	import GroupBadge from '@/components/common/GroupBadge.vue'
 	import GroupOptionItem from '@/components/common/GroupOptionItem.vue'
@@ -896,6 +905,8 @@ const hasSubscriptionGroup = computed(() =>
 )
 const loading = ref(false)
 const submitting = ref(false)
+const subscriptionForKey = (row: ApiKey) =>
+  subscriptionStore.activeSubscriptions.find((subscription) => subscription.group_id === row.group_id)
 const usageStats = ref<Record<string, BatchApiKeyUsageStats>>({})
 const usageLoading = ref(false)
 const usageLoadFailed = ref(false)
@@ -1140,6 +1151,9 @@ const isAbortError = (error: unknown) => {
 
 const loadApiKeys = async () => {
   void loadPrepaidAccess()
+  void subscriptionStore.fetchActiveSubscriptions(true).catch((error) => {
+    console.error('Failed to refresh active subscriptions:', error)
+  })
   abortController?.abort()
   const controller = new AbortController()
   abortController = controller
@@ -1442,12 +1456,6 @@ const closeCcsCodexBinding = () => {
   pendingCcsRow.value = null
 }
 
-const openCcsWithPreservedConfig = () => {
-  if (!showCcsCodexBinding.value || !pendingCcsRow.value) return
-  executeCcsImport(pendingCcsRow.value, 'claude', 'new')
-  closeCcsCodexBinding()
-}
-
 const importNewCcsCodexConfig = () => {
   if (!showCcsCodexBinding.value || !pendingCcsRow.value) return
   executeCcsImport(pendingCcsRow.value, 'claude', 'new')
@@ -1471,7 +1479,11 @@ const executeCcsImport = (row: ApiKey, clientType: CcSwitchClientType, codexImpo
       headers: { "Authorization": "Bearer {{apiKey}}" }
     },
     extractor: function(response) {
-      const remaining = response?.remaining ?? response?.quota?.remaining ?? response?.balance;
+      const rawRemaining = response?.remaining ?? response?.quota?.remaining ?? response?.balance;
+      const amount = Number(rawRemaining);
+      // -1 is the legacy unlimited sentinel for subscriptions, not a debt.
+      const remaining = rawRemaining == null || (response?.subscription && amount === -1)
+        ? null : Number.isFinite(amount) ? Math.max(0, amount) : null;
       const unit = response?.unit ?? response?.quota?.unit ?? "USD";
       return {
         isValid: response?.is_active ?? response?.isValid ?? true,
@@ -1512,9 +1524,6 @@ onMounted(() => {
   loadSavedColumns()
   loadApiKeys()
   loadGroups()
-  subscriptionStore.fetchActiveSubscriptions().catch((error) => {
-    console.error('Failed to load active subscriptions:', error)
-  })
   loadPublicSettings()
   document.addEventListener('click', closeGroupSelector)
   window.addEventListener('focus', loadPrepaidAccess)
