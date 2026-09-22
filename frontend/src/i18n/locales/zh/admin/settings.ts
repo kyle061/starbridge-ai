@@ -96,7 +96,7 @@ export default {
           rebateRate: '全局返利比例',
           rebateRateHint: '充值后返给邀请人的默认比例（0-100%，例如填写 10 表示返利 10%）。',
           freezeHours: '返利冻结期（小时）',
-          freezeHoursDesc: '新产生的返利将在冻结期内无法提现。0 = 不冻结。',
+          freezeHoursDesc: '新产生的返利在冻结期内无法转入账户余额。0 = 不冻结。',
           durationDays: '返利有效期（天）',
           durationDaysDesc: '被邀请用户注册后多少天内的充值产生返利。0 = 永久有效。',
           perInviteeCap: '单人返利上限',

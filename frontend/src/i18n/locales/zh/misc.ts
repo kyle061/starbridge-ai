@@ -114,7 +114,7 @@ export default {
   userSubscriptions: {
     title: '我的订阅',
     guide: {
-      title: '订阅使用方式',
+      title: '订阅使用说明',
       show: '展开说明',
       hide: '收起说明',
       description: '订阅生效后，使用对应分组的 API 密钥连接客户端。购买或分配订阅不会自动生成密钥。',

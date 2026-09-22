@@ -1,8 +1,13 @@
 <template>
   <AppLayout>
     <div class="space-y-6">
-      <SubscriptionUsageGuide />
-      <div class="flex justify-end"><button type="button" class="btn btn-secondary btn-sm" :disabled="loading" @click="loadSubscriptions">{{ t('common.refresh') }}</button></div>
+      <div class="flex flex-wrap items-center justify-end gap-2">
+        <SubscriptionUsageGuide />
+        <button type="button" class="btn btn-secondary btn-sm min-h-11" :disabled="loading" @click="loadSubscriptions">
+          <Icon name="refresh" size="sm" />
+          {{ t('common.refresh') }}
+        </button>
+      </div>
       <!-- Loading State -->
       <div v-if="loading" class="flex justify-center py-12">
         <div
