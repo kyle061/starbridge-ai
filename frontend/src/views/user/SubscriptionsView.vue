@@ -1,6 +1,7 @@
 <template>
   <AppLayout>
     <div class="space-y-6">
+      <div class="flex justify-end"><button type="button" class="btn btn-secondary btn-sm" :disabled="loading" @click="loadSubscriptions">{{ t('common.refresh') }}</button></div>
       <!-- Loading State -->
       <div v-if="loading" class="flex justify-center py-12">
         <div
@@ -33,13 +34,13 @@
         >
           <!-- Header -->
           <div
-            class="flex items-center justify-between border-b border-gray-100 p-4 dark:border-dark-700"
+            class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 p-4 dark:border-dark-700"
           >
-            <div class="flex items-center gap-3">
+            <div class="flex min-w-0 flex-1 items-center gap-3">
               <div :class="['h-1.5 w-1.5 shrink-0 rounded-full', platformAccentDotClass(subscription.group?.platform || '')]" />
               <div>
-                <div class="flex items-center gap-2">
-                  <h3 class="font-semibold text-gray-900 dark:text-white">
+                <div class="flex flex-wrap items-center gap-2">
+                  <h3 class="break-words font-semibold text-gray-900 dark:text-white">
                     {{ subscription.group?.name || `Group #${subscription.group_id}` }}
                   </h3>
                   <span :class="['rounded-md border px-2 py-0.5 text-[11px] font-medium', platformBadgeClass(subscription.group?.platform || '')]">
@@ -97,19 +98,7 @@
               }}</span>
             </div>
 
-            <!-- Purchased subscription quota -->
-            <div v-if="subscription.quota_usd > 0" class="space-y-2">
-              <div class="flex items-center justify-between">
-                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('userSubscriptions.subscriptionQuota') }}</span>
-                <span class="text-sm text-gray-500 dark:text-dark-400">
-                  ¥{{ (subscription.quota_used_usd || 0).toFixed(2) }} / ¥{{ subscription.quota_usd.toFixed(2) }}
-                </span>
-              </div>
-              <div class="relative h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-dark-600">
-                <div class="absolute inset-y-0 left-0 rounded-full bg-primary-500 transition-all duration-300" :style="{ width: getProgressWidth(subscription.quota_used_usd, subscription.quota_usd) }" />
-              </div>
-
-            </div>
+            <SubscriptionQuotaSummary :quota="subscription.quota_usd || 0" :used="subscription.quota_used_usd || 0" />
 
             <!-- Daily Usage -->
             <div v-if="subscription.group?.daily_limit_usd" class="space-y-2">
@@ -249,6 +238,7 @@ import subscriptionsAPI from '@/api/subscriptions'
 import type { UserSubscription } from '@/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
+import SubscriptionQuotaSummary from '@/components/common/SubscriptionQuotaSummary.vue'
 import { formatDateTimeToMinute } from '@/utils/format'
 import { platformBorderClass, platformBadgeClass, platformButtonClass, platformLabel } from '@/utils/platformColors'
 import {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"math/rand/v2"
 	"strconv"
 	"strings"
@@ -481,11 +482,14 @@ func (s *SubscriptionService) applyPurchasedEntitlements(ctx context.Context, ex
 
 // BulkAssignSubscriptionInput 批量分配订阅输入
 type BulkAssignSubscriptionInput struct {
-	UserIDs      []int64
-	GroupID      int64
-	ValidityDays int
-	AssignedBy   int64
-	Notes        string
+	UserIDs         []int64
+	GroupID         int64
+	ValidityDays    int
+	AssignedBy      int64
+	Notes           string
+	QuotaUSD        float64
+	UsageMultiplier float64
+	PlanName        string
 }
 
 // BulkAssignResult 批量分配结果
@@ -509,11 +513,14 @@ func (s *SubscriptionService) BulkAssignSubscription(ctx context.Context, input 
 
 	for _, userID := range input.UserIDs {
 		sub, reused, err := s.assignSubscriptionWithReuse(ctx, &AssignSubscriptionInput{
-			UserID:       userID,
-			GroupID:      input.GroupID,
-			ValidityDays: input.ValidityDays,
-			AssignedBy:   input.AssignedBy,
-			Notes:        input.Notes,
+			UserID:          userID,
+			GroupID:         input.GroupID,
+			ValidityDays:    input.ValidityDays,
+			AssignedBy:      input.AssignedBy,
+			Notes:           input.Notes,
+			QuotaUSD:        input.QuotaUSD,
+			UsageMultiplier: input.UsageMultiplier,
+			PlanName:        input.PlanName,
 		})
 		if err != nil {
 			result.FailedCount++
@@ -536,6 +543,12 @@ func (s *SubscriptionService) BulkAssignSubscription(ctx context.Context, input 
 }
 
 func (s *SubscriptionService) assignSubscriptionWithReuse(ctx context.Context, input *AssignSubscriptionInput) (*UserSubscription, bool, error) {
+	if input == nil {
+		return nil, false, ErrSubscriptionNilInput
+	}
+	if err := validateSubscriptionEntitlements(input.QuotaUSD, input.UsageMultiplier); err != nil {
+		return nil, false, err
+	}
 	// 检查分组是否存在且为订阅类型
 	group, err := s.groupRepo.GetByID(ctx, input.GroupID)
 	if err != nil {
@@ -559,7 +572,29 @@ func (s *SubscriptionService) assignSubscriptionWithReuse(ctx context.Context, i
 		if sub.Status == SubscriptionStatusExpired ||
 			(sub.Status != SubscriptionStatusSuspended && !sub.ExpiresAt.After(now)) {
 			validityDays := normalizeAssignValidityDays(input.ValidityDays)
-			if err := s.updateExistingSubscriptionTerm(ctx, sub.ID, validityDays, input.Notes, true); err != nil {
+			if err := s.withSubscriptionUpdateTx(ctx, func(txCtx context.Context) error {
+				if err := s.updateExistingSubscriptionTerm(txCtx, sub.ID, validityDays, input.Notes, true); err != nil {
+					return err
+				}
+				if input.QuotaUSD <= 0 && input.UsageMultiplier <= 0 && strings.TrimSpace(input.PlanName) == "" {
+					return nil
+				}
+				current, err := s.userSubRepo.GetByIDForUpdate(txCtx, sub.ID)
+				if err != nil {
+					return err
+				}
+				if input.QuotaUSD > 0 {
+					current.QuotaUSD = input.QuotaUSD
+					current.QuotaUsedUSD = 0
+				}
+				if input.UsageMultiplier > 0 {
+					current.UsageMultiplier = input.UsageMultiplier
+				}
+				if strings.TrimSpace(input.PlanName) != "" {
+					current.PlanName = strings.TrimSpace(input.PlanName)
+				}
+				return s.userSubRepo.Update(txCtx, current)
+			}); err != nil {
 				return nil, false, err
 			}
 			s.maybeInvalidateAssignmentCaches(input.UserID, input.GroupID, false)
@@ -596,6 +631,15 @@ func (s *SubscriptionService) assignSubscriptionWithReuse(ctx context.Context, i
 func detectAssignSemanticConflict(existing *UserSubscription, input *AssignSubscriptionInput) (string, bool) {
 	if existing == nil || input == nil {
 		return "", false
+	}
+	if input.QuotaUSD > 0 && existing.QuotaUSD != input.QuotaUSD {
+		return "quota_mismatch", true
+	}
+	if input.UsageMultiplier > 0 && existing.EffectiveUsageMultiplier() != input.UsageMultiplier {
+		return "usage_multiplier_mismatch", true
+	}
+	if strings.TrimSpace(input.PlanName) != "" && existing.PlanName != strings.TrimSpace(input.PlanName) {
+		return "plan_name_mismatch", true
 	}
 
 	normalizedDays := normalizeAssignValidityDays(input.ValidityDays)
@@ -1131,13 +1175,21 @@ func (s *SubscriptionService) RecordUsage(ctx context.Context, subscriptionID in
 
 // SubscriptionProgress 订阅进度
 type SubscriptionProgress struct {
-	ID            int64                `json:"id"`
-	GroupName     string               `json:"group_name"`
-	ExpiresAt     time.Time            `json:"expires_at"`
-	ExpiresInDays int                  `json:"expires_in_days"`
-	Daily         *UsageWindowProgress `json:"daily,omitempty"`
-	Weekly        *UsageWindowProgress `json:"weekly,omitempty"`
-	Monthly       *UsageWindowProgress `json:"monthly,omitempty"`
+	ID            int64                      `json:"id"`
+	GroupName     string                     `json:"group_name"`
+	ExpiresAt     time.Time                  `json:"expires_at"`
+	ExpiresInDays int                        `json:"expires_in_days"`
+	Daily         *UsageWindowProgress       `json:"daily,omitempty"`
+	Weekly        *UsageWindowProgress       `json:"weekly,omitempty"`
+	Monthly       *UsageWindowProgress       `json:"monthly,omitempty"`
+	Quota         *SubscriptionQuotaProgress `json:"quota,omitempty"`
+}
+
+type SubscriptionQuotaProgress struct {
+	LimitUSD     float64 `json:"limit_usd"`
+	UsedUSD      float64 `json:"used_usd"`
+	RemainingUSD float64 `json:"remaining_usd"`
+	Percentage   float64 `json:"percentage"`
 }
 
 // UsageWindowProgress 使用窗口进度
@@ -1176,6 +1228,9 @@ func (s *SubscriptionService) calculateProgress(sub *UserSubscription, group *Gr
 		GroupName:     group.Name,
 		ExpiresAt:     sub.ExpiresAt,
 		ExpiresInDays: sub.DaysRemaining(),
+	}
+	if sub.QuotaUSD > 0 {
+		progress.Quota = &SubscriptionQuotaProgress{LimitUSD: sub.QuotaUSD, UsedUSD: sub.QuotaUsedUSD, RemainingUSD: sub.RemainingQuotaUSD(), Percentage: math.Min(100, math.Max(0, sub.QuotaUsedUSD/sub.QuotaUSD*100))}
 	}
 
 	// 日进度

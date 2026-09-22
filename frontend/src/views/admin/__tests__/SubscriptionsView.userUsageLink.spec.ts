@@ -4,7 +4,9 @@ import { defineComponent } from 'vue'
 
 import SubscriptionsView from '../SubscriptionsView.vue'
 
-const { listSubscriptions, assignSubscription, getAllGroups, listUsers, searchUsageUsers, showError } = vi.hoisted(() => ({
+const { listSubscriptions, assignSubscription, getAllGroups, listUsers, searchUsageUsers, showError, getPlans, setQuota } = vi.hoisted(() => ({
+  getPlans: vi.fn().mockResolvedValue({ data: [] }),
+  setQuota: vi.fn().mockResolvedValue({}),
   listSubscriptions: vi.fn(),
   assignSubscription: vi.fn(),
   showError: vi.fn(),
@@ -13,9 +15,11 @@ const { listSubscriptions, assignSubscription, getAllGroups, listUsers, searchUs
   searchUsageUsers: vi.fn()
 }))
 
+vi.mock('@/api/admin/payment', () => ({ adminPaymentAPI: { getPlans } }))
+
 vi.mock('@/api/admin', () => ({
   adminAPI: {
-    subscriptions: { list: listSubscriptions, assign: assignSubscription },
+    subscriptions: { list: listSubscriptions, assign: assignSubscription, setQuota },
     groups: { getAll: getAllGroups },
     users: { list: listUsers },
     usage: { searchUsers: searchUsageUsers }
@@ -46,6 +50,8 @@ const DataTableStub = {
     <div>
       <div v-for="row in data" :key="row.id">
         <slot name="cell-user" :row="row" />
+        <slot name="cell-usage" :row="row" />
+        <slot name="cell-actions" :row="row" />
       </div>
     </div>
   `
@@ -182,7 +188,7 @@ describe('admin subscription users', () => {
 
       expect(assignSubscription).toHaveBeenCalledTimes(1)
       expect(assignSubscription).toHaveBeenCalledWith({
-        user_id: 84, group_id: 3, validity_days: 30
+        user_id: 84, group_id: 3, validity_days: 30, quota_usd: 50, usage_multiplier: 12
       })
     } finally {
       wrapper.unmount()
@@ -256,4 +262,45 @@ describe('admin subscription users', () => {
     expect(link.text()).toBe('User #42')
     expect(link.props('to')).toEqual({ path: '/admin/usage', query: { user_id: 42 } })
   })
+  it('fills quota and duration from the selected plan and submits the entitlement', async () => {
+    getPlans.mockResolvedValueOnce({ data: [{ id: 4, group_id: 3, name: 'Daily', price: 5, quota_multiplier: 10, usage_multiplier: 12, validity_days: 1, validity_unit: 'days' }] })
+    const wrapper = mountView()
+    await flushPromises()
+    await wrapper.findAll('button').find(button => button.text() === 'admin.subscriptions.assignSubscription')!.trigger('click')
+    await flushPromises()
+    const form = wrapper.get('#assign-subscription-form')
+    const selects = form.findAllComponents({ name: 'Select' })
+    selects[0]!.vm.$emit('update:modelValue', 3)
+    await flushPromises()
+    selects[1]!.vm.$emit('update:modelValue', 4)
+    await flushPromises()
+    expect((form.get('#assign-quota').element as HTMLInputElement).value).toBe('50')
+    expect((form.get('#assign-usage-multiplier').element as HTMLInputElement).value).toBe('12')
+    expect((form.get('input[max="36500"]').element as HTMLInputElement).value).toBe('1')
+    await form.get('#assign-quota').setValue(0)
+    const vm = wrapper.vm as unknown as { assignForm: { user_id: number } }
+    vm.assignForm.user_id = 42
+    await form.trigger('submit')
+    expect(assignSubscription).not.toHaveBeenCalled()
+    await form.get('#assign-quota').setValue(50)
+    await form.trigger('submit')
+    await flushPromises()
+    expect(assignSubscription).toHaveBeenCalledWith({ user_id: 42, group_id: 3, validity_days: 1, quota_usd: 50, usage_multiplier: 12, plan_name: 'Daily' })
+    wrapper.unmount()
+  })
+
+  it('shows quota and lets administrators change the total without resetting usage', async () => {
+    listSubscriptions.mockResolvedValueOnce({ items: [{ id: 9, user_id: 42, group_id: 3, status: 'active', quota_usd: 50, quota_used_usd: 0.000024, usage_multiplier: 12 }], total: 1, pages: 1 })
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.text()).toContain('¥0.000024')
+    await wrapper.get('[data-test="edit-subscription-quota"]').trigger('click')
+    const form = wrapper.get('#subscription-quota-form')
+    await form.get('#subscription-total-quota').setValue(100)
+    await form.trigger('submit')
+    await flushPromises()
+    expect(setQuota).toHaveBeenCalledWith(9, { quota_usd: 100, usage_multiplier: 12 })
+    wrapper.unmount()
+  })
+
 })

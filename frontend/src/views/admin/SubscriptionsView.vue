@@ -247,6 +247,7 @@
 
           <template #cell-usage="{ row }">
             <div class="min-w-[280px] space-y-2">
+              <SubscriptionQuotaSummary :quota="row.quota_usd || 0" :used="row.quota_used_usd || 0" />
               <!-- Daily Usage -->
               <div v-if="row.group?.daily_limit_usd" class="usage-row">
                 <div class="flex items-center gap-2">
@@ -357,21 +358,6 @@
                   <span>{{ formatResetTime(row.monthly_window_start, 'monthly') }}</span>
                 </div>
               </div>
-
-              <!-- No Limits - Unlimited badge -->
-              <div
-                v-if="
-                  !row.group?.daily_limit_usd &&
-                  !row.group?.weekly_limit_usd &&
-                  !row.group?.monthly_limit_usd
-                "
-                class="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-50 to-teal-50 px-3 py-2 dark:from-emerald-900/20 dark:to-teal-900/20"
-              >
-                <span class="text-lg text-emerald-600 dark:text-emerald-400">∞</span>
-                <span class="text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                  {{ t('admin.subscriptions.unlimited') }}
-                </span>
-              </div>
             </div>
           </template>
 
@@ -418,6 +404,9 @@
 
           <template #cell-actions="{ row }">
             <div class="flex items-center gap-1">
+              <button v-if="row.status !== 'revoked'" type="button" class="btn btn-secondary btn-sm" data-test="edit-subscription-quota" @click="openQuotaDialog(row)">
+                {{ t('admin.subscriptions.editQuota') }}
+              </button>
               <button
                 v-if="row.status === 'active' || row.status === 'expired'"
                 @click="handleExtend(row)"
@@ -487,7 +476,26 @@
       @completed="handleBulkCompleted"
     />
 
-    <!-- Assign Subscription Modal -->
+    <!-- Subscription Quota Modal -->
+    <BaseDialog :show="quotaSubscription !== null" :title="t('admin.subscriptions.editQuota')" @close="closeQuotaDialog">
+      <form id="subscription-quota-form" class="space-y-4" @submit.prevent="saveQuota">
+        <SubscriptionQuotaSummary v-if="quotaSubscription" :quota="quotaSubscription.quota_usd || 0" :used="quotaSubscription.quota_used_usd || 0" />
+        <div>
+          <label class="input-label" for="subscription-total-quota">{{ t('admin.subscriptions.totalQuota') }}</label>
+          <input id="subscription-total-quota" v-model.number="quotaForm.quota_usd" class="input" type="number" min="0.000001" step="0.000001" required :disabled="quotaSaving" />
+          <p class="input-hint">{{ t('admin.subscriptions.quotaEditHint') }}</p>
+        </div>
+        <div>
+          <label class="input-label" for="subscription-usage-multiplier">{{ t('payment.admin.usageMultiplier') }}</label>
+          <input id="subscription-usage-multiplier" v-model.number="quotaForm.usage_multiplier" class="input" type="number" min="0.01" step="0.01" required :disabled="quotaSaving" />
+        </div>
+      </form>
+      <template #footer><div class="flex justify-end gap-3">
+        <button type="button" class="btn btn-secondary" :disabled="quotaSaving" @click="closeQuotaDialog">{{ t('common.cancel') }}</button>
+        <button type="submit" form="subscription-quota-form" class="btn btn-primary" :disabled="quotaSaving">{{ t('common.save') }}</button>
+      </div></template>
+    </BaseDialog>
+
     <BaseDialog
       :show="showAssignModal"
       :title="t('admin.subscriptions.assignSubscription')"
@@ -607,9 +615,23 @@
           <p class="input-hint">{{ t('admin.subscriptions.groupHint') }}</p>
         </div>
         <div>
+          <label class="input-label">{{ t('admin.subscriptions.planTemplate') }}</label>
+          <Select v-model="assignmentPlanId" :options="assignmentPlanOptions" :disabled="submitting" />
+          <p class="input-hint">{{ t('admin.subscriptions.planTemplateHint') }}</p>
+        </div>
+        <div>
           <label class="input-label">{{ t('admin.subscriptions.form.validityDays') }}</label>
           <input v-model.number="assignForm.validity_days" type="number" min="1" max="36500" step="1" :disabled="submitting" class="input" />
           <p class="input-hint">{{ t('admin.subscriptions.validityHint') }}</p>
+        </div>
+        <div>
+          <label class="input-label" for="assign-quota">{{ t('admin.subscriptions.totalQuota') }}</label>
+          <input id="assign-quota" v-model.number="assignForm.quota_usd" type="number" min="0.000001" step="0.000001" required :disabled="submitting" class="input" />
+          <p class="input-hint">{{ t('admin.subscriptions.quotaHint') }}</p>
+        </div>
+        <div>
+          <label class="input-label" for="assign-usage-multiplier">{{ t('payment.admin.usageMultiplier') }}</label>
+          <input id="assign-usage-multiplier" v-model.number="assignForm.usage_multiplier" type="number" min="0.01" step="0.01" required :disabled="submitting" class="input" />
         </div>
         <div v-if="batchAssignResult" class="space-y-2 text-sm" role="status" data-test="batch-assign-result">
           <p>{{ t('admin.subscriptions.batchAssign.result', { success: batchAssignResult.success_count, failed: batchAssignResult.failed_count }) }}</p>
@@ -840,10 +862,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 import { adminAPI } from '@/api/admin'
+import { adminPaymentAPI } from '@/api/admin/payment'
+import type { SubscriptionPlan } from '@/types/payment'
+import SubscriptionQuotaSummary from '@/components/common/SubscriptionQuotaSummary.vue'
 import type { AdminUser, UserSubscription, Group, GroupPlatform, SubscriptionType } from '@/types'
 import type { SimpleUser } from '@/api/admin/usage'
 import type { SubscriptionBulkAction, SubscriptionBulkActionResult, BulkAssignSubscriptionResult } from '@/api/admin/subscriptions'
@@ -1096,8 +1121,60 @@ const restoringSubscription = ref<UserSubscription | null>(null)
 const assignForm = reactive({
   user_id: null as number | null,
   group_id: null as number | null,
-  validity_days: 30
+  validity_days: 30,
+  quota_usd: 50,
+  usage_multiplier: 12,
+  plan_name: ''
 })
+
+const assignmentPlans = ref<SubscriptionPlan[]>([])
+const assignmentPlanId = ref<number | null>(null)
+const assignmentPlanOptions = computed(() => [
+  { value: null, label: t('admin.subscriptions.customQuota') },
+  ...assignmentPlans.value.filter(p => p.group_id === assignForm.group_id).map(p => ({ value: p.id, label: p.name }))
+])
+watch(showAssignModal, async visible => {
+  if (!visible) return
+  try { assignmentPlans.value = (await adminPaymentAPI.getPlans()).data }
+  catch { assignmentPlans.value = [] }
+})
+watch(() => assignForm.group_id, () => { assignmentPlanId.value = null; assignForm.plan_name = '' })
+watch(assignmentPlanId, id => {
+  const plan = assignmentPlans.value.find(p => p.id === id && p.group_id === assignForm.group_id)
+  if (!plan) { assignForm.plan_name = ''; return }
+  const unit = String(plan.validity_unit || 'days').replace(/s$/, '')
+  assignForm.validity_days = plan.validity_days * (unit === 'month' ? 30 : unit === 'week' ? 7 : 1)
+  assignForm.quota_usd = plan.price * (plan.quota_multiplier || 10)
+  assignForm.usage_multiplier = plan.usage_multiplier || 12
+  assignForm.plan_name = plan.name
+})
+const quotaSubscription = ref<UserSubscription | null>(null)
+const quotaSaving = ref(false)
+const quotaForm = reactive({ quota_usd: 50, usage_multiplier: 12 })
+function openQuotaDialog(subscription: UserSubscription) {
+  quotaSubscription.value = subscription
+  quotaForm.quota_usd = subscription.quota_usd || 50
+  quotaForm.usage_multiplier = subscription.usage_multiplier || 1
+}
+function closeQuotaDialog() { if (!quotaSaving.value) quotaSubscription.value = null }
+async function saveQuota() {
+  if (!quotaSubscription.value || quotaSaving.value) return
+  if (!Number.isFinite(quotaForm.quota_usd) || quotaForm.quota_usd <= 0 || !Number.isFinite(quotaForm.usage_multiplier) || quotaForm.usage_multiplier <= 0) {
+    appStore.showError(t('admin.subscriptions.quotaRequired')); return
+  }
+  if (quotaForm.quota_usd < (quotaSubscription.value.quota_used_usd || 0)) {
+    appStore.showError(t('admin.subscriptions.quotaBelowUsage')); return
+  }
+  quotaSaving.value = true
+  try {
+    await adminAPI.subscriptions.setQuota(quotaSubscription.value.id, { ...quotaForm })
+    appStore.showSuccess(t('common.saved'))
+    quotaSubscription.value = null
+    await loadSubscriptions()
+  } catch (error: any) {
+    appStore.showError(error.response?.data?.detail || t('admin.subscriptions.failedToAdjust'))
+  } finally { quotaSaving.value = false }
+}
 
 const extendForm = reactive({
   days: 30
@@ -1333,6 +1410,10 @@ const closeAssignModal = () => {
   assignForm.user_id = null
   assignForm.group_id = null
   assignForm.validity_days = 30
+  assignForm.quota_usd = 50
+  assignForm.usage_multiplier = 12
+  assignForm.plan_name = ''
+  assignmentPlanId.value = null
   // Clear user search state
   selectedUser.value = null
   userSearchKeyword.value = ''
@@ -1355,13 +1436,21 @@ const handleAssignSubscription = async () => {
     return
   }
 
+  if (!Number.isFinite(assignForm.quota_usd) || assignForm.quota_usd <= 0 || !Number.isFinite(assignForm.usage_multiplier) || assignForm.usage_multiplier <= 0) {
+    appStore.showError(t('admin.subscriptions.quotaRequired'))
+    return
+  }
+
   submitting.value = true
   try {
     if (batchAssignEnabled.value) {
       batchAssignResult.value = await adminAPI.subscriptions.bulkAssign({
         user_ids: assignUsers.value.map((user) => user.id),
         group_id: assignForm.group_id,
-        validity_days: assignForm.validity_days
+        validity_days: assignForm.validity_days,
+        quota_usd: assignForm.quota_usd,
+        usage_multiplier: assignForm.usage_multiplier,
+        ...(assignForm.plan_name ? { plan_name: assignForm.plan_name } : {})
       })
       const result = batchAssignResult.value
       const successIds = new Set(result.subscriptions.map((subscription) => subscription.user_id))
@@ -1375,7 +1464,10 @@ const handleAssignSubscription = async () => {
     await adminAPI.subscriptions.assign({
       user_id: assignForm.user_id!,
       group_id: assignForm.group_id,
-      validity_days: assignForm.validity_days
+      validity_days: assignForm.validity_days,
+      quota_usd: assignForm.quota_usd,
+      usage_multiplier: assignForm.usage_multiplier,
+      ...(assignForm.plan_name ? { plan_name: assignForm.plan_name } : {})
     })
     appStore.showSuccess(t('admin.subscriptions.subscriptionAssigned'))
     submitting.value = false

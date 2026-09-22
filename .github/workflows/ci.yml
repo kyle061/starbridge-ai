@@ -29,6 +29,9 @@ jobs:
           src/components/common/__tests__/Pagination.spec.ts
           src/components/common/__tests__/DataTable.spec.ts
           src/components/common/__tests__/SupportContact.spec.ts
+          src/components/common/__tests__/SubscriptionQuotaSummary.spec.ts
+          src/views/admin/__tests__/SubscriptionsView.userUsageLink.spec.ts
+          src/views/admin/__tests__/SubscriptionsView.bulkActions.spec.ts
           src/components/layout/__tests__/docUrlSanitization.spec.ts
           src/components/layout/__tests__/AppSidebar.spec.ts
           src/components/layout/__tests__/TablePageLayout.spec.ts
@@ -73,6 +76,10 @@ jobs:
       - run: >-
           go test ./internal/handler/admin ./internal/server/middleware
           -run 'TestAdminSubscriptionPlansForResponse|TestGroupModelAllowlist'
+        working-directory: backend
+      - run: go test ./internal/service ./internal/handler/admin ./internal/server/routes -run '^Test(AssignSubscription|BulkAssignSubscription|Subscription|SetSubscriptionQuota|SetLegacySubscriptionQuota|BulkSubscriptionAssignment|CalculateProgress)'
+        working-directory: backend
+      - run: go test -tags unit ./internal/service -run '^TestBuildUsageBillingCommand_Subscription'
         working-directory: backend
       - run: go test ./internal/service -run '^TestOpenAIGatewayServiceRecordUsage_'
         working-directory: backend

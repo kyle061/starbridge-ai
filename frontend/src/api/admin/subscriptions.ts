@@ -230,6 +230,10 @@ export async function listByUser(
 }
 
 export const subscriptionsAPI = {
+  async setQuota(id: number, request: { quota_usd: number; usage_multiplier?: number }): Promise<UserSubscription> {
+    const { data } = await apiClient.put<UserSubscription>(`/admin/subscriptions/${id}/quota`, request)
+    return data
+  },
   list,
   getById,
   getProgress,

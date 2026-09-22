@@ -41,18 +41,24 @@ func NewSubscriptionHandler(subscriptionService *service.SubscriptionService) *S
 
 // AssignSubscriptionRequest represents assign subscription request
 type AssignSubscriptionRequest struct {
-	UserID       int64  `json:"user_id" binding:"required"`
-	GroupID      int64  `json:"group_id" binding:"required"`
-	ValidityDays int    `json:"validity_days" binding:"omitempty,max=36500"` // max 100 years
-	Notes        string `json:"notes"`
+	UserID          int64    `json:"user_id" binding:"required"`
+	GroupID         int64    `json:"group_id" binding:"required"`
+	ValidityDays    int      `json:"validity_days" binding:"omitempty,max=36500"` // max 100 years
+	Notes           string   `json:"notes"`
+	QuotaUSD        *float64 `json:"quota_usd" binding:"omitempty,gt=0"`
+	UsageMultiplier *float64 `json:"usage_multiplier" binding:"omitempty,gt=0"`
+	PlanName        string   `json:"plan_name" binding:"max=200"`
 }
 
 // BulkAssignSubscriptionRequest represents bulk assign subscription request
 type BulkAssignSubscriptionRequest struct {
-	UserIDs      []int64 `json:"user_ids" binding:"required,min=1,max=100,dive,gt=0"`
-	GroupID      int64   `json:"group_id" binding:"required"`
-	ValidityDays int     `json:"validity_days" binding:"omitempty,max=36500"` // max 100 years
-	Notes        string  `json:"notes"`
+	UserIDs         []int64  `json:"user_ids" binding:"required,min=1,max=100,dive,gt=0"`
+	GroupID         int64    `json:"group_id" binding:"required"`
+	ValidityDays    int      `json:"validity_days" binding:"omitempty,max=36500"` // max 100 years
+	Notes           string   `json:"notes"`
+	QuotaUSD        *float64 `json:"quota_usd" binding:"omitempty,gt=0"`
+	UsageMultiplier *float64 `json:"usage_multiplier" binding:"omitempty,gt=0"`
+	PlanName        string   `json:"plan_name" binding:"max=200"`
 }
 
 // AdjustSubscriptionRequest represents adjust subscription request (extend or shorten)
@@ -146,11 +152,14 @@ func (h *SubscriptionHandler) Assign(c *gin.Context) {
 	adminID := getAdminIDFromContext(c)
 
 	subscription, err := h.subscriptionService.AssignSubscription(c.Request.Context(), &service.AssignSubscriptionInput{
-		UserID:       req.UserID,
-		GroupID:      req.GroupID,
-		ValidityDays: req.ValidityDays,
-		AssignedBy:   adminID,
-		Notes:        req.Notes,
+		UserID:          req.UserID,
+		GroupID:         req.GroupID,
+		ValidityDays:    req.ValidityDays,
+		AssignedBy:      adminID,
+		Notes:           req.Notes,
+		QuotaUSD:        subscriptionNumber(req.QuotaUSD),
+		UsageMultiplier: subscriptionNumber(req.UsageMultiplier),
+		PlanName:        req.PlanName,
 	})
 	if err != nil {
 		response.ErrorFrom(c, err)
@@ -173,11 +182,14 @@ func (h *SubscriptionHandler) BulkAssign(c *gin.Context) {
 	adminID := getAdminIDFromContext(c)
 
 	result, err := h.subscriptionService.BulkAssignSubscription(c.Request.Context(), &service.BulkAssignSubscriptionInput{
-		UserIDs:      req.UserIDs,
-		GroupID:      req.GroupID,
-		ValidityDays: req.ValidityDays,
-		AssignedBy:   adminID,
-		Notes:        req.Notes,
+		UserIDs:         req.UserIDs,
+		GroupID:         req.GroupID,
+		ValidityDays:    req.ValidityDays,
+		AssignedBy:      adminID,
+		Notes:           req.Notes,
+		QuotaUSD:        subscriptionNumber(req.QuotaUSD),
+		UsageMultiplier: subscriptionNumber(req.UsageMultiplier),
+		PlanName:        req.PlanName,
 	})
 	if err != nil {
 		response.ErrorFrom(c, err)
@@ -185,6 +197,36 @@ func (h *SubscriptionHandler) BulkAssign(c *gin.Context) {
 	}
 
 	response.Success(c, dto.BulkAssignResultFromService(result))
+}
+
+func subscriptionNumber(value *float64) float64 {
+	if value == nil {
+		return 0
+	}
+	return *value
+}
+
+// SetQuota updates the total entitlement without resetting recorded usage.
+func (h *SubscriptionHandler) SetQuota(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		response.BadRequest(c, "Invalid subscription ID")
+		return
+	}
+	var req struct {
+		QuotaUSD        float64  `json:"quota_usd" binding:"required,gt=0"`
+		UsageMultiplier *float64 `json:"usage_multiplier" binding:"omitempty,gt=0"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+	sub, err := h.subscriptionService.SetSubscriptionQuota(c.Request.Context(), id, req.QuotaUSD, req.UsageMultiplier)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, dto.UserSubscriptionFromServiceAdmin(sub))
 }
 
 // BulkAction applies one operation to selected subscriptions, returning each outcome.

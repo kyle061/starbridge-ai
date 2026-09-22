@@ -6,6 +6,8 @@ const { list, bulkAction, bulkAssign, listUsers, showError } = vi.hoisted(() => 
   list: vi.fn(), bulkAction: vi.fn(), bulkAssign: vi.fn(), listUsers: vi.fn(), showError: vi.fn()
 }))
 
+vi.mock('@/api/admin/payment', () => ({ adminPaymentAPI: { getPlans: vi.fn().mockResolvedValue({ data: [] }) } }))
+
 vi.mock('@/api/admin', () => ({
   adminAPI: {
     subscriptions: { list, bulkAction, bulkAssign },
@@ -128,7 +130,7 @@ describe('subscription bulk operations', () => {
     await form.trigger('submit')
     await form.trigger('submit')
     expect(bulkAssign).toHaveBeenCalledTimes(1)
-    expect(bulkAssign).toHaveBeenCalledWith({ user_ids: [11, 22], group_id: 7, validity_days: 30 })
+    expect(bulkAssign).toHaveBeenCalledWith({ user_ids: [11, 22], group_id: 7, validity_days: 30, quota_usd: 50, usage_multiplier: 12 })
     resolveAssign({ success_count: 1, failed_count: 1, subscriptions: [{ user_id: 11 }], errors: ['User 22: conflict'] })
     await flushPromises()
     expect(form.get('[data-test="assign-users"]').text()).not.toContain('user11@example.com')
@@ -137,7 +139,7 @@ describe('subscription bulk operations', () => {
     bulkAssign.mockResolvedValueOnce({ success_count: 1, failed_count: 0, subscriptions: [{ user_id: 22 }], errors: [] })
     await form.trigger('submit')
     await flushPromises()
-    expect(bulkAssign).toHaveBeenLastCalledWith({ user_ids: [22], group_id: 7, validity_days: 30 })
+    expect(bulkAssign).toHaveBeenLastCalledWith({ user_ids: [22], group_id: 7, validity_days: 30, quota_usd: 50, usage_multiplier: 12 })
     expect(form.find('[data-test="assign-users"]').exists()).toBe(false)
   })
 })

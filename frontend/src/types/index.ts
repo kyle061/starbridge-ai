@@ -2079,6 +2079,7 @@ export interface UserSubscription {
 }
 
 export interface SubscriptionProgress {
+	quota?: { limit_usd: number; used_usd: number; remaining_usd: number; percentage: number } | null
   subscription_id: number
   daily: {
     used: number
@@ -2106,12 +2107,18 @@ export interface AssignSubscriptionRequest {
   user_id: number
   group_id: number
   validity_days?: number
+  quota_usd?: number
+  usage_multiplier?: number
+  plan_name?: string
 }
 
 export interface BulkAssignSubscriptionRequest {
   user_ids: number[]
   group_id: number
   validity_days?: number
+  quota_usd?: number
+  usage_multiplier?: number
+  plan_name?: string
 }
 
 export interface ExtendSubscriptionRequest {

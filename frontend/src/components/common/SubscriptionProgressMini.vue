@@ -76,7 +76,7 @@
                   <div class="h-1.5 min-w-0 flex-1 rounded-full bg-gray-200 dark:bg-dark-600">
                     <div class="h-1.5 rounded-full transition-all" :class="getProgressBarClass(subscription.quota_used_usd, subscription.quota_usd)" :style="{ width: getProgressWidth(subscription.quota_used_usd, subscription.quota_usd) }"></div>
                   </div>
-                  <span class="w-24 flex-shrink-0 text-right text-[10px] text-gray-500">{{ formatQuotaUsage(subscription.quota_used_usd, subscription.quota_usd) }}</span>
+                  <span class="min-w-24 break-all text-right text-[10px] text-gray-500">{{ formatQuotaUsage(subscription.quota_used_usd, subscription.quota_usd) }}</span>
                 </div>
                 <div v-if="subscription.group?.daily_limit_usd" class="flex items-center gap-2">
                   <span class="w-8 flex-shrink-0 text-[10px] text-gray-500">{{
@@ -190,6 +190,7 @@ import Icon from '@/components/icons/Icon.vue'
 import { useSubscriptionStore } from '@/stores'
 import { FeatureFlags, isFeatureFlagEnabled } from '@/utils/featureFlags'
 import type { UserSubscription } from '@/types'
+import { formatSubscriptionQuota } from '@/utils/subscriptionQuota'
 
 const { t } = useI18n()
 
@@ -271,9 +272,7 @@ function formatUsage(used: number | undefined, limit: number | null | undefined)
 }
 
 function formatQuotaUsage(used: number | undefined, limit: number | null | undefined): string {
-  const usedValue = (used || 0).toFixed(2)
-  const limitValue = limit?.toFixed(2) || '∞'
-  return `¥${usedValue}/¥${limitValue}`
+  return `¥${formatSubscriptionQuota(used)}/¥${formatSubscriptionQuota(limit)}`
 }
 
 function formatDaysRemaining(expiresAt: string): string {

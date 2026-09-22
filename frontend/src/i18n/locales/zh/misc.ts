@@ -136,6 +136,11 @@ export default {
     quotaEndsIn: '额度将在 {time} 后结束',
     windowNotActive: '等待首次使用',
     usageOf: '已用 {used} / {limit}',
+    totalQuota: '总额度',
+    usedQuota: '已消耗',
+    remainingQuota: '剩余额度',
+    quotaExhausted: '订阅额度已用完，该订阅的 API 调用已停止。',
+    quotaNotConfigured: '尚未设置订阅总额度，请联系管理员分配。',
     subscriptionQuota: '订阅额度',
     usageRate: '消耗倍率：'
   },

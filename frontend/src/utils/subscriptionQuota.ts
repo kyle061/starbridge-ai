@@ -1,5 +1,13 @@
 import type { UserSubscription } from '@/types'
 
+/** Keep small real deductions visible instead of rounding them to zero. */
+export function formatSubscriptionQuota(value: number | null | undefined): string {
+  const amount = Number(value) || 0
+  if (amount > 0 && amount < 0.000001) return '<0.000001'
+  const [whole, fraction = ''] = amount.toFixed(6).split('.')
+  return `${whole}.${fraction.replace(/0+$/, '').padEnd(2, '0')}`
+}
+
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
 
 export type ExpirationDateRelation = 'expired' | 'today' | 'tomorrow' | 'later'
