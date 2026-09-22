@@ -219,14 +219,21 @@ func incrementUsageBillingSubscription(ctx context.Context, tx *sql.Tx, subscrip
 			daily_usage_usd = us.daily_usage_usd + $1,
 			weekly_usage_usd = us.weekly_usage_usd + $1,
 			monthly_usage_usd = us.monthly_usage_usd + $1,
-			quota_used_usd = CASE WHEN us.quota_usd > 0 THEN us.quota_used_usd + $1 ELSE us.quota_used_usd END,
+			-- A request can finish with a cost larger than the small amount left
+			-- in the subscription. Keep the durable total quota saturated instead
+			-- of rolling back the whole billing transaction. Rolling it back leaves
+			-- the subscription just below its limit and lets every later request
+			-- through while its usage log is marked as unbilled.
+			quota_used_usd = CASE
+				WHEN us.quota_usd > 0 THEN LEAST(us.quota_usd, us.quota_used_usd + $1)
+				ELSE us.quota_used_usd
+			END,
 			updated_at = NOW()
 		FROM groups g
 		WHERE us.id = $2
 			AND us.deleted_at IS NULL
 			AND us.group_id = g.id
 			AND g.deleted_at IS NULL
-			AND (us.quota_usd <= 0 OR us.quota_used_usd + $1 <= us.quota_usd)
 	`
 	res, err := tx.ExecContext(ctx, updateSQL, costUSD, subscriptionID)
 	if err != nil {
@@ -238,11 +245,6 @@ func incrementUsageBillingSubscription(ctx context.Context, tx *sql.Tx, subscrip
 	}
 	if affected > 0 {
 		return nil
-	}
-	var quota, used float64
-	lookupErr := tx.QueryRowContext(ctx, `SELECT quota_usd, quota_used_usd FROM user_subscriptions WHERE id = $1 AND deleted_at IS NULL`, subscriptionID).Scan(&quota, &used)
-	if lookupErr == nil && quota > 0 && used+costUSD > quota {
-		return service.ErrSubscriptionQuotaExceeded
 	}
 	return service.ErrSubscriptionNotFound
 }

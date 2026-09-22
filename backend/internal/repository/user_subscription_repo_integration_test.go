@@ -446,6 +446,24 @@ func (s *UserSubscriptionRepoSuite) TestIncrementUsage_Accumulates() {
 	s.Require().InDelta(3.5, got.DailyUsageUSD, 1e-6)
 }
 
+func (s *UserSubscriptionRepoSuite) TestIncrementUsage_SaturatesTotalQuota() {
+	user := s.mustCreateUser("usage-quota@test.com", service.RoleUser)
+	group := s.mustCreateGroup("g-usage-quota")
+	sub := s.mustCreateSubscription(user.ID, group.ID, func(c *dbent.UserSubscriptionCreate) {
+		c.SetQuotaUsd(1.0)
+	})
+
+	s.Require().NoError(s.repo.IncrementUsage(s.ctx, sub.ID, 0.75))
+	s.Require().NoError(s.repo.IncrementUsage(s.ctx, sub.ID, 0.75))
+
+	got, err := s.repo.GetByID(s.ctx, sub.ID)
+	s.Require().NoError(err)
+	s.Require().InDelta(1.5, got.DailyUsageUSD, 1e-6)
+	s.Require().InDelta(1.5, got.WeeklyUsageUSD, 1e-6)
+	s.Require().InDelta(1.5, got.MonthlyUsageUSD, 1e-6)
+	s.Require().InDelta(1.0, got.QuotaUsedUSD, 1e-6)
+}
+
 func (s *UserSubscriptionRepoSuite) TestActivateWindows() {
 	user := s.mustCreateUser("activate@test.com", service.RoleUser)
 	group := s.mustCreateGroup("g-activate")

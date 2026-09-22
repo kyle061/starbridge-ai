@@ -99,7 +99,8 @@ var (
 		redis.call('HINCRBYFLOAT', KEYS[1], 'monthly_usage', cost)
 		local quota = tonumber(redis.call('HGET', KEYS[1], 'quota_usd') or 0)
 		if quota > 0 then
-			redis.call('HINCRBYFLOAT', KEYS[1], 'quota_used_usd', cost)
+			local used = tonumber(redis.call('HGET', KEYS[1], 'quota_used_usd') or 0)
+			redis.call('HSET', KEYS[1], 'quota_used_usd', math.min(quota, used + cost))
 		end
 		redis.call('EXPIRE', KEYS[1], ARGV[2])
 		return 1

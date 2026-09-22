@@ -474,8 +474,9 @@ func (r *userSubscriptionRepository) translateConditionalWindowReset(ctx context
 }
 
 // IncrementUsage 原子性地累加订阅用量。
-// 限额检查已在请求前由 BillingCacheService.CheckBillingEligibility 完成，
-// 此处仅负责记录实际消费，确保消费数据的完整性。
+// 请求前由 BillingCacheService.CheckBillingEligibility 做准入检查；如果
+// 最后一笔请求的实际消费超过剩余额度，quota_used_usd 会封顶到 quota_usd，
+// 确保订阅进入耗尽状态，而不是回滚后让后续请求继续免费通过。
 func (r *userSubscriptionRepository) IncrementUsage(ctx context.Context, id int64, costUSD float64) error {
 	const updateSQL = `
 		UPDATE user_subscriptions us
@@ -483,14 +484,16 @@ func (r *userSubscriptionRepository) IncrementUsage(ctx context.Context, id int6
 			daily_usage_usd = us.daily_usage_usd + $1,
 			weekly_usage_usd = us.weekly_usage_usd + $1,
 			monthly_usage_usd = us.monthly_usage_usd + $1,
-			quota_used_usd = CASE WHEN us.quota_usd > 0 THEN us.quota_used_usd + $1 ELSE us.quota_used_usd END,
+			quota_used_usd = CASE
+				WHEN us.quota_usd > 0 THEN LEAST(us.quota_usd, us.quota_used_usd + $1)
+				ELSE us.quota_used_usd
+			END,
 			updated_at = NOW()
 		FROM groups g
 		WHERE us.id = $2
 			AND us.deleted_at IS NULL
 			AND us.group_id = g.id
 			AND g.deleted_at IS NULL
-			AND (us.quota_usd <= 0 OR us.quota_used_usd + $1 <= us.quota_usd)
 	`
 
 	client := clientFromContext(ctx, r.client)
@@ -508,10 +511,6 @@ func (r *userSubscriptionRepository) IncrementUsage(ctx context.Context, id int6
 		return nil
 	}
 
-	existing, lookupErr := client.UserSubscription.Get(ctx, id)
-	if lookupErr == nil && existing.QuotaUsd > 0 && existing.QuotaUsedUsd+costUSD > existing.QuotaUsd {
-		return service.ErrSubscriptionQuotaExceeded
-	}
 	return service.ErrSubscriptionNotFound
 }
 
