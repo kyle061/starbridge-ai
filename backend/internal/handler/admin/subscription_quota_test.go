@@ -86,5 +86,5 @@ func TestSubscriptionQuotaHandlerPassesEntitlementsAndPreservesUsage(t *testing.
 	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 	require.Equal(t, float64(100), repo.sub.QuotaUSD)
 	require.Equal(t, 0.000024, repo.sub.QuotaUsedUSD)
-	require.Equal(t, float64(12), repo.sub.UsageMultiplier)
+	require.Equal(t, float64(18), repo.sub.UsageMultiplier)
 }
