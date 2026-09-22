@@ -295,6 +295,28 @@ export default {
       linkCopied: 'CCS import link copied',
       retry: 'Retry opening'
     },
+    ccsCodex: {
+      title: 'Bind CCS · Keep existing settings',
+      description: 'CCS quick import regenerates Codex settings. Edit your existing provider to update only the gateway URL and API key.',
+      step1: 'Open CCS → Codex and edit the provider you already use. Back up its current configuration first.',
+      step2: 'Replace its endpoint and API key with this gateway’s values. If experimental_bearer_token exists, update the key in that field.',
+      step3: 'Save and reopen Codex. Keep model_provider and its matching provider section name, and retain the existing provider.',
+      copyEndpoint: 'Copy endpoint',
+      copyKey: 'Copy API key',
+      preserveHint: 'Keep supports_websockets, requires_openai_auth, model, reasoning effort, MCP, projects and other existing settings. The tool below only updates base_url and experimental_bearer_token, preserving provider identity.',
+      configLabel: 'Existing config.toml (optional, processed locally)',
+      placeholder: 'Paste the complete config.toml from your existing CCS provider to merge connection settings',
+      localOnly: 'Processed only in this browser, without uploading or saving. Cleared when closed. The result contains your key; do not share it.',
+      resultLabel: 'Merged config.toml',
+      generate: 'Generate while keeping settings',
+      copyResult: 'Copy merged configuration',
+      errors: {
+        invalid: 'The configuration cannot be parsed safely. Paste a complete valid config.toml, or update the endpoint and key manually using the steps above.',
+        provider: 'No custom provider could be safely updated. Edit the endpoint and key in your existing CCS provider, keeping its identity.',
+        auth: 'This configuration uses an environment variable, authentication command or authentication headers. Update the key through that existing method; these settings will not be overwritten.',
+        profile: 'The selected profile overrides provider settings. Update its endpoint and key manually in the existing profile.'
+      }
+    },
     ccsClientSelect: {
       title: 'Select Client',
       description: 'Please select the client type to import to CC-Switch:',

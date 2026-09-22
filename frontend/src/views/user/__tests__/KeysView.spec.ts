@@ -439,6 +439,27 @@ describe('user KeysView column settings', () => {
     wrapper.unmount()
   })
 
+  it.each(['openai', 'composite', 'deepseek'] as const)('keeps %s CCS binding away from configuration-replacing imports', async (platform) => {
+    const row = { ...createApiKey(), group: { platform } } as ApiKey
+    listKeys.mockResolvedValue({ items: [row], total: 1, page: 1, page_size: 20 })
+    const open = vi.spyOn(window, 'open').mockReturnValue(null)
+    try {
+      const wrapper = await mountView()
+      await getButtonByText(wrapper, 'Import to CC Switch').trigger('click')
+      expect(open).not.toHaveBeenCalled()
+      expect(wrapper.find('#ccs-existing-config').exists()).toBe(true)
+      expect(wrapper.text()).toContain('keys.ccsCodex.preserveHint')
+      await getButtonByText(wrapper, 'keys.ccsCodex.copyEndpoint').trigger('click')
+      expect(copyToClipboard).toHaveBeenCalledWith(`${window.location.origin}/v1`)
+      await wrapper.find('#ccs-existing-config').setValue('private local settings')
+      await wrapper.findComponent({ name: 'CcsCodexBindingModal' }).vm.$emit('close')
+      await nextTick()
+      await getButtonByText(wrapper, 'Import to CC Switch').trigger('click')
+      expect((wrapper.get('#ccs-existing-config').element as HTMLTextAreaElement).value).toBe('')
+      wrapper.unmount()
+    } finally { open.mockRestore() }
+  })
+
   it('opens CCS in a new tab without showing a fallback dialog', async () => {
     vi.useFakeTimers()
     const openedWindow = { closed: false } as unknown as Window

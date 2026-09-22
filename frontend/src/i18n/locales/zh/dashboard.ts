@@ -300,6 +300,28 @@ export default {
       linkCopied: 'CCS 导入链接已复制',
       retry: '重试打开'
     },
+    ccsCodex: {
+      title: '绑定 CCS · 保留原配置',
+      description: 'CCS 的快捷导入会重新生成 Codex 配置。已有配置请编辑原供应商，只更新本站接口和密钥。',
+      step1: '打开 CCS → Codex，编辑原来使用的供应商；先备份当前配置。',
+      step2: '将接口地址和 API Key 替换为本站信息。已有 experimental_bearer_token 时，更新该字段中的密钥。',
+      step3: '保存后重新打开 Codex。保留原 model_provider 和对应的供应商区块名称，不要删除原供应商。',
+      copyEndpoint: '复制接口地址',
+      copyKey: '复制 API 密钥',
+      preserveHint: '保留 supports_websockets、requires_openai_auth、模型、推理强度、MCP、项目和其他原有参数。下方工具只更新 base_url 与 experimental_bearer_token，不修改供应商标识。',
+      configLabel: '原 config.toml（可选，本地处理）',
+      placeholder: '需要自动合并时，粘贴 CCS 原供应商中的完整 config.toml',
+      localOnly: '配置仅在当前浏览器内处理，不上传、不保存；关闭窗口后清空。生成结果包含密钥，请勿分享。',
+      resultLabel: '合并后的 config.toml',
+      generate: '保留参数并生成配置',
+      copyResult: '复制合并配置',
+      errors: {
+        invalid: '配置无法安全解析，请粘贴完整有效的 config.toml，或按上方步骤手动更新接口和密钥。',
+        provider: '未找到可安全更新的自定义供应商。请在 CCS 原供应商中手动更新接口和密钥，保留原供应商标识。',
+        auth: '此配置使用环境变量、认证命令或认证请求头。请沿用原认证方式更新密钥，工具不会覆盖这些设置。',
+        profile: '当前配置档案覆盖了供应商设置，请在原档案中手动更新接口和密钥。'
+      }
+    },
     ccsClientSelect: {
       title: '选择客户端',
       description: '请选择您要导入到 CC-Switch 的客户端类型：',

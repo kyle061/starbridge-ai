@@ -126,7 +126,7 @@ export default {
       },
       step2: {
         title: 'Configure your client',
-        description: 'Click Use Key, choose Codex or another client, and copy the configuration with the site endpoint and API key. If CCS is installed, you can also click Import to CCS. Choose a model included in your plan.'
+        description: 'Click Use Key, choose Codex or another client, and copy the configuration with the site endpoint and API key. For CCS, click Import to CCS and follow the steps to edit your existing provider while keeping its settings. Choose a model included in your plan.'
       },
       step3: {
         title: 'Make a request and view usage',

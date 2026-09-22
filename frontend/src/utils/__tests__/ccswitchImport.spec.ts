@@ -3,7 +3,8 @@ import {
   GROK_CC_SWITCH_MODEL,
   DEEPSEEK_CC_SWITCH_CODEX_MODEL,
   OPENAI_CC_SWITCH_CODEX_MODEL,
-  buildCcSwitchImportDeeplink
+  buildCcSwitchImportDeeplink,
+  resolveCcSwitchImportConfig
 } from '@/utils/ccswitchImport'
 import type { GroupPlatform } from '@/types'
 
@@ -28,61 +29,15 @@ describe('ccswitchImport utils', () => {
     usageScript: 'return true'
   }
 
-  it('adds the Codex model parameter for OpenAI imports', () => {
-    const params = paramsFromDeeplink(
-      buildCcSwitchImportDeeplink({
-        ...baseInput,
-        platform: 'openai',
-        clientType: 'claude'
-      })
-    )
-
-    expect(params.get('resource')).toBe('provider')
-    expect(params.get('app')).toBe('codex')
-    expect(params.get('endpoint')).toBe(`${baseInput.baseUrl}/v1`)
-    expect(params.get('model')).toBe(OPENAI_CC_SWITCH_CODEX_MODEL)
-    expect(params.get('usageBaseUrl')).toBe(baseInput.baseUrl)
-    expect(atob(params.get('usageScript') || '')).toBe(baseInput.usageScript)
-  })
-
-  it('imports the composite relay as a Codex provider', () => {
-    const params = paramsFromDeeplink(
-      buildCcSwitchImportDeeplink({
-        ...baseInput,
-        platform: 'composite',
-        clientType: 'claude'
-      })
-    )
-
-    expect(params.get('app')).toBe('codex')
-    expect(params.get('endpoint')).toBe(`${baseInput.baseUrl}/v1`)
-    expect(params.get('usageBaseUrl')).toBe(baseInput.baseUrl)
-    expect(params.get('model')).toBe(OPENAI_CC_SWITCH_CODEX_MODEL)
-  })
-
-  it('imports DeepSeek keys into Codex rather than Claude Code', () => {
-    const params = paramsFromDeeplink(buildCcSwitchImportDeeplink({
-      ...baseInput, platform: 'deepseek', clientType: 'claude'
-    }))
-    expect(params.get('app')).toBe('codex')
-    expect(params.get('model')).toBe(DEEPSEEK_CC_SWITCH_CODEX_MODEL)
-    expect(params.get('endpoint')).toBe(`${baseInput.baseUrl}/v1`)
-    expect(params.get('usageBaseUrl')).toBe(baseInput.baseUrl)
-  })
-
-  it('avoids duplicate version paths for configured gateway URLs', () => {
-    const params = paramsFromDeeplink(
-      buildCcSwitchImportDeeplink({
-        ...baseInput,
-        baseUrl: ' https://api.example.com/v1/ ',
-        platform: 'openai',
-        clientType: 'claude'
-      })
-    )
-
-    expect(params.get('endpoint')).toBe('https://api.example.com/v1')
-    expect(params.get('homepage')).toBe('https://api.example.com')
-    expect(params.get('usageBaseUrl')).toBe('https://api.example.com')
+  it.each([
+    ['openai', OPENAI_CC_SWITCH_CODEX_MODEL],
+    ['composite', OPENAI_CC_SWITCH_CODEX_MODEL],
+    ['deepseek', DEEPSEEK_CC_SWITCH_CODEX_MODEL]
+  ] as const)('routes %s through preservation instead of a lossy Codex deeplink', (platform, model) => {
+    const config = resolveCcSwitchImportConfig(platform, 'claude', ' https://api.example.com/v1/ ')
+    expect(config).toMatchObject({ app: 'codex', endpoint: 'https://api.example.com/v1', usageBaseUrl: baseInput.baseUrl, model })
+    expect(() => buildCcSwitchImportDeeplink({ ...baseInput, platform, clientType: 'claude' }))
+      .toThrow('Codex requires the existing-config binding flow')
   })
 
   it.each([

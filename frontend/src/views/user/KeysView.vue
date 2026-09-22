@@ -586,6 +586,13 @@
       @close="closeUseKeyModal"
     />
 
+    <CcsCodexBindingModal
+      :show="showCcsCodexBinding"
+      :api-key="pendingCcsRow?.key || ''"
+      :endpoint="ccsCodexEndpoint"
+      @close="closeCcsCodexBinding"
+    />
+
     <!-- CCS Client Selection Dialog for Antigravity -->
     <BaseDialog
       :show="showCcsClientSelect"
@@ -723,6 +730,7 @@ import BulkEditKeysModal from '@/components/keys/BulkEditKeysModal.vue'
 	import SearchInput from '@/components/common/SearchInput.vue'
 	import Icon from '@/components/icons/Icon.vue'
 	import UseKeyModal from '@/components/keys/UseKeyModal.vue'
+import CcsCodexBindingModal from '@/components/keys/CcsCodexBindingModal.vue'
 	import EndpointPopover from '@/components/keys/EndpointPopover.vue'
 	import GroupBadge from '@/components/common/GroupBadge.vue'
 	import GroupOptionItem from '@/components/common/GroupOptionItem.vue'
@@ -734,6 +742,7 @@ import { formatDateTime } from '@/utils/format'
 import { maskApiKey } from '@/utils/maskApiKey'
 import {
   buildCcSwitchImportDeeplink,
+  resolveCcSwitchImportConfig,
   type CcSwitchClientType
 } from '@/utils/ccswitchImport'
 
@@ -950,6 +959,10 @@ const showEditModal = ref(false)
 const showDeleteDialog = ref(false)
 const showUseKeyModal = ref(false)
 const showCcsClientSelect = ref(false)
+const showCcsCodexBinding = ref(false)
+const ccsCodexEndpoint = computed(() => resolveCcSwitchImportConfig(
+  pendingCcsRow.value?.group?.platform, 'claude', effectiveApiBaseUrl.value
+).endpoint)
 const showColumnDropdown = ref(false)
 const pendingCcsRow = ref<ApiKey | null>(null)
 const selectedKey = ref<ApiKey | null>(null)
@@ -1403,6 +1416,15 @@ const closeModals = () => {
 const importToCcswitch = (row: ApiKey) => {
   const platform = row.group?.platform || 'anthropic'
 
+  // CCS regenerates Codex TOML from deeplinks (including model_provider), even
+  // with an inline config payload. Preserve existing settings by editing the
+  // existing provider instead of sending this lossy import.
+  if (resolveCcSwitchImportConfig(platform, 'claude', effectiveApiBaseUrl.value).app === 'codex') {
+    pendingCcsRow.value = row
+    showCcsCodexBinding.value = true
+    return
+  }
+
   // For antigravity platform, show client selection dialog
   if (platform === 'antigravity') {
     pendingCcsRow.value = row
@@ -1410,9 +1432,12 @@ const importToCcswitch = (row: ApiKey) => {
     return
   }
 
-  // Composite groups are routed through the OpenAI-compatible Codex app.
-  // Other platforms retain their existing client defaults.
   executeCcsImport(row, platform === 'gemini' ? 'gemini' : 'claude')
+}
+
+const closeCcsCodexBinding = () => {
+  showCcsCodexBinding.value = false
+  pendingCcsRow.value = null
 }
 
 const launchCcsImport = (deeplink: string) => {

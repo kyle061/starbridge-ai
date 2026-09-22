@@ -94,20 +94,21 @@ docker compose logs --tail=100 caddy
 3. 默认选择 **设备码登录**，点击「获取登录设备码」，复制一次性设备码，再点击「打开 OpenAI 登录页面」。在官方页面登录自己的 Plus / Pro 账号并输入设备码，完成后切回原来的星桥标签页，账号会自动保存。设备码 15 分钟内有效；首次使用请先在 **ChatGPT → 设置 → 安全** 中开启设备码登录。服务器无法直连 OpenAI 时，先给该账号选择可用代理。
 4. 保存账号并点击测试。标准模式启动时会自动创建 `openai-default`、`deepseek-default` 和 `composite-default`，新建 OpenAI/DeepSeek 账号不指定分组时会自动加入对应默认分组和 Composite 分组，无需手动切换。
 5. 在 **API 密钥 → 创建密钥** 中选择 `composite-default`（页面会优先预选），生成面向客户端的 Starbridge API Key。公开模型 `gpt-6` / `gpt-6-astra` 会先由已有的便宜模型（优先 DeepSeek `deepseek-v4-pro`）生成内部需求文档，再由 OpenAI `gpt-6-astra` 完成原任务；客户和后台的请求模型仍显示 GPT6，只有独立 DeepSeek 分组显示 DeepSeek。预处理阶段按 6 倍客户倍率计费，真实上游模型、原始成本和客户扣费分别保存在用量审计中。管理端用量页可在「真实口径 / 客户口径」之间切换，客户接口只返回倍率处理后的数据。升级会调整未被管理员修改的默认线路，用量窗口缓存约 5 秒刷新。
-6. 在密钥列表点击 **使用密钥**，OpenAI、DeepSeek 和 Composite 分组默认打开 **Codex CLI**。组合分组生成的单文件 `~/.codex/config.toml` 包含 `model = "gpt-6-astra"`、`model_provider = "starbridgeai"`、`name = "Starbridge AI"`、`model_reasoning_effort = "xhigh"`、`wire_api = "responses"`、`supports_websockets = false`、`responses_websockets_v2 = false`、`requires_openai_auth = true` 和当前站点 `/v1` 地址，使用 HTTP/SSE 兼容跨平台主备线路。单独 OpenAI 分组仍支持 WebSocket。保存后重启 Codex 即可；OpenAI 和 Composite 也可切换到环境变量模式。
+6. 在密钥列表点击 **使用密钥**，OpenAI、DeepSeek 和 Composite 分组默认打开 **Codex CLI**。组合分组生成的单文件 `~/.codex/config.toml` 包含 `model = "gpt-6-astra"`、`model_provider = "starbridaeai"`、`name = "starbridaeai"`、`model_reasoning_effort = "xhigh"`、`wire_api = "responses"`、`supports_websockets = false`、`responses_websockets_v2 = false`、`requires_openai_auth = true` 和当前站点 `/v1` 地址，使用 HTTP/SSE 兼容跨平台主备线路。单独 OpenAI 分组仍支持 WebSocket。保存后重启 Codex 即可；OpenAI 和 Composite 也可切换到环境变量模式。
 7. 标准模式下，星桥用户还需要有站内余额或分组订阅。管理员可以在用户管理中分配站内余额；这个余额是站内记账，与 OpenAI Pro 的上游额度分别管理。
 
 ### 3.1 导入到 CC-Switch / CCS
 
 在 **API 密钥** 列表的操作栏点击 **导入到 CC Switch**：
 
-- OpenAI 和 `composite-default` 会生成 Codex 供应商，端点自动使用当前站点的 `/v1`，默认模型为 `gpt-6-astra`。
+- OpenAI、Composite 和 DeepSeek 的 Codex 绑定会显示「保留原配置」操作指南。编辑 CCS 中已有的供应商，仅更新接口地址和密钥；不再发送会重建配置、改变 `model_provider` 的 Codex 快捷导入链接。
+- 可粘贴原供应商的完整 `config.toml`，在浏览器内生成仅更新 `base_url` / `experimental_bearer_token` 的结果，再复制回 CCS 原供应商。原有 `model_provider`、`supports_websockets`、`requires_openai_auth`、模型、MCP、项目、注释等保持不变。配置不上传、不持久保存，关闭窗口即清空。环境变量、认证命令、请求头或当前档案覆盖供应商的复杂配置需沿用原方式手动更新。
 - Anthropic、Gemini、Grok 和 Antigravity 会按对应客户端生成配置；Antigravity 会先让你选择 Claude Code 或 Gemini CLI。
-- 导入链接会同时配置 `GET /v1/usage` 用量查询，每 30 分钟由 CCS 自动刷新。查询结果包含余额、请求数和 Token 统计；不会因为查询本身扣费。
-- 点击导入会在新标签页发送 `ccswitch://` 导入请求，已注册协议时会直接唤起 CC-Switch。没有安装或协议未注册时不显示额外弹窗；需要使用时请先安装并注册 `ccswitch://` 协议。
+- 其他客户端的导入链接会同时配置 `GET /v1/usage` 用量查询，每 30 分钟由 CCS 自动刷新。查询结果包含余额、请求数和 Token 统计；不会因为查询本身扣费。
+- 其他客户端点击导入会在新标签页发送 `ccswitch://` 导入请求，已注册协议时会直接唤起 CC-Switch。没有安装或协议未注册时不显示额外弹窗；需要使用时请先安装并注册 `ccswitch://` 协议。
 - 链接内包含当前 Starbridge API Key，只在自己的设备间传递；不要发到群聊、工单或公开仓库。导入后可在 CCS 的供应商详情中检查端点是否为 `https://你的域名/v1`，用量地址是否为 `https://你的域名/v1/usage`。
 
-如果导入后请求返回 404，先删除 CCS 中的旧供应商再重新导入，并确认没有把 `/v1` 重复填写成 `/v1/v1`。如果没有任何反应，请先安装 CCS 并按系统说明注册 `ccswitch://` 关联。
+如果绑定后请求返回 404，编辑原供应商并确认没有把 `/v1` 重复填写成 `/v1/v1`；不要删除原供应商或更换原供应商标识。如果没有任何反应，请先安装 CCS 并按系统说明注册 `ccswitch://` 关联。
 
 星桥保留上游的 OAuth 刷新能力，普通调用者只使用星桥 API Key。不要把客户端 API Key 发布到前端、日志、代码仓库或公共聊天中。可用模型及用量上限由 OpenAI 账号决定；Pro 不等于全部 API 模型都可用，也不会转换为 OpenAI Platform 的 API 余额。官方说明见 [Codex 身份验证](https://learn.chatgpt.com/docs/auth)。
 

@@ -95,6 +95,9 @@ export function resolveCcSwitchImportConfig(
 
 export function buildCcSwitchImportDeeplink(input: CcSwitchImportDeeplinkInput): string {
   const config = resolveCcSwitchImportConfig(input.platform, input.clientType, input.baseUrl)
+  // Codex deeplinks rebuild a minimal config and change the provider identity.
+  // Keep callers on the preservation flow until CCS supports a lossless update.
+  if (config.app === 'codex') throw new Error('Codex requires the existing-config binding flow')
   const entries: [string, string][] = [
     ['resource', 'provider'],
     ['app', config.app],
