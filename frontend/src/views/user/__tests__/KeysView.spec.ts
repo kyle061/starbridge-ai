@@ -460,6 +460,38 @@ describe('user KeysView column settings', () => {
     } finally { open.mockRestore() }
   })
 
+  it('copies the merged Codex config before opening the CCS import entry', async () => {
+    const row = { ...createApiKey(), group: { platform: 'openai' } } as ApiKey
+    listKeys.mockResolvedValue({ items: [row], total: 1, page: 1, page_size: 20 })
+    const open = vi.spyOn(window, 'open').mockReturnValue(null)
+    try {
+      const wrapper = await mountView()
+      await getButtonByText(wrapper, 'Import to CC Switch').trigger('click')
+      await wrapper.find('#ccs-existing-config').setValue(`model = "gpt-6-astra"
+model_provider = "starbridaeai"
+
+[model_providers.starbridaeai]
+name = "Starbridge AI"
+base_url = "https://old.example/v1"
+experimental_bearer_token = "old-key"
+supports_websockets = true`)
+      expect((wrapper.get('#ccs-existing-config').element as HTMLTextAreaElement).value).toContain('model_provider')
+      await getButtonByText(wrapper, 'keys.ccsCodex.generate').trigger('click')
+      await vi.dynamicImportSettled()
+      await flushPromises()
+
+      const merged = (wrapper.get('#ccs-updated-config').element as HTMLTextAreaElement).value
+      expect(merged).toContain(`base_url = "${window.location.origin}/v1"`)
+      expect(merged).toContain('experimental_bearer_token = "sk-test-key"')
+      expect(merged).toContain('supports_websockets = true')
+
+      await getButtonByText(wrapper, 'keys.ccsCodex.copyAndOpenCcs').trigger('click')
+      expect(copyToClipboard).toHaveBeenCalledWith(merged, 'keys.ccsCodex.mergedCopied')
+      expect(open).toHaveBeenCalledWith(expect.stringContaining('ccswitch://v1/import?'), '_blank')
+      wrapper.unmount()
+    } finally { open.mockRestore() }
+  })
+
   it.each(['openai', 'composite', 'deepseek'] as const)('allows %s CCS import without an existing config after choosing new', async (platform) => {
     const row = { ...createApiKey(), group: { platform } } as ApiKey
     listKeys.mockResolvedValue({ items: [row], total: 1, page: 1, page_size: 20 })
