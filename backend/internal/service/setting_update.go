@@ -204,6 +204,12 @@ func (s *SettingService) buildSystemSettingsUpdates(ctx context.Context, setting
 	updates[SettingKeySMTPFromName] = settings.SMTPFromName
 	updates[SettingKeySMTPUseTLS] = strconv.FormatBool(settings.SMTPUseTLS)
 	updates[SettingKeyResendFallbackEnabled] = strconv.FormatBool(settings.ResendFallbackEnabled)
+	updates[SettingKeyEmailProvider] = emailProviderOrDefault(settings.EmailProvider)
+	if settings.BrevoAPIKey != "" {
+		updates[SettingKeyBrevoAPIKey] = settings.BrevoAPIKey
+	}
+	updates[SettingKeyBrevoFrom] = settings.BrevoFrom
+	updates[SettingKeyBrevoFromName] = settings.BrevoFromName
 	if settings.ResendAPIKey != "" {
 		updates[SettingKeyResendAPIKey] = settings.ResendAPIKey
 	}

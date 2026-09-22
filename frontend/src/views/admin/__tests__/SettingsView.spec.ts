@@ -11,6 +11,8 @@ import SettingsView from "../SettingsView.vue";
 const {
   getSettings,
   updateSettings,
+  sendTestBrevoEmail,
+  sendTestEmail,
   getWebSearchEmulationConfig,
   updateWebSearchEmulationConfig,
   getAdminApiKey,
@@ -39,6 +41,8 @@ const {
 } = vi.hoisted(() => ({
   getSettings: vi.fn(),
   updateSettings: vi.fn(),
+  sendTestBrevoEmail: vi.fn(),
+  sendTestEmail: vi.fn(),
   getWebSearchEmulationConfig: vi.fn(),
   updateWebSearchEmulationConfig: vi.fn(),
   getAdminApiKey: vi.fn(),
@@ -86,6 +90,8 @@ vi.mock("@/api", () => ({
     settings: {
       getSettings,
       updateSettings,
+      sendTestBrevoEmail,
+      sendTestEmail,
       getWebSearchEmulationConfig,
       updateWebSearchEmulationConfig,
       getAdminApiKey,
@@ -797,6 +803,54 @@ describe("admin SettingsView payment visible method controls", () => {
       public_ip_rpm: 300,
     });
     expect(showSuccess).toHaveBeenCalled();
+  });
+
+  it("tests Brevo with unsaved fields and clears the key after saving", async () => {
+    getSettings.mockResolvedValueOnce({ ...baseSettingsResponse, email_verify_enabled: true });
+    sendTestBrevoEmail.mockReset().mockResolvedValue({ message: "accepted" });
+    sendTestEmail.mockReset();
+    const wrapper = mountView();
+    await flushPromises();
+    await wrapper.get('[data-testid="email-provider"]').setValue("brevo");
+    await wrapper.get('#brevo-api-key').setValue("xkeysib-test");
+    await wrapper.get('#brevo-from-email').setValue("no-reply@example.com");
+    await wrapper.get('#brevo-from-name').setValue("Starbridge AI");
+    await wrapper.get('[data-testid="test-email-recipient"]').setValue("user@example.com");
+    await wrapper.get('[data-testid="test-primary-email"]').trigger("click");
+    await flushPromises();
+    expect(sendTestBrevoEmail).toHaveBeenCalledWith({
+      email: "user@example.com",
+      brevo_api_key: "xkeysib-test",
+      brevo_from_email: "no-reply@example.com",
+      brevo_from_name: "Starbridge AI",
+    });
+    expect(sendTestEmail).not.toHaveBeenCalled();
+    expect(updateSettings).not.toHaveBeenCalled();
+    await wrapper.find("form").trigger("submit.prevent");
+    await flushPromises();
+    expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ email_provider: "brevo", brevo_api_key: "xkeysib-test" }));
+    expect((wrapper.get('#brevo-api-key').element as HTMLInputElement).value).toBe("");
+    wrapper.unmount();
+  });
+
+  it("tests Brevo using a stored key without re-entering or exposing it", async () => {
+    getSettings.mockResolvedValueOnce({
+      ...baseSettingsResponse,
+      email_verify_enabled: true,
+      email_provider: "brevo",
+      brevo_api_key_configured: true,
+      brevo_from_email: "no-reply@example.com",
+      brevo_from_name: "Starbridge AI",
+    });
+    sendTestBrevoEmail.mockReset().mockResolvedValue({ message: "accepted" });
+    const wrapper = mountView();
+    await flushPromises();
+    expect((wrapper.get('#brevo-api-key').element as HTMLInputElement).value).toBe("");
+    await wrapper.get('[data-testid="test-email-recipient"]').setValue("user@example.com");
+    await wrapper.get('[data-testid="test-primary-email"]').trigger("click");
+    await flushPromises();
+    expect(sendTestBrevoEmail).toHaveBeenCalledWith(expect.objectContaining({ brevo_api_key: undefined }));
+    wrapper.unmount();
   });
 
   it("renders and persists visible payment method sources", async () => {

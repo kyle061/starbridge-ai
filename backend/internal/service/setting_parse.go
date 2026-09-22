@@ -181,6 +181,7 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		SettingKeyForceEmailOnThirdPartySignup:              "false",
 		SettingKeySMTPPort:                                  "587",
 		SettingKeySMTPUseTLS:                                "false",
+		SettingKeyEmailProvider:                             EmailProviderSMTP,
 		SettingKeyResendFallbackEnabled:                     "false",
 		// Model fallback defaults
 		SettingKeyEnableModelFallback:      "false",
@@ -461,6 +462,10 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 		SMTPFromName:                           settings[SettingKeySMTPFromName],
 		SMTPUseTLS:                             settings[SettingKeySMTPUseTLS] == "true",
 		SMTPPasswordConfigured:                 settings[SettingKeySMTPPassword] != "",
+		EmailProvider:                          emailProviderOrDefault(settings[SettingKeyEmailProvider]),
+		BrevoAPIKeyConfigured:                  settings[SettingKeyBrevoAPIKey] != "",
+		BrevoFrom:                              settings[SettingKeyBrevoFrom],
+		BrevoFromName:                          settings[SettingKeyBrevoFromName],
 		ResendFallbackEnabled:                  settings[SettingKeyResendFallbackEnabled] == "true",
 		ResendAPIKeyConfigured:                 settings[SettingKeyResendAPIKey] != "",
 		ResendFrom:                             settings[SettingKeyResendFrom],
@@ -551,6 +556,7 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 	// 敏感信息直接返回，方便测试连接时使用
 	result.SMTPPassword = settings[SettingKeySMTPPassword]
 	result.ResendAPIKey = settings[SettingKeyResendAPIKey]
+	result.BrevoAPIKey = settings[SettingKeyBrevoAPIKey]
 	result.TurnstileSecretKey = settings[SettingKeyTurnstileSecretKey]
 	result.TencentCaptchaAppSecretKey = settings[SettingKeyTencentCaptchaAppSecretKey]
 	result.TencentCaptchaCloudSecretID = settings[SettingKeyTencentCaptchaCloudSecretID]

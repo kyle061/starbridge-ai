@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"math/big"
 	"net"
+	"net/http"
 	"net/mail"
 	"net/smtp"
 	"net/url"
@@ -97,7 +98,7 @@ type SMTPConfig struct {
 	UseTLS   bool
 }
 
-// ResendConfig configures the API-based fallback used only after SMTP fails.
+// ResendConfig configures the API-based fallback used only after the primary fails.
 type ResendConfig struct {
 	Enabled  bool
 	APIKey   string
@@ -113,6 +114,7 @@ type EmailService struct {
 	cache                    EmailCache
 	notificationEmailService *NotificationEmailService
 	resendSend               resendSendFunc
+	brevoClient              *http.Client
 }
 
 // NewEmailService 创建邮件服务实例
@@ -216,26 +218,26 @@ func (s *EmailService) GetResendConfig(ctx context.Context) (*ResendConfig, erro
 
 // SendEmail 发送邮件（使用数据库中保存的配置）
 func (s *EmailService) SendEmail(ctx context.Context, to, subject, body string) error {
-	smtpConfig, smtpErr := s.GetSMTPConfig(ctx)
-	if smtpErr == nil {
-		smtpErr = s.SendEmailWithConfig(smtpConfig, to, subject, body)
-		if smtpErr == nil {
-			return nil
-		}
+	provider, primaryErr := s.sendPrimaryEmail(ctx, to, subject, body)
+	if primaryErr == nil {
+		return nil
+	}
+	if ctx.Err() != nil {
+		return primaryErr
 	}
 
 	resendConfig, resendConfigErr := s.GetResendConfig(ctx)
 	if resendConfigErr != nil {
-		return fmt.Errorf("primary SMTP failed: %v; load Resend fallback: %w", smtpErr, resendConfigErr)
+		return fmt.Errorf("primary %s failed: %v; load Resend fallback: %w", provider, primaryErr, resendConfigErr)
 	}
 	if !resendConfig.Enabled {
-		return smtpErr
+		return primaryErr
 	}
 	if err := s.SendEmailWithResendConfig(ctx, resendConfig, to, subject, body); err != nil {
-		return fmt.Errorf("primary SMTP failed: %v; Resend fallback failed: %w", smtpErr, err)
+		return fmt.Errorf("primary %s failed: %v; Resend fallback failed: %w", provider, primaryErr, err)
 	}
 
-	slog.WarnContext(ctx, "email delivered through Resend fallback", "smtp_error", smtpErr)
+	slog.WarnContext(ctx, "email delivered through Resend fallback", "primary_provider", provider, "primary_error", primaryErr)
 	return nil
 }
 

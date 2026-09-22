@@ -927,9 +927,24 @@ export default {
         useTls: '使用 TLS',
         useTlsHint: '为 SMTP 连接启用 TLS 加密'
       },
+      emailProvider: {
+        title: '主邮件通道',
+        description: '选择注册验证、密码重置和通知邮件的主发送服务。可以先测试，确认收件后再保存切换。',
+        smtp: 'SMTP（QQ 等邮箱）',
+        testSmtp: '测试 SMTP 主通道'
+      },
+      brevo: {
+        apiKey: 'Brevo API Key',
+        apiKeyPlaceholder: '填写 Brevo 控制台生成的真实 API Key',
+        apiKeyHint: '使用 Brevo API Key，不能使用 Resend Key 或 Brevo SMTP 密钥。',
+        openConsole: '打开 Brevo 密钥管理',
+        senderHint: '请先在 Brevo 完成账号及发件人域名验证。其他服务的域名验证不能代替 Brevo 验证。',
+        testEmail: '测试 Brevo 主通道',
+        testEmailSent: 'Brevo 已接受测试邮件，请检查收件箱和垃圾邮件文件夹'
+      },
       resend: {
         title: 'Resend 备用通道',
-        description: 'QQ SMTP 保持为主通道；仅当主通道发送失败时自动改用 Resend。',
+        description: '仅当所选主通道（SMTP 或 Brevo）发送失败时，自动改用 Resend。',
         enabled: '启用 Resend 自动备用',
         enabledHint: '关闭时不会自动调用 Resend，仍可使用测试按钮验证配置。',
         apiKey: 'Resend API Key',
@@ -941,7 +956,7 @@ export default {
         fromEmailPlaceholder: "no-reply{'@'}mail.starbridaeai.top",
         fromName: '备用发件人名称',
         fromNamePlaceholder: 'Starbridge AI',
-        senderHint: 'onboarding@resend.dev 仅适合向 Resend 账号邮箱做初始测试；正式发送请使用已验证域名的地址。',
+        senderHint: "onboarding{'@'}resend.dev 仅适合向 Resend 账号邮箱做初始测试；正式发送请使用已验证域名的地址。",
         testEmail: '测试 Resend 备用',
         testing: '测试中...',
         testEmailSent: 'Resend 备用测试邮件发送成功',
@@ -949,7 +964,7 @@ export default {
       },
       testEmail: {
         title: '发送测试邮件',
-        description: '使用同一收件地址分别验证主 SMTP 和 Resend 备用通道',
+        description: '分别测试当前表单中的主通道和 Resend 备用通道。测试主通道失败时不会自动调用备用，以便确认各自可用。',
         recipientEmail: '收件人邮箱',
         recipientEmailPlaceholder: "test{'@'}example.com",
         sendTestEmail: '发送测试邮件',

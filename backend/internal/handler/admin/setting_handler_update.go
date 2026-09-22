@@ -51,6 +51,10 @@ type UpdateSettingsRequest struct {
 	SMTPFromName string `json:"smtp_from_name"`
 	SMTPUseTLS   bool   `json:"smtp_use_tls"`
 
+	EmailProvider         string `json:"email_provider"`
+	BrevoAPIKey           string `json:"brevo_api_key"`
+	BrevoFrom             string `json:"brevo_from_email"`
+	BrevoFromName         string `json:"brevo_from_name"`
 	ResendFallbackEnabled bool   `json:"resend_fallback_enabled"`
 	ResendAPIKey          string `json:"resend_api_key"`
 	ResendFrom            string `json:"resend_from_email"`
@@ -483,6 +487,7 @@ func omittedSettingKeys(sentFields map[string]json.RawMessage) service.OmittedSe
 }
 
 func settingsAuditRequest(req UpdateSettingsRequest) UpdateSettingsRequest {
+	req.BrevoAPIKey = strings.TrimSpace(req.BrevoAPIKey)
 	req.ResendAPIKey = strings.TrimSpace(req.ResendAPIKey)
 	req.TencentCaptchaAppSecretKey = strings.TrimSpace(req.TencentCaptchaAppSecretKey)
 	req.TencentCaptchaCloudSecretID = strings.TrimSpace(req.TencentCaptchaCloudSecretID)
@@ -649,6 +654,31 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		req.SMTPFrom = previousSettings.SMTPFrom
 		req.SMTPFromName = previousSettings.SMTPFromName
 		req.SMTPUseTLS = previousSettings.SMTPUseTLS
+	}
+
+	req.EmailProvider = strings.ToLower(strings.TrimSpace(req.EmailProvider))
+	req.BrevoAPIKey = strings.TrimSpace(req.BrevoAPIKey)
+	req.BrevoFrom = strings.TrimSpace(req.BrevoFrom)
+	req.BrevoFromName = strings.TrimSpace(req.BrevoFromName)
+	if _, sent := sentFields["email_provider"]; !sent {
+		req.EmailProvider = previousSettings.EmailProvider
+	}
+	if req.EmailProvider != service.EmailProviderSMTP && req.EmailProvider != service.EmailProviderBrevo {
+		response.BadRequest(c, "Email provider must be smtp or brevo")
+		return
+	}
+	if req.EmailProvider == service.EmailProviderBrevo {
+		brevoConfig := &service.BrevoConfig{APIKey: req.BrevoAPIKey, From: req.BrevoFrom}
+		if brevoConfig.APIKey == "" {
+			brevoConfig.APIKey = previousSettings.BrevoAPIKey
+		}
+		if _, sent := sentFields["brevo_from_email"]; !sent {
+			brevoConfig.From = previousSettings.BrevoFrom
+		}
+		if err := service.ValidateBrevoConfig(brevoConfig); err != nil {
+			response.BadRequest(c, err.Error())
+			return
+		}
 	}
 
 	resendFallbackEnabled := previousSettings.ResendFallbackEnabled
@@ -1575,6 +1605,10 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		SMTPFromName:                        req.SMTPFromName,
 		SMTPUseTLS:                          req.SMTPUseTLS,
 		ResendFallbackEnabled:               resendFallbackEnabled,
+		EmailProvider:                       req.EmailProvider,
+		BrevoAPIKey:                         req.BrevoAPIKey,
+		BrevoFrom:                           req.BrevoFrom,
+		BrevoFromName:                       req.BrevoFromName,
 		ResendAPIKey:                        req.ResendAPIKey,
 		ResendFrom:                          req.ResendFrom,
 		ResendFromName:                      req.ResendFromName,
@@ -2234,6 +2268,10 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		SMTPFromName:                                           updatedSettings.SMTPFromName,
 		SMTPUseTLS:                                             updatedSettings.SMTPUseTLS,
 		ResendFallbackEnabled:                                  updatedSettings.ResendFallbackEnabled,
+		EmailProvider:                                          updatedSettings.EmailProvider,
+		BrevoAPIKeyConfigured:                                  updatedSettings.BrevoAPIKeyConfigured,
+		BrevoFrom:                                              updatedSettings.BrevoFrom,
+		BrevoFromName:                                          updatedSettings.BrevoFromName,
 		ResendAPIKeyConfigured:                                 updatedSettings.ResendAPIKeyConfigured,
 		ResendFrom:                                             updatedSettings.ResendFrom,
 		ResendFromName:                                         updatedSettings.ResendFromName,

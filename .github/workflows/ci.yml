@@ -32,6 +32,7 @@ jobs:
           src/components/common/__tests__/SubscriptionQuotaSummary.spec.ts
           src/views/admin/__tests__/SubscriptionsView.userUsageLink.spec.ts
           src/views/admin/__tests__/SubscriptionsView.bulkActions.spec.ts
+          src/views/admin/__tests__/SettingsView.spec.ts
           src/components/layout/__tests__/docUrlSanitization.spec.ts
           src/components/layout/__tests__/AppSidebar.spec.ts
           src/components/layout/__tests__/TablePageLayout.spec.ts
@@ -62,6 +63,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with: { go-version-file: backend/go.mod, cache: true, cache-dependency-path: backend/go.sum }
+      - run: >-
+          go test -tags unit ./internal/service ./internal/handler/admin
+          -run 'Test(SendEmail|Brevo|UpdateSettings.*(Brevo|Resend|PartialPayload)|SettingService_UpdateSettings.*Resend)'
+        working-directory: backend
       - run: go test ./internal/pkg/apicompat ./internal/service -run 'TestOpenAIOAuthService_|TestForwardResponses_ForceChatCompletions|TestResolveOpenAIForwardModel|TestChatCompletionsToResponses'
         working-directory: backend
       - run: go test ./internal/service ./internal/repository ./internal/handler/admin -run TestOpenAIDevice

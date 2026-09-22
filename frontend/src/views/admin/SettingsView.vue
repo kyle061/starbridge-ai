@@ -8423,8 +8423,69 @@
             </div>
           </div>
 
-          <!-- SMTP Settings - Only show when email verification is enabled -->
           <div v-if="form.email_verify_enabled" class="card">
+            <div class="space-y-5 p-6">
+              <div>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                  {{ t("admin.settings.emailProvider.title") }}
+                </h2>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {{ t("admin.settings.emailProvider.description") }}
+                </p>
+              </div>
+              <Select
+                v-model="form.email_provider"
+                data-testid="email-provider"
+                :options="[
+                  { value: 'smtp', label: t('admin.settings.emailProvider.smtp') },
+                  { value: 'brevo', label: 'Brevo API' },
+                ]"
+              />
+              <template v-if="form.email_provider === 'brevo'">
+                <div>
+                  <label for="brevo-api-key" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t("admin.settings.brevo.apiKey") }}
+                  </label>
+                  <input
+                    id="brevo-api-key"
+                    v-model="form.brevo_api_key"
+                    type="password"
+                    class="input"
+                    autocomplete="new-password"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    :placeholder="form.brevo_api_key_configured ? '********' : t('admin.settings.brevo.apiKeyPlaceholder')"
+                  />
+                  <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{ form.brevo_api_key_configured ? t("admin.settings.resend.apiKeyConfiguredHint") : t("admin.settings.brevo.apiKeyHint") }}
+                    <a href="https://app.brevo.com/settings/keys/api" target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:underline">
+                      {{ t("admin.settings.brevo.openConsole") }}
+                    </a>
+                  </p>
+                </div>
+                <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <div>
+                    <label for="brevo-from-email" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {{ t("admin.settings.smtp.fromEmail") }}
+                    </label>
+                    <input id="brevo-from-email" v-model="form.brevo_from_email" type="email" class="input" placeholder="no-reply@example.com" />
+                  </div>
+                  <div>
+                    <label for="brevo-from-name" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {{ t("admin.settings.smtp.fromName") }}
+                    </label>
+                    <input id="brevo-from-name" v-model="form.brevo_from_name" type="text" class="input" placeholder="Starbridge AI" />
+                  </div>
+                </div>
+                <p class="text-xs text-amber-600 dark:text-amber-400">
+                  {{ t("admin.settings.brevo.senderHint") }}
+                </p>
+              </template>
+            </div>
+          </div>
+
+          <!-- SMTP remains available when selected as the primary channel. -->
+          <div v-if="form.email_verify_enabled && form.email_provider === 'smtp'" class="card">
             <div
               class="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-dark-700"
             >
@@ -8696,6 +8757,7 @@
                   </label>
                   <input
                     v-model="testEmailAddress"
+                    data-testid="test-email-recipient"
                     type="email"
                     class="input"
                     :placeholder="
@@ -8707,6 +8769,7 @@
                   <button
                     type="button"
                     @click="sendTestEmail"
+                    data-testid="test-primary-email"
                     :disabled="
                       sendingTestEmail || !testEmailAddress || loadFailed
                     "
@@ -8719,7 +8782,9 @@
                     {{
                       sendingTestEmail
                         ? t("admin.settings.testEmail.sending")
-                        : t("admin.settings.testEmail.sendTestEmail")
+                        : form.email_provider === 'brevo'
+                          ? t("admin.settings.brevo.testEmail")
+                          : t("admin.settings.emailProvider.testSmtp")
                     }}
                   </button>
                   <button
@@ -9741,6 +9806,7 @@ type SettingsForm = Omit<
   channel_monitor_hide_user_ranking: boolean;
   smtp_password: string;
   resend_api_key: string;
+  brevo_api_key: string;
   turnstile_secret_key: string;
   tencent_captcha_app_secret_key: string;
   tencent_captcha_cloud_secret_id: string;
@@ -9887,6 +9953,11 @@ const form = reactive<SettingsForm>({
   smtp_from_name: "",
   smtp_use_tls: true,
   resend_fallback_enabled: false,
+  email_provider: "smtp",
+  brevo_api_key: "",
+  brevo_api_key_configured: false,
+  brevo_from_email: "",
+  brevo_from_name: "Starbridge AI",
   resend_api_key: "",
   resend_api_key_configured: false,
   resend_from_email: "no-reply@mail.starbridaeai.top",
@@ -11167,6 +11238,7 @@ async function loadSettings() {
     registrationEmailSuffixWhitelistDraft.value = "";
     form.smtp_password = "";
     form.resend_api_key = "";
+    form.brevo_api_key = "";
     smtpPasswordManuallyEdited.value = false;
     form.turnstile_secret_key = "";
     form.tencent_captcha_app_secret_key = "";
@@ -11577,6 +11649,10 @@ async function saveSettings() {
       smtp_from_name: form.smtp_from_name,
       smtp_use_tls: form.smtp_use_tls,
       resend_fallback_enabled: form.resend_fallback_enabled,
+      email_provider: form.email_provider,
+      brevo_api_key: form.brevo_api_key || undefined,
+      brevo_from_email: form.brevo_from_email,
+      brevo_from_name: form.brevo_from_name,
       resend_api_key: form.resend_api_key || undefined,
       resend_from_email: form.resend_from_email,
       resend_from_name: form.resend_from_name,
@@ -11918,6 +11994,8 @@ async function saveSettings() {
     );
     registrationEmailSuffixWhitelistDraft.value = "";
     form.smtp_password = "";
+    form.brevo_api_key = "";
+    form.resend_api_key = "";
     smtpPasswordManuallyEdited.value = false;
     form.turnstile_secret_key = "";
     form.aliyun_captcha_access_key_secret = "";
@@ -12034,6 +12112,16 @@ async function sendTestEmail() {
 
   sendingTestEmail.value = true;
   try {
+    if (form.email_provider === "brevo") {
+      const result = await adminAPI.settings.sendTestBrevoEmail({
+        email: testEmailAddress.value,
+        brevo_api_key: form.brevo_api_key || undefined,
+        brevo_from_email: form.brevo_from_email,
+        brevo_from_name: form.brevo_from_name,
+      });
+      appStore.showSuccess(result.message || t("admin.settings.brevo.testEmailSent"));
+      return;
+    }
     const smtpPasswordForSend = smtpPasswordManuallyEdited.value
       ? form.smtp_password
       : "";

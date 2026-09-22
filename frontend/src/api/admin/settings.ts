@@ -499,6 +499,10 @@ export interface SystemSettings {
   smtp_from_name: string;
   smtp_use_tls: boolean;
   resend_fallback_enabled: boolean;
+  email_provider: "smtp" | "brevo";
+  brevo_api_key_configured: boolean;
+  brevo_from_email: string;
+  brevo_from_name: string;
   resend_api_key_configured: boolean;
   resend_from_email: string;
   resend_from_name: string;
@@ -847,6 +851,10 @@ export interface UpdateSettingsRequest {
   smtp_from_name?: string;
   smtp_use_tls?: boolean;
   resend_fallback_enabled?: boolean;
+  email_provider?: "smtp" | "brevo";
+  brevo_api_key?: string;
+  brevo_from_email?: string;
+  brevo_from_name?: string;
   resend_api_key?: string;
   resend_from_email?: string;
   resend_from_name?: string;
@@ -1146,6 +1154,23 @@ export interface SendTestResendEmailRequest {
   resend_api_key?: string;
   resend_from_email: string;
   resend_from_name: string;
+}
+
+export interface SendTestBrevoEmailRequest {
+  email: string;
+  brevo_api_key?: string;
+  brevo_from_email: string;
+  brevo_from_name: string;
+}
+
+export async function sendTestBrevoEmail(
+  request: SendTestBrevoEmailRequest,
+): Promise<{ message: string }> {
+  const { data } = await apiClient.post<{ message: string }>(
+    "/admin/settings/send-test-brevo",
+    request,
+  );
+  return data;
 }
 
 export async function sendTestResendEmail(
@@ -1599,6 +1624,7 @@ export const settingsAPI = {
   testSmtpConnection,
   sendTestEmail,
   sendTestResendEmail,
+  sendTestBrevoEmail,
   getEmailTemplates,
   getEmailTemplate,
   updateEmailTemplate,

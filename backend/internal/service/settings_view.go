@@ -38,6 +38,11 @@ type SystemSettings struct {
 	SMTPFrom               string
 	SMTPFromName           string
 	SMTPUseTLS             bool
+	EmailProvider          string
+	BrevoAPIKey            string
+	BrevoAPIKeyConfigured  bool
+	BrevoFrom              string
+	BrevoFromName          string
 	ResendFallbackEnabled  bool
 	ResendAPIKey           string
 	ResendAPIKeyConfigured bool

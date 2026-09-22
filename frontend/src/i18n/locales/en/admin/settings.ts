@@ -932,9 +932,24 @@ export default {
         useTls: 'Use TLS',
         useTlsHint: 'Enable TLS encryption for SMTP connection'
       },
+      emailProvider: {
+        title: 'Primary Email Channel',
+        description: 'Choose the primary service for verification, password reset and notification emails. Test delivery before saving the switch.',
+        smtp: 'SMTP (QQ and other mailboxes)',
+        testSmtp: 'Test Primary SMTP'
+      },
+      brevo: {
+        apiKey: 'Brevo API Key',
+        apiKeyPlaceholder: 'Enter a real API key from your Brevo dashboard',
+        apiKeyHint: 'Use a Brevo API key, not a Resend key or a Brevo SMTP key.',
+        openConsole: 'Open Brevo key management',
+        senderHint: 'Verify your account and sender domain in Brevo first. Verification with another provider does not verify your domain in Brevo.',
+        testEmail: 'Test Primary Brevo',
+        testEmailSent: 'Brevo accepted the test email. Check your inbox and spam folder.'
+      },
       resend: {
         title: 'Resend Backup Channel',
-        description: 'QQ SMTP remains primary. Resend is used automatically only after primary delivery fails.',
+        description: 'Resend is used automatically only after the selected primary channel (SMTP or Brevo) fails.',
         enabled: 'Enable automatic Resend fallback',
         enabledHint: 'When disabled, Resend is not used automatically, but the test button remains available.',
         apiKey: 'Resend API Key',
@@ -946,7 +961,7 @@ export default {
         fromEmailPlaceholder: "no-reply{'@'}mail.starbridaeai.top",
         fromName: 'Backup From Name',
         fromNamePlaceholder: 'Starbridge AI',
-        senderHint: 'onboarding@resend.dev is only for initial tests to your Resend account email. Use an address on a verified domain for production.',
+        senderHint: "onboarding{'@'}resend.dev is only for initial tests to your Resend account email. Use an address on a verified domain for production.",
         testEmail: 'Test Resend Backup',
         testing: 'Testing...',
         testEmailSent: 'Resend backup test email sent successfully',
@@ -954,7 +969,7 @@ export default {
       },
       testEmail: {
         title: 'Send Test Email',
-        description: 'Use one recipient to test the primary SMTP and Resend backup channels separately',
+        description: 'Test the primary and Resend backup channels using the form values. Primary tests do not invoke fallback, so each channel can be verified separately.',
         recipientEmail: 'Recipient Email',
         recipientEmailPlaceholder: "test{'@'}example.com",
         sendTestEmail: 'Send Test Email',

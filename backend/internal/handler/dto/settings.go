@@ -58,6 +58,10 @@ type SystemSettings struct {
 	SMTPFromName           string `json:"smtp_from_name"`
 	SMTPUseTLS             bool   `json:"smtp_use_tls"`
 
+	EmailProvider          string `json:"email_provider"`
+	BrevoAPIKeyConfigured  bool   `json:"brevo_api_key_configured"`
+	BrevoFrom              string `json:"brevo_from_email"`
+	BrevoFromName          string `json:"brevo_from_name"`
 	ResendFallbackEnabled  bool   `json:"resend_fallback_enabled"`
 	ResendAPIKeyConfigured bool   `json:"resend_api_key_configured"`
 	ResendFrom             string `json:"resend_from_email"`

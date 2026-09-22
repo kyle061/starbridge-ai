@@ -104,6 +104,18 @@ func diffSettings(before *service.SystemSettings, after *service.SystemSettings,
 	if before.ResendFallbackEnabled != after.ResendFallbackEnabled {
 		changed = append(changed, "resend_fallback_enabled")
 	}
+	if before.EmailProvider != after.EmailProvider {
+		changed = append(changed, "email_provider")
+	}
+	if req.BrevoAPIKey != "" {
+		changed = append(changed, "brevo_api_key")
+	}
+	if before.BrevoFrom != after.BrevoFrom {
+		changed = append(changed, "brevo_from_email")
+	}
+	if before.BrevoFromName != after.BrevoFromName {
+		changed = append(changed, "brevo_from_name")
+	}
 	if req.ResendAPIKey != "" {
 		changed = append(changed, "resend_api_key")
 	}
