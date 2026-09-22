@@ -301,8 +301,12 @@ export default {
       retry: '重试打开'
     },
     ccsCodex: {
-      title: '绑定 CCS · 保留原配置',
-      description: 'CCS 的快捷导入会重新生成 Codex 配置。已有配置请编辑原供应商，只更新本站接口和密钥。',
+      title: '绑定 CCS',
+      description: '选择保留已有参数，或直接导入一份新配置。',
+      modeLabel: '配置方式',
+      modes: { preserve: '保留原配置', new: '不保留，直接导入' },
+      newConfigHint: '将使用 CCS 默认模板创建新供应商，不沿用原配置中的自定义参数。点击下方按钮打开 CCS 完成导入。',
+      importNew: '直接导入 CCS',
       step1: '打开 CCS → Codex，编辑原来使用的供应商；先备份当前配置。',
       step2: '将接口地址和 API Key 替换为本站信息。已有 experimental_bearer_token 时，更新该字段中的密钥。',
       step3: '保存后重新打开 Codex。保留原 model_provider 和对应的供应商区块名称，不要删除原供应商。',

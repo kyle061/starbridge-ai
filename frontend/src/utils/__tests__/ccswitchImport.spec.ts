@@ -41,6 +41,22 @@ describe('ccswitchImport utils', () => {
   })
 
   it.each([
+    ['openai', OPENAI_CC_SWITCH_CODEX_MODEL],
+    ['composite', OPENAI_CC_SWITCH_CODEX_MODEL],
+    ['deepseek', DEEPSEEK_CC_SWITCH_CODEX_MODEL]
+  ] as const)('allows %s direct import when a new config is explicitly chosen', (platform, model) => {
+    const params = paramsFromDeeplink(buildCcSwitchImportDeeplink({
+      ...baseInput, providerName: 'starbridaeai', platform, clientType: 'claude', codexImportMode: 'new'
+    }))
+    expect(params.get('app')).toBe('codex')
+    expect(params.get('model')).toBe(model)
+    expect(params.get('name')).toBe('starbridaeai')
+    expect(params.get('endpoint')).toBe('https://api.example.com/v1')
+    expect(params.get('apiKey')).toBe(baseInput.apiKey)
+    expect(atob(params.get('usageScript') || '')).toBe(baseInput.usageScript)
+  })
+
+  it.each([
     'https://api.example.com',
     'https://api.example.com/',
     'https://api.example.com/v1',

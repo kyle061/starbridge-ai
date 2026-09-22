@@ -460,6 +460,32 @@ describe('user KeysView column settings', () => {
     } finally { open.mockRestore() }
   })
 
+  it.each(['openai', 'composite', 'deepseek'] as const)('allows %s CCS import without an existing config after choosing new', async (platform) => {
+    const row = { ...createApiKey(), group: { platform } } as ApiKey
+    listKeys.mockResolvedValue({ items: [row], total: 1, page: 1, page_size: 20 })
+    const open = vi.spyOn(window, 'open').mockReturnValue(null)
+    try {
+      const wrapper = await mountView()
+      await getButtonByText(wrapper, 'Import to CC Switch').trigger('click')
+      await getButtonByText(wrapper, 'keys.ccsCodex.modes.new').trigger('click')
+      expect(wrapper.find('#ccs-existing-config').exists()).toBe(false)
+      expect(open).not.toHaveBeenCalled()
+      await getButtonByText(wrapper, 'keys.ccsCodex.importNew').trigger('click')
+      expect(open).toHaveBeenCalledTimes(1)
+      const [link, target] = open.mock.calls[0]
+      const params = new URLSearchParams(String(link).split('?')[1])
+      expect(target).toBe('_blank')
+      expect(params.get('app')).toBe('codex')
+      expect(params.get('name')).toBe('starbridaeai')
+      expect(params.get('apiKey')).toBe(row.key)
+      expect(params.get('endpoint')).toBe(`${window.location.origin}/v1`)
+      expect(wrapper.find('textarea[aria-label="keys.ccsImportFallback.linkLabel"]').exists()).toBe(false)
+      await getButtonByText(wrapper, 'Import to CC Switch').trigger('click')
+      expect(wrapper.find('#ccs-existing-config').exists()).toBe(true)
+      wrapper.unmount()
+    } finally { open.mockRestore() }
+  })
+
   it('opens CCS in a new tab without showing a fallback dialog', async () => {
     vi.useFakeTimers()
     const openedWindow = { closed: false } as unknown as Window

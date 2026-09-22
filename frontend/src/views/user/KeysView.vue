@@ -591,6 +591,7 @@
       :api-key="pendingCcsRow?.key || ''"
       :endpoint="ccsCodexEndpoint"
       @close="closeCcsCodexBinding"
+      @import-new="importNewCcsCodexConfig"
     />
 
     <!-- CCS Client Selection Dialog for Antigravity -->
@@ -1417,8 +1418,8 @@ const importToCcswitch = (row: ApiKey) => {
   const platform = row.group?.platform || 'anthropic'
 
   // CCS regenerates Codex TOML from deeplinks (including model_provider), even
-  // with an inline config payload. Preserve existing settings by editing the
-  // existing provider instead of sending this lossy import.
+  // with an inline config payload. Let users choose whether to keep their
+  // existing settings or explicitly import a fresh template.
   if (resolveCcSwitchImportConfig(platform, 'claude', effectiveApiBaseUrl.value).app === 'codex') {
     pendingCcsRow.value = row
     showCcsCodexBinding.value = true
@@ -1440,13 +1441,19 @@ const closeCcsCodexBinding = () => {
   pendingCcsRow.value = null
 }
 
+const importNewCcsCodexConfig = () => {
+  if (!showCcsCodexBinding.value || !pendingCcsRow.value) return
+  executeCcsImport(pendingCcsRow.value, 'claude', 'new')
+  closeCcsCodexBinding()
+}
+
 const launchCcsImport = (deeplink: string) => {
   // The browser/OS handles the custom protocol. When CCS is not installed,
   // the browser simply ignores the URL; no diagnostic dialog is shown.
   window.open(deeplink, '_blank')
 }
 
-const executeCcsImport = (row: ApiKey, clientType: CcSwitchClientType) => {
+const executeCcsImport = (row: ApiKey, clientType: CcSwitchClientType, codexImportMode?: 'new') => {
   const baseUrl = effectiveApiBaseUrl.value
   const platform = row.group?.platform || 'anthropic'
 
@@ -1474,7 +1481,8 @@ const executeCcsImport = (row: ApiKey, clientType: CcSwitchClientType) => {
     clientType,
     providerName,
     apiKey: row.key,
-    usageScript
+    usageScript,
+    codexImportMode
   })
 
   launchCcsImport(deeplink)

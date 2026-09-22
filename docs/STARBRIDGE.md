@@ -101,7 +101,7 @@ docker compose logs --tail=100 caddy
 
 在 **API 密钥** 列表的操作栏点击 **导入到 CC Switch**：
 
-- OpenAI、Composite 和 DeepSeek 的 Codex 绑定会显示「保留原配置」操作指南。编辑 CCS 中已有的供应商，仅更新接口地址和密钥；不再发送会重建配置、改变 `model_provider` 的 Codex 快捷导入链接。
+- OpenAI、Composite 和 DeepSeek 的 Codex 绑定提供「保留原配置」与「不保留，直接导入」两种选择。默认保留配置，编辑 CCS 中已有的供应商，仅更新接口地址和密钥；选择不保留后，无需粘贴旧配置，可直接唤起 CCS 导入新供应商。新配置采用 CCS 默认模板，不继承旧参数。
 - 可粘贴原供应商的完整 `config.toml`，在浏览器内生成仅更新 `base_url` / `experimental_bearer_token` 的结果，再复制回 CCS 原供应商。原有 `model_provider`、`supports_websockets`、`requires_openai_auth`、模型、MCP、项目、注释等保持不变。配置不上传、不持久保存，关闭窗口即清空。环境变量、认证命令、请求头或当前档案覆盖供应商的复杂配置需沿用原方式手动更新。
 - Anthropic、Gemini、Grok 和 Antigravity 会按对应客户端生成配置；Antigravity 会先让你选择 Claude Code 或 Gemini CLI。
 - 其他客户端的导入链接会同时配置 `GET /v1/usage` 用量查询，每 30 分钟由 CCS 自动刷新。查询结果包含余额、请求数和 Token 统计；不会因为查询本身扣费。

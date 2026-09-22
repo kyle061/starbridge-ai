@@ -296,8 +296,12 @@ export default {
       retry: 'Retry opening'
     },
     ccsCodex: {
-      title: 'Bind CCS · Keep existing settings',
-      description: 'CCS quick import regenerates Codex settings. Edit your existing provider to update only the gateway URL and API key.',
+      title: 'Bind CCS',
+      description: 'Choose whether to keep your existing settings or import a new configuration.',
+      modeLabel: 'Configuration mode',
+      modes: { preserve: 'Keep existing settings', new: 'Import without keeping settings' },
+      newConfigHint: 'Creates a new provider using the CCS default template, without carrying over custom settings. Use the button below to open CCS and complete the import.',
+      importNew: 'Import directly to CCS',
       step1: 'Open CCS → Codex and edit the provider you already use. Back up its current configuration first.',
       step2: 'Replace its endpoint and API key with this gateway’s values. If experimental_bearer_token exists, update the key in that field.',
       step3: 'Save and reopen Codex. Keep model_provider and its matching provider section name, and retain the existing provider.',
