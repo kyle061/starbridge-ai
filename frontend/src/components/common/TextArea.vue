@@ -1,18 +1,20 @@
 <template>
   <div class="w-full">
-    <label v-if="label" :for="id" class="input-label mb-1.5 block">
+    <label v-if="label" :for="fieldId" class="input-label mb-1.5 block">
       {{ label }}
-      <span v-if="required" class="text-red-500">*</span>
+      <span v-if="required" class="text-red-500" aria-hidden="true">*</span>
     </label>
     <div class="relative">
       <textarea
-        :id="id"
+        :id="fieldId"
         ref="textAreaRef"
         :value="modelValue"
         :disabled="disabled"
         :required="required"
         :placeholder="placeholderText"
         :readonly="readonly"
+        :aria-invalid="error ? 'true' : 'false'"
+        :aria-describedby="feedbackId"
         :rows="rows"
         :class="[
           'input w-full min-h-[80px] transition-all duration-200 resize-y',
@@ -26,10 +28,11 @@
       ></textarea>
     </div>
     <!-- Hint / Error Text -->
-    <p v-if="error" class="input-error-text mt-1.5">
+    <p v-if="error" :id="feedbackId" class="input-error-text mt-1.5" role="alert">
+      <Icon name="exclamationCircle" size="sm" aria-hidden="true" />
       {{ error }}
     </p>
-    <p v-else-if="hint" class="input-hint mt-1.5">
+    <p v-else-if="hint" :id="feedbackId" class="input-hint mt-1.5">
       {{ hint }}
     </p>
   </div>
@@ -37,6 +40,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import Icon from '@/components/icons/Icon.vue'
 
 interface Props {
   modelValue: string | null | undefined
@@ -67,6 +71,9 @@ const emit = defineEmits<{
 
 const textAreaRef = ref<HTMLTextAreaElement | null>(null)
 const placeholderText = computed(() => props.placeholder || '')
+const generatedId = `textarea-${Math.random().toString(36).slice(2, 10)}`
+const fieldId = computed(() => props.id || generatedId)
+const feedbackId = computed(() => `${fieldId.value}-feedback`)
 
 const onInput = (event: Event) => {
   const value = (event.target as HTMLTextAreaElement).value

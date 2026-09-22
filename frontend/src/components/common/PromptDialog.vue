@@ -1,7 +1,17 @@
 <template>
   <BaseDialog :show="show" :title="title" width="narrow" @close="handleCancel">
-    <form class="space-y-4" @submit.prevent="handleConfirm">
-      <p class="text-sm text-gray-600 dark:text-gray-400">{{ message }}</p>
+    <form class="space-y-5" @submit.prevent="handleConfirm">
+      <div
+        class="flex items-start gap-3 rounded-2xl border border-primary-200/80 bg-primary-50/80 px-4 py-3.5 dark:border-primary-900/60 dark:bg-primary-950/25"
+      >
+        <span
+          class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-100 text-primary-600 dark:bg-primary-900/50 dark:text-primary-300"
+          aria-hidden="true"
+        >
+          <Icon name="infoCircle" size="md" />
+        </span>
+        <p class="pt-1 text-sm leading-6 text-gray-700 dark:text-gray-300">{{ message }}</p>
+      </div>
       <div>
         <label :for="inputId" class="sr-only">{{ message }}</label>
         <input
@@ -17,10 +27,10 @@
     </form>
 
     <template #footer>
-      <div class="flex justify-end space-x-3">
+      <div class="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button
           type="button"
-          class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:border-dark-600 dark:bg-dark-700 dark:text-gray-200 dark:hover:bg-dark-600 dark:focus:ring-offset-dark-800"
+          class="btn btn-secondary btn-md w-full sm:w-auto"
           @click="handleCancel"
         >
           {{ cancelText }}
@@ -28,10 +38,8 @@
         <button
           type="button"
           :class="[
-            'rounded-md px-4 py-2 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-dark-800',
-            danger
-              ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
-              : 'bg-primary-600 hover:bg-primary-700 focus:ring-primary-500'
+            'btn btn-md w-full sm:w-auto',
+            danger ? 'btn-danger' : 'btn-primary'
           ]"
           @click="handleConfirm"
         >
@@ -46,6 +54,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import BaseDialog from './BaseDialog.vue'
+import Icon from '@/components/icons/Icon.vue'
 
 interface Props {
   show: boolean

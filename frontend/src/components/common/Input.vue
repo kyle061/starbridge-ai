@@ -1,8 +1,8 @@
 <template>
   <div class="w-full">
-    <label v-if="label" :for="id" class="input-label mb-1.5 block">
+    <label v-if="label" :for="fieldId" class="input-label mb-1.5 block">
       {{ label }}
-      <span v-if="required" class="text-red-500">*</span>
+      <span v-if="required" class="text-red-500" aria-hidden="true">*</span>
     </label>
     <div class="relative">
       <!-- Prefix Icon Slot -->
@@ -14,7 +14,7 @@
       </div>
 
       <input
-        :id="id"
+        :id="fieldId"
         ref="inputRef"
         :type="type"
         :value="modelValue"
@@ -23,6 +23,8 @@
         :placeholder="placeholderText"
         :autocomplete="autocomplete"
         :readonly="readonly"
+        :aria-invalid="error ? 'true' : 'false'"
+        :aria-describedby="feedbackId"
         :class="[
           'input w-full transition-all duration-200',
           $slots.prefix ? 'pl-11' : '',
@@ -46,10 +48,11 @@
       </div>
     </div>
     <!-- Hint / Error Text -->
-    <p v-if="error" class="input-error-text mt-1.5">
+    <p v-if="error" :id="feedbackId" class="input-error-text mt-1.5" role="alert">
+      <Icon name="exclamationCircle" size="sm" aria-hidden="true" />
       {{ error }}
     </p>
-    <p v-else-if="hint" class="input-hint mt-1.5">
+    <p v-else-if="hint" :id="feedbackId" class="input-hint mt-1.5">
       {{ hint }}
     </p>
   </div>
@@ -57,6 +60,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import Icon from '@/components/icons/Icon.vue'
 
 interface Props {
   modelValue: string | number | null | undefined
@@ -89,6 +93,9 @@ const emit = defineEmits<{
 
 const inputRef = ref<HTMLInputElement | null>(null)
 const placeholderText = computed(() => props.placeholder || '')
+const generatedId = `input-${Math.random().toString(36).slice(2, 10)}`
+const fieldId = computed(() => props.id || generatedId)
+const feedbackId = computed(() => `${fieldId.value}-feedback`)
 
 const onInput = (event: Event) => {
   const value = (event.target as HTMLInputElement).value
