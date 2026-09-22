@@ -115,6 +115,28 @@ export default {
   // User Subscriptions Page
   userSubscriptions: {
     title: 'My Subscriptions',
+    guide: {
+      title: 'How to use your subscription',
+      show: 'Show instructions',
+      hide: 'Hide instructions',
+      description: 'Once your subscription is active, connect your client with an API key for the matching group. Purchasing or receiving a subscription does not create a key automatically.',
+      step1: {
+        title: 'Create a subscription key',
+        description: 'Open API Keys, create a key, and select the subscription group included with your plan. Find the group name in My Subscriptions.'
+      },
+      step2: {
+        title: 'Configure your client',
+        description: 'Click Use Key, choose Codex or another client, and copy the configuration with the site endpoint and API key. If CCS is installed, you can also click Import to CCS. Choose a model included in your plan.'
+      },
+      step3: {
+        title: 'Make a request and view usage',
+        description: 'Send a message from your client, then open Usage to view the request and token counts. Refresh My Subscriptions to see consumed and remaining quota.'
+      },
+      billingHint: 'Keys belonging to the same user and subscription group share that subscription quota. Subscription group requests consume subscription quota; balance group requests charge your account balance.',
+      limitHint: 'Total quota does not reset daily. Requests stop when the subscription expires or its quota runs out, without switching to balance billing. Renew your subscription or ask an administrator to add quota.',
+      openKeys: 'Open API Keys',
+      openUsage: 'View Usage'
+    },
     description: 'View your subscription plans and usage',
     noActiveSubscriptions: 'No Active Subscriptions',
     noActiveSubscriptionsDesc:

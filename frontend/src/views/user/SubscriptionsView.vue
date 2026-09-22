@@ -1,6 +1,7 @@
 <template>
   <AppLayout>
     <div class="space-y-6">
+      <SubscriptionUsageGuide />
       <div class="flex justify-end"><button type="button" class="btn btn-secondary btn-sm" :disabled="loading" @click="loadSubscriptions">{{ t('common.refresh') }}</button></div>
       <!-- Loading State -->
       <div v-if="loading" class="flex justify-center py-12">
@@ -239,6 +240,7 @@ import type { UserSubscription } from '@/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
 import SubscriptionQuotaSummary from '@/components/common/SubscriptionQuotaSummary.vue'
+import SubscriptionUsageGuide from '@/components/common/SubscriptionUsageGuide.vue'
 import { formatDateTimeToMinute } from '@/utils/format'
 import { platformBorderClass, platformBadgeClass, platformButtonClass, platformLabel } from '@/utils/platformColors'
 import {

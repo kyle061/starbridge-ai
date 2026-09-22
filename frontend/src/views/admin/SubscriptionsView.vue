@@ -2,6 +2,9 @@
   <AppLayout>
     <TablePageLayout>
       <template #filters>
+        <p class="mb-4 rounded-xl border border-primary-100 bg-primary-50/50 p-3 text-sm leading-6 text-gray-600 dark:border-primary-900/50 dark:bg-primary-950/20 dark:text-gray-300">
+          {{ t('admin.subscriptions.guide.overview') }}
+        </p>
         <!-- Top Toolbar: Left (search + filters) / Right (actions) -->
         <div class="flex flex-wrap items-start justify-between gap-4">
           <!-- Left: Fuzzy user search + filters (wrap to multiple lines) -->
@@ -157,7 +160,8 @@
               class="btn btn-secondary"
               :title="t('admin.subscriptions.guide.showGuide')"
             >
-              <Icon name="questionCircle" size="md" />
+              <Icon name="questionCircle" size="md" class="mr-2" />
+              {{ t('admin.subscriptions.guide.showGuide') }}
             </button>
             <button @click="showAssignModal = true" class="btn btn-primary">
               <Icon name="plus" size="md" class="mr-2" />
@@ -846,6 +850,18 @@
               </div>
             </div>
 
+            <div class="mb-5">
+              <h3 class="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+                <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-bold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">4</span>
+                {{ t('admin.subscriptions.guide.step4.title') }}
+              </h3>
+              <ol class="ml-8 list-decimal space-y-1 text-sm leading-6 text-gray-600 dark:text-gray-300">
+                <li>{{ t('admin.subscriptions.guide.step4.line1') }}</li>
+                <li>{{ t('admin.subscriptions.guide.step4.line2') }}</li>
+                <li>{{ t('admin.subscriptions.guide.step4.line3') }}</li>
+              </ol>
+            </div>
+
             <!-- Tip -->
             <div class="rounded-lg bg-blue-50 p-3 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
               {{ t('admin.subscriptions.guide.tip') }}
@@ -912,6 +928,7 @@ interface GroupOption {
 const showGuideModal = ref(false)
 
 const guideActionRows = computed(() => [
+  { action: t('admin.subscriptions.editQuota'), desc: t('admin.subscriptions.guide.actions.quotaDesc') },
   { action: t('admin.subscriptions.guide.actions.adjust'), desc: t('admin.subscriptions.guide.actions.adjustDesc') },
   { action: t('admin.subscriptions.guide.actions.resetQuota'), desc: t('admin.subscriptions.guide.actions.resetQuotaDesc') },
   { action: t('admin.subscriptions.guide.actions.revoke'), desc: t('admin.subscriptions.guide.actions.revokeDesc') }

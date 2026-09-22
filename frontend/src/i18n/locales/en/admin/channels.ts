@@ -791,29 +791,37 @@ export default {
         "Restore the subscription for '{user}'? If the original subscription has expired, it will be restored as expired.",
       guide: {
         title: 'Subscription Management Guide',
-        subtitle: 'Subscription mode lets you assign time-based usage quotas to users, with daily/weekly/monthly limits. Follow these steps to get started.',
+        subtitle: 'Assign validity and total quota, then ask the user to create an API key for the matching group. Total quota does not reset daily. Daily, weekly and monthly limits are optional additional controls.',
+        overview: 'How it works: assign a subscription using plan settings or a custom quota and validity. The user creates an API key for the same subscription group, then uses Use Key to configure a client. View consumed quota here or in My Subscriptions after a request.',
         showGuide: 'Usage Guide',
         step1: {
           title: 'Create a Subscription Group',
           line1: 'Go to "Group Management" page, click "Create Group"',
-          line2: 'Set billing type to "Subscription", configure daily/weekly/monthly quota limits',
-          line3: 'Save the group and ensure its status is "Active"',
+          line2: 'Set billing type to "Subscription" and choose the models included in the plan. Daily, weekly and monthly limits are optional',
+          line3: 'Link available upstream accounts, save the group and ensure its status is "Active"',
           link: 'Go to Group Management'
         },
         step2: {
           title: 'Assign Subscription to User',
           line1: 'Click the "Assign Subscription" button in the top right',
           line2: 'Search for a user by email and select them',
-          line3: 'Choose a subscription group, set validity days, then click "Assign"'
+          line3: 'Choose a subscription group, apply plan settings or enter total quota and validity, then click "Assign"'
         },
         step3: {
           title: 'Manage Existing Subscriptions'
         },
+        step4: {
+          title: 'Help the user get started',
+          line1: 'The user opens API Keys and creates a key for the same subscription group. Assigning a subscription does not create a key automatically.',
+          line2: 'Click Use Key to copy the client configuration, use the site endpoint and this key, and select a model included in the plan.',
+          line3: 'Send a message, view the request in Usage, and refresh My Subscriptions to see quota consumption. Requests stop when the subscription expires or its quota runs out, without switching to balance billing.'
+        },
         actions: {
+          quotaDesc: 'Change total quota while preserving consumed quota and expiry. Quota tracking for legacy subscriptions starts after a total is set',
           adjust: 'Adjust',
           adjustDesc: 'Extend or shorten the subscription validity period',
           resetQuota: 'Reset Quota',
-          resetQuotaDesc: 'Reset daily/weekly/monthly usage to zero',
+          resetQuotaDesc: 'Reset daily/weekly/monthly window usage only; this does not restore the total subscription quota',
           revoke: 'Revoke',
           revokeDesc: 'Immediately terminate the subscription (restorable from the revoked list)'
         },

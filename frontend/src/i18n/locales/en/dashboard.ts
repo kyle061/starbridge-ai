@@ -67,10 +67,10 @@ export default {
   // API Keys
   keys: {
     prepaidBalance: 'Account token credit: ${balance} USD',
-    prepaidPurchaseRequired: 'Top up through an administrator or redeem code. Once credited, you can create a key.',
-    prepaidReady: 'All API keys share this account balance and are charged for actual token usage.',
-    prepaidPaused: 'The account balance is exhausted. New requests for all API keys are paused until a top-up restores a positive balance.',
-    prepaidLifetimeHint: 'Creating a key does not assign a separate quota. Balance changes sync to every key, and new requests pause at zero.',
+    prepaidPurchaseRequired: 'Top up through an administrator or redeem code to use balance groups. With an active subscription, you can create a key for its subscription group.',
+    prepaidReady: 'Balance group keys share your account balance and charge for actual requests. Subscription group keys consume the matching subscription quota.',
+    prepaidPaused: 'Your balance is exhausted, so new balance group requests are paused until you top up. Subscription groups follow their own validity and remaining quota.',
+    prepaidLifetimeHint: 'Keys do not need a separate quota. Balance groups share the account balance and pause at zero. Subscription groups share their subscription quota and pause when it expires or runs out.',
     prepaidAccessUnavailable: 'Balance status is unavailable. Refresh to retry.',
     purchaseBalance: 'Redeem credit',
     renewBalance: 'Redeem credit',

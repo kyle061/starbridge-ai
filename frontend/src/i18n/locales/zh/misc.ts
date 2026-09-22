@@ -113,6 +113,28 @@ export default {
   // User Subscriptions Page
   userSubscriptions: {
     title: '我的订阅',
+    guide: {
+      title: '订阅使用方式',
+      show: '展开说明',
+      hide: '收起说明',
+      description: '订阅生效后，使用对应分组的 API 密钥连接客户端。购买或分配订阅不会自动生成密钥。',
+      step1: {
+        title: '创建订阅密钥',
+        description: '进入「API 密钥」，点击创建密钥，选择与套餐对应的订阅分组。分组名称可在「我的订阅」中查看。'
+      },
+      step2: {
+        title: '配置客户端',
+        description: '点击「使用密钥」选择 Codex 或其他客户端，复制包含本站接口地址和密钥的配置。已安装 CCS 时也可点击「导入到 CCS」。模型须在套餐支持范围内。'
+      },
+      step3: {
+        title: '调用并查看消耗',
+        description: '在客户端发送一条消息，再到「使用记录」查看模型调用和 Token 用量；返回「我的订阅」点击刷新，即可查看已消耗和剩余额度。'
+      },
+      billingHint: '扣费规则：同一账号在同一订阅分组下的多个密钥共享该订阅额度。订阅分组的调用扣订阅额度，普通余额分组的调用扣账户余额。',
+      limitHint: '总额度不会每天重置。订阅到期或额度用完后，该订阅的调用会停止，不会自动改扣余额；请续费或联系管理员补充额度。',
+      openKeys: '前往 API 密钥',
+      openUsage: '查看使用记录'
+    },
     description: '查看您的订阅计划和用量',
     noActiveSubscriptions: '暂无有效订阅',
     noActiveSubscriptionsDesc: '您没有任何有效订阅。请联系管理员获取订阅。',

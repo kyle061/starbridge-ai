@@ -67,10 +67,10 @@ export default {
   // API Keys
   keys: {
     prepaidBalance: '账户可用 Token 额度：${balance} USD',
-    prepaidPurchaseRequired: '请通过后台或兑换码充值，余额到账后即可创建 Key。',
-    prepaidReady: '所有 API Key 共用此账户余额，按实际 Token 用量扣除。',
-    prepaidPaused: '账户余额已耗尽，所有 API Key 的新请求已暂停。充值到账且余额恢复为正后自动恢复。',
-    prepaidLifetimeHint: '创建 Key 不会分配独立额度，余额变化会同步到所有 Key；余额为 0 时自动暂停请求。',
+    prepaidPurchaseRequired: '使用普通余额分组，请先通过后台或兑换码充值；已有有效订阅时，可创建对应订阅分组的密钥。',
+    prepaidReady: '普通余额分组的密钥共用账户余额，按实际调用扣费；订阅分组的密钥消耗对应订阅额度。',
+    prepaidPaused: '账户余额已耗尽，普通余额分组的新请求已暂停，充值后恢复。订阅分组按对应订阅的有效期与剩余额度使用。',
+    prepaidLifetimeHint: '创建密钥无需另设额度。普通分组同步账户余额，余额为 0 时暂停；订阅分组共享对应订阅额度，到期或用完后暂停。',
     prepaidAccessUnavailable: '暂时无法查询充值状态，请刷新后重试。',
     purchaseBalance: '兑换码充值',
     renewBalance: '兑换码续充',
