@@ -158,7 +158,7 @@ export default {
         },
       },
       emailTabDisabledTitle: '邮箱验证未启用',
-      emailTabDisabledHint: '请在「安全与认证」选项卡中启用邮箱验证后，再配置 SMTP 设置。',
+      emailTabDisabledHint: '注册邮箱验证已关闭。邮件通道仍可用于密码重置和系统通知，已保存的发件配置继续保留。',
       registration: {
         title: '注册设置',
         description: '控制用户注册和验证',
@@ -969,10 +969,12 @@ export default {
         fromEmailPlaceholder: "no-reply{'@'}mail.starbridaeai.top",
         fromName: '备用发件人名称',
         fromNamePlaceholder: 'Starbridge AI',
-        senderHint: "onboarding{'@'}resend.dev 仅适合向 Resend 账号邮箱做初始测试；正式发送请使用已验证域名的地址。",
+        fillSender: '填入本站发件人',
+        fillSenderHint: '补齐空白字段后需保存设置；请先确认该发件域名已在 Resend 验证。',
+        senderHint: "正式发送请使用 Resend 已验证域名，并配置 SPF、DKIM 和 DMARC。onboarding{'@'}resend.dev 仅用于初始测试。",
         testEmail: '测试 Resend 备用',
         testing: '测试中...',
-        testEmailSent: 'Resend 备用测试邮件发送成功',
+        testEmailSent: 'Resend 已接受测试邮件，请检查收件箱和垃圾邮件文件夹',
         testEmailFailed: 'Resend 备用测试邮件发送失败'
       },
       testEmail: {

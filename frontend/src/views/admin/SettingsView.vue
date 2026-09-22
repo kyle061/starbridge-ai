@@ -8337,7 +8337,7 @@
             </div>
           </div>
 
-          <div v-if="form.email_verify_enabled" class="card">
+          <div class="card">
             <div class="space-y-5 p-6">
               <div>
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
@@ -8400,7 +8400,7 @@
           </div>
 
           <!-- SMTP remains available when selected as the primary channel. -->
-          <div v-if="form.email_verify_enabled && form.email_provider === 'smtp'" class="card">
+          <div v-if="form.email_provider === 'smtp'" class="card">
             <div
               class="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-dark-700"
             >
@@ -8563,8 +8563,8 @@
             </div>
           </div>
 
-          <!-- Resend fallback - Only show when email verification is enabled -->
-          <div v-if="form.email_verify_enabled" class="card">
+          <!-- Mail channels also serve password resets and notifications. -->
+          <div class="card">
             <div
               class="border-b border-gray-100 px-6 py-4 dark:border-dark-700"
             >
@@ -8593,11 +8593,13 @@
               >
                 <div class="md:col-span-2">
                   <label
+                    for="resend-api-key"
                     class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
                   >
                     {{ t("admin.settings.resend.apiKey") }}
                   </label>
                   <input
+                    id="resend-api-key"
                     v-model="form.resend_api_key"
                     type="password"
                     class="input"
@@ -8621,11 +8623,13 @@
                 </div>
                 <div>
                   <label
+                    for="resend-from-email"
                     class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
                   >
                     {{ t("admin.settings.resend.fromEmail") }}
                   </label>
                   <input
+                    id="resend-from-email"
                     v-model="form.resend_from_email"
                     type="email"
                     class="input"
@@ -8634,11 +8638,13 @@
                 </div>
                 <div>
                   <label
+                    for="resend-from-name"
                     class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
                   >
                     {{ t("admin.settings.resend.fromName") }}
                   </label>
                   <input
+                    id="resend-from-name"
                     v-model="form.resend_from_name"
                     type="text"
                     class="input"
@@ -8646,14 +8652,28 @@
                   />
                 </div>
               </div>
+              <div v-if="!form.resend_from_email.trim() || !form.resend_from_name.trim()" class="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  data-testid="resend-fill-sender"
+                  class="btn btn-secondary btn-sm"
+                  :disabled="loadFailed"
+                  @click="fillResendSender"
+                >
+                  <Icon name="mail" size="sm" />
+                  {{ t("admin.settings.resend.fillSender") }}
+                </button>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ t("admin.settings.resend.fillSenderHint") }}
+                </p>
+              </div>
               <p class="text-xs text-amber-600 dark:text-amber-400">
                 {{ t("admin.settings.resend.senderHint") }}
               </p>
             </div>
           </div>
 
-          <!-- Send Test Email - Only show when email verification is enabled -->
-          <div v-if="form.email_verify_enabled" class="card">
+          <div class="card">
             <div
               class="border-b border-gray-100 px-6 py-4 dark:border-dark-700"
             >
@@ -8707,6 +8727,7 @@
                   <button
                     type="button"
                     @click="sendTestResendEmail"
+                    data-testid="test-resend-email"
                     :disabled="
                       sendingTestResendEmail ||
                       !testEmailAddress ||
@@ -9878,8 +9899,8 @@ const form = reactive<SettingsForm>({
   brevo_from_name: "Starbridge AI",
   resend_api_key: "",
   resend_api_key_configured: false,
-  resend_from_email: "no-reply@mail.starbridaeai.top",
-  resend_from_name: "Starbridge AI",
+  resend_from_email: "",
+  resend_from_name: "",
   // Cloudflare Turnstile
   turnstile_enabled: false,
   turnstile_site_key: "",
@@ -12040,6 +12061,15 @@ async function sendTestEmail() {
     );
   } finally {
     sendingTestEmail.value = false;
+  }
+}
+
+function fillResendSender() {
+  if (!form.resend_from_email.trim()) {
+    form.resend_from_email = "no-reply@mail.starbridaeai.top";
+  }
+  if (!form.resend_from_name.trim()) {
+    form.resend_from_name = form.site_name.trim() || "Starbridge AI";
   }
 }
 

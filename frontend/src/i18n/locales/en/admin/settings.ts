@@ -158,7 +158,7 @@ export default {
         },
       },
       emailTabDisabledTitle: 'Email Verification Not Enabled',
-      emailTabDisabledHint: 'Enable email verification in the Security tab to configure SMTP settings.',
+      emailTabDisabledHint: 'Registration email verification is off. Email channels remain available for password resets and notifications, and saved sender settings are retained.',
       registration: {
         title: 'Registration Settings',
         description: 'Control user registration and verification',
@@ -974,10 +974,12 @@ export default {
         fromEmailPlaceholder: "no-reply{'@'}mail.starbridaeai.top",
         fromName: 'Backup From Name',
         fromNamePlaceholder: 'Starbridge AI',
-        senderHint: "onboarding{'@'}resend.dev is only for initial tests to your Resend account email. Use an address on a verified domain for production.",
+        fillSender: 'Fill site sender',
+        fillSenderHint: 'Fills empty fields only. Verify the sender domain in Resend, then save settings to apply.',
+        senderHint: "Use a Resend-verified domain with SPF, DKIM and DMARC for production. onboarding{'@'}resend.dev is only for initial tests.",
         testEmail: 'Test Resend Backup',
         testing: 'Testing...',
-        testEmailSent: 'Resend backup test email sent successfully',
+        testEmailSent: 'Resend accepted the test email. Check your inbox and spam folder.',
         testEmailFailed: 'Failed to send Resend backup test email'
       },
       testEmail: {

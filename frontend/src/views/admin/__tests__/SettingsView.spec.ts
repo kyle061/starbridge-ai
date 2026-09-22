@@ -13,6 +13,7 @@ const {
   updateSettings,
   sendTestBrevoEmail,
   sendTestEmail,
+  sendTestResendEmail,
   getWebSearchEmulationConfig,
   updateWebSearchEmulationConfig,
   getAdminApiKey,
@@ -43,6 +44,7 @@ const {
   updateSettings: vi.fn(),
   sendTestBrevoEmail: vi.fn(),
   sendTestEmail: vi.fn(),
+  sendTestResendEmail: vi.fn(),
   getWebSearchEmulationConfig: vi.fn(),
   updateWebSearchEmulationConfig: vi.fn(),
   getAdminApiKey: vi.fn(),
@@ -92,6 +94,7 @@ vi.mock("@/api", () => ({
       updateSettings,
       sendTestBrevoEmail,
       sendTestEmail,
+      sendTestResendEmail,
       getWebSearchEmulationConfig,
       updateWebSearchEmulationConfig,
       getAdminApiKey,
@@ -850,6 +853,100 @@ describe("admin SettingsView payment visible method controls", () => {
     await wrapper.get('[data-testid="test-primary-email"]').trigger("click");
     await flushPromises();
     expect(sendTestBrevoEmail).toHaveBeenCalledWith(expect.objectContaining({ brevo_api_key: undefined }));
+    wrapper.unmount();
+  });
+
+  it("keeps email channels and tests available when registration verification is disabled", async () => {
+    getSettings.mockResolvedValueOnce({
+      ...baseSettingsResponse,
+      email_provider: "smtp",
+      resend_api_key_configured: true,
+      resend_from_email: "security@mail.example.com",
+      resend_from_name: "Example Security",
+    });
+    sendTestResendEmail.mockReset().mockResolvedValue({ message: "accepted" });
+    const wrapper = mountView();
+    await flushPromises();
+    await wrapper.get('#settings-tab-email').trigger("click");
+
+    expect(wrapper.get('[data-testid="email-provider"]').isVisible()).toBe(true);
+    expect(wrapper.get('#resend-from-email').isVisible()).toBe(true);
+    expect(wrapper.text()).toContain("admin.settings.smtp.title");
+    expect(wrapper.get('[data-testid="test-primary-email"]').isVisible()).toBe(true);
+    await wrapper.get('[data-testid="test-email-recipient"]').setValue("user@example.com");
+    await wrapper.get('[data-testid="test-resend-email"]').trigger("click");
+    await flushPromises();
+
+    expect(sendTestResendEmail).toHaveBeenCalledWith({
+      email: "user@example.com",
+      resend_api_key: undefined,
+      resend_from_email: "security@mail.example.com",
+      resend_from_name: "Example Security",
+    });
+    await wrapper.get('[data-testid="email-provider"]').setValue("brevo");
+    expect(wrapper.get('#brevo-from-email').isVisible()).toBe(true);
+    expect(wrapper.get('#resend-from-email').isVisible()).toBe(true);
+    expect(updateSettings).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it.each([
+    ["", "", "no-reply@mail.starbridaeai.top", "Example Site"],
+    ["security@mail.example.com", "", "security@mail.example.com", "Example Site"],
+    ["", "Custom Sender", "no-reply@mail.starbridaeai.top", "Custom Sender"],
+  ])("fills only missing Resend sender fields (%s, %s)", async (email, name, expectedEmail, expectedName) => {
+    getSettings.mockResolvedValueOnce({
+      ...baseSettingsResponse,
+      site_name: "Example Site",
+      resend_from_email: email,
+      resend_from_name: name,
+    });
+    const wrapper = mountView();
+    await flushPromises();
+    expect((wrapper.get('#resend-from-email').element as HTMLInputElement).value).toBe(email);
+    expect((wrapper.get('#resend-from-name').element as HTMLInputElement).value).toBe(name);
+    await wrapper.get('[data-testid="resend-fill-sender"]').trigger("click");
+    expect((wrapper.get('#resend-from-email').element as HTMLInputElement).value).toBe(expectedEmail);
+    expect((wrapper.get('#resend-from-name').element as HTMLInputElement).value).toBe(expectedName);
+    expect(updateSettings).not.toHaveBeenCalled();
+    await wrapper.find("form").trigger("submit.prevent");
+    await flushPromises();
+    expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({
+      resend_from_email: expectedEmail,
+      resend_from_name: expectedName,
+    }));
+    expect((wrapper.get('#resend-from-email').element as HTMLInputElement).value).toBe(expectedEmail);
+    expect((wrapper.get('#resend-from-name').element as HTMLInputElement).value).toBe(expectedName);
+    wrapper.unmount();
+  });
+
+  it("retains saved Resend sender details and configured key across save and reload", async () => {
+    const stored = {
+      ...baseSettingsResponse,
+      resend_api_key_configured: true,
+      resend_from_email: "security@mail.example.com",
+      resend_from_name: "Example Security",
+    };
+    getSettings.mockResolvedValue(stored);
+    updateSettings.mockResolvedValueOnce(stored);
+    let wrapper = mountView();
+    await flushPromises();
+    await wrapper.find("form").trigger("submit.prevent");
+    await flushPromises();
+    expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({
+      resend_api_key: undefined,
+      resend_from_email: stored.resend_from_email,
+      resend_from_name: stored.resend_from_name,
+    }));
+    expect((wrapper.get('#resend-from-email').element as HTMLInputElement).value).toBe(stored.resend_from_email);
+    wrapper.unmount();
+    wrapper = mountView();
+    await flushPromises();
+    expect((wrapper.get('#resend-from-email').element as HTMLInputElement).value).toBe(stored.resend_from_email);
+    expect((wrapper.get('#resend-from-name').element as HTMLInputElement).value).toBe(stored.resend_from_name);
+    expect((wrapper.get('#resend-api-key').element as HTMLInputElement).value).toBe("");
+    expect(wrapper.get('#resend-api-key').attributes('placeholder')).toBe("admin.settings.resend.apiKeyConfiguredPlaceholder");
+    expect(wrapper.find('[data-testid="resend-fill-sender"]').exists()).toBe(false);
     wrapper.unmount();
   });
 
