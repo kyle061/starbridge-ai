@@ -272,7 +272,7 @@ function formatUsage(used: number | undefined, limit: number | null | undefined)
 }
 
 function formatQuotaUsage(used: number | undefined, limit: number | null | undefined): string {
-  return `¥${formatSubscriptionQuota(used)}/¥${formatSubscriptionQuota(limit)}`
+  return `$${formatSubscriptionQuota(used)}/$${formatSubscriptionQuota(limit)}`
 }
 
 function formatDaysRemaining(expiresAt: string): string {

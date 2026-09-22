@@ -293,7 +293,7 @@ describe('admin subscription users', () => {
     listSubscriptions.mockResolvedValueOnce({ items: [{ id: 9, user_id: 42, group_id: 3, status: 'active', quota_usd: 50, quota_used_usd: 0.000024, usage_multiplier: 12 }], total: 1, pages: 1 })
     const wrapper = mountView()
     await flushPromises()
-    expect(wrapper.text()).toContain('¥0.000024')
+    expect(wrapper.text()).toContain('$0.000024')
     await wrapper.get('[data-test="edit-subscription-quota"]').trigger('click')
     const form = wrapper.get('#subscription-quota-form')
     await form.get('#subscription-total-quota').setValue(100)

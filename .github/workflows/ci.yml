@@ -79,6 +79,7 @@ jobs:
           -run 'TestAdminSubscriptionPlansForResponse|TestGroupModelAllowlist'
         working-directory: backend
       - run: go test ./internal/service ./internal/handler/admin ./internal/server/routes -run '^Test(AssignSubscription|BulkAssignSubscription|Subscription|SetSubscriptionQuota|SetLegacySubscriptionQuota|BulkSubscriptionAssignment|CalculateProgress)'
+        working-directory: backend
       - run: go test ./internal/handler -run 'Test(SubscriptionRemainingMatchesSharedQuotaAndPeriodicLimits|UsageResponsesCapKeyRemainingBySubscription|UnlimitedSubscriptionUsageOmitsNegativeRemaining)'
         working-directory: backend
       - run: go test -tags unit ./internal/service -run '^TestBuildUsageBillingCommand_Subscription'
