@@ -11,6 +11,24 @@ import type { UserSubscription } from '@/types'
 // Cache TTL: 60 seconds
 const CACHE_TTL_MS = 60_000
 
+function normalizeActiveSubscriptions(data: unknown): UserSubscription[] {
+  if (Array.isArray(data)) {
+    return data as UserSubscription[]
+  }
+
+  // Older deployments may wrap the successful payload in an object while the
+  // current endpoint returns the array directly. Keep the global store's
+  // invariant stable so consumers can safely read `.length` and iterate.
+  if (data && typeof data === 'object' && 'subscriptions' in data) {
+    const subscriptions = (data as { subscriptions?: unknown }).subscriptions
+    if (Array.isArray(subscriptions)) {
+      return subscriptions as UserSubscription[]
+    }
+  }
+
+  return []
+}
+
 // Request generation counter to invalidate stale in-flight responses
 let requestGeneration = 0
 
@@ -59,12 +77,13 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     const requestPromise = subscriptionsAPI
       .getActiveSubscriptions()
       .then((data) => {
+        const subscriptions = normalizeActiveSubscriptions(data)
         if (currentGeneration === requestGeneration) {
-          activeSubscriptions.value = data
+          activeSubscriptions.value = subscriptions
           loaded.value = true
           lastFetchedAt.value = Date.now()
         }
-        return data
+        return subscriptions
       })
       .catch((error) => {
         console.error('Failed to fetch active subscriptions:', error)

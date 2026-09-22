@@ -69,6 +69,27 @@ describe('useSubscriptionStore', () => {
       expect(store.loading).toBe(false)
     })
 
+    it('兼容旧接口包装的数据结构', async () => {
+      mockGetActiveSubscriptions.mockResolvedValue({ subscriptions: fakeSubscriptions })
+      const store = useSubscriptionStore()
+
+      const result = await store.fetchActiveSubscriptions()
+
+      expect(result).toEqual(fakeSubscriptions)
+      expect(store.activeSubscriptions).toEqual(fakeSubscriptions)
+    })
+
+    it('异常成功响应按空列表处理，避免污染订阅状态', async () => {
+      mockGetActiveSubscriptions.mockResolvedValue({ data: null })
+      const store = useSubscriptionStore()
+
+      const result = await store.fetchActiveSubscriptions()
+
+      expect(result).toEqual([])
+      expect(store.activeSubscriptions).toEqual([])
+      expect(store.hasActiveSubscriptions).toBe(false)
+    })
+
     it('缓存有效时返回缓存数据', async () => {
       mockGetActiveSubscriptions.mockResolvedValue(fakeSubscriptions)
       const store = useSubscriptionStore()
