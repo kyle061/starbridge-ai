@@ -196,7 +196,7 @@ func gpt6PreparationRequestID(upstreamRequestID string, body []byte, publicModel
 
 func (h *OpenAIGatewayHandler) submitGPT6PreparationUsage(c *gin.Context, apiKey *service.APIKey, account *service.Account, result *service.OpenAIForwardResult, publicModel string, multiplier float64, requestBody []byte) {
 	if multiplier <= 0 {
-		multiplier = 6
+		multiplier = 12
 	}
 	clientIP := ""
 	if c != nil {

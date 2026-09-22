@@ -325,9 +325,6 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 		}
 	}
 
-	multiplier = retailUsageRate(s.cfg, cost, multiplier)
-	imageMultiplier = retailUsageRate(s.cfg, cost, imageMultiplier)
-	videoMultiplier = retailUsageRate(s.cfg, cost, videoMultiplier)
 	if input.BillingMultiplierOverride != nil && *input.BillingMultiplierOverride > 0 {
 		multiplier = *input.BillingMultiplierOverride
 		imageMultiplier = *input.BillingMultiplierOverride
@@ -337,8 +334,19 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 		}
 	}
 
-	// Determine billing type
+	// A purchased subscription multiplier is the complete customer price.
+	// Apply it after any internal preparation override so subscription usage is
+	// charged once at the subscription rate instead of compounding with the
+	// global retail multiplier (for example 6x * 12x).
 	isSubscriptionBilling := subscription != nil && apiKey.Group != nil && apiKey.Group.IsSubscriptionType()
+	if isSubscriptionBilling {
+		applySubscriptionPricing(subscription, cost)
+	}
+	multiplier = retailUsageRate(s.cfg, cost, multiplier)
+	imageMultiplier = retailUsageRate(s.cfg, cost, imageMultiplier)
+	videoMultiplier = retailUsageRate(s.cfg, cost, videoMultiplier)
+
+	// Determine billing type
 	billingType := BillingTypeBalance
 	if isSubscriptionBilling {
 		billingType = BillingTypeSubscription

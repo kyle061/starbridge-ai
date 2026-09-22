@@ -142,7 +142,7 @@ func postUsageBilling(ctx context.Context, p *postUsageBillingParams, deps *bill
 		// Subscription usage tracked by ActualCost so group rate multiplier
 		// consumes the quota at the expected speed.
 		if cost.ActualCost > 0 {
-			subscriptionCost := subscriptionUsageCost(p.Subscription, cost.ActualCost)
+			subscriptionCost := subscriptionBillingCost(p.Subscription, cost)
 			if err := deps.userSubRepo.IncrementUsage(billingCtx, p.Subscription.ID, subscriptionCost); err != nil {
 				slog.Error("increment subscription usage failed", "subscription_id", p.Subscription.ID, "error", err)
 			}
@@ -202,16 +202,6 @@ func postUsageBilling(ctx context.Context, p *postUsageBillingParams, deps *bill
 	// cache updates. The legacy path does DB writes directly; the finalize path
 	// does cache queue + notifications. Notifications are dispatched separately
 	// by the caller after recording the usage log.
-}
-
-func subscriptionUsageCost(subscription *UserSubscription, rawCost float64) float64 {
-	if rawCost <= 0 {
-		return rawCost
-	}
-	if subscription == nil {
-		return rawCost
-	}
-	return rawCost * subscription.EffectiveUsageMultiplier()
 }
 
 func resolveUsageBillingRequestID(ctx context.Context, upstreamRequestID string) string {
@@ -317,13 +307,12 @@ func buildUsageBillingCommand(requestID string, usageLog *UsageLog, p *postUsage
 		}
 	}
 
-	// Record subscription / balance cost using ActualCost so the group (and any
-	// user-specific) rate multiplier consumes subscription quota at the expected
-	// speed. TotalCost remains the raw (pre-multiplier) value; downstream guards
-	// on "> 0" still correctly skip free subscriptions (RateMultiplier == 0).
+	// Record subscription cost using the subscription's complete customer
+	// multiplier. TotalCost is the raw model cost; ActualCost has already been
+	// normalized to the same single multiplier for subscription requests.
 	if p.IsSubscriptionBill && p.Subscription != nil && p.Cost.TotalCost > 0 {
 		cmd.SubscriptionID = &p.Subscription.ID
-		cmd.SubscriptionCost = subscriptionUsageCost(p.Subscription, p.Cost.ActualCost)
+		cmd.SubscriptionCost = subscriptionBillingCost(p.Subscription, p.Cost)
 	} else if p.Cost.ActualCost > 0 {
 		cmd.BalanceCost = p.Cost.ActualCost
 	}
@@ -383,7 +372,7 @@ func finalizePostUsageBilling(ctx context.Context, p *postUsageBillingParams, de
 
 	if p.IsSubscriptionBill {
 		if p.Cost.ActualCost > 0 && p.User != nil && p.APIKey != nil && p.APIKey.GroupID != nil {
-			deps.billingCacheService.QueueUpdateSubscriptionUsage(p.User.ID, *p.APIKey.GroupID, subscriptionUsageCost(p.Subscription, p.Cost.ActualCost))
+			deps.billingCacheService.QueueUpdateSubscriptionUsage(p.User.ID, *p.APIKey.GroupID, subscriptionBillingCost(p.Subscription, p.Cost))
 		}
 	} else if p.Cost.ActualCost > 0 && p.User != nil {
 		syncBalanceCacheAfterDeduction(ctx, p, deps, result)
@@ -741,6 +730,7 @@ func (s *GatewayService) recordUsageCore(ctx context.Context, input *recordUsage
 	user := input.User
 	account := input.Account
 	subscription := input.Subscription
+	isSubscriptionBilling := subscription != nil && apiKey.Group != nil && apiKey.Group.IsSubscriptionType()
 	ApplyForwardImageBillingResolution(result)
 	logServiceTierBillingDowngrade("service.gateway", account, result.RequestID, ApplyForwardServiceTierBillingResolution(result))
 
@@ -828,11 +818,13 @@ func (s *GatewayService) recordUsageCore(ctx context.Context, input *recordUsage
 		}
 	}
 
+	if isSubscriptionBilling {
+		applySubscriptionPricing(subscription, cost)
+	}
 	multiplier = retailUsageRate(s.cfg, cost, multiplier)
 	imageMultiplier = retailUsageRate(s.cfg, cost, imageMultiplier)
 
 	// 判断计费方式：订阅模式 vs 余额模式
-	isSubscriptionBilling := subscription != nil && apiKey.Group != nil && apiKey.Group.IsSubscriptionType()
 	billingType := BillingTypeBalance
 	if isSubscriptionBilling {
 		billingType = BillingTypeSubscription

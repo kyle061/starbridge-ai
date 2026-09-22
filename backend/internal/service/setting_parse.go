@@ -28,6 +28,9 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 		if err := s.migrateLegacyBranding(ctx); err != nil {
 			return fmt.Errorf("migrate legacy branding: %w", err)
 		}
+		if err := s.migrateLegacyCustomerBillingMultiplier(ctx); err != nil {
+			return fmt.Errorf("migrate legacy customer billing multiplier: %w", err)
+		}
 		settings, err := s.GetAllSettings(ctx)
 		if err != nil {
 			return fmt.Errorf("load existing settings: %w", err)
@@ -289,6 +292,24 @@ func (s *SettingService) InitializeDefaultSettings(ctx context.Context) error {
 	}
 	s.refreshCachedSettings(settings)
 	return nil
+}
+
+// migrateLegacyCustomerBillingMultiplier upgrades the previous built-in 6x
+// customer pricing default to the current 12x default. This only changes the
+// exact legacy value; any other administrator-selected multiplier is preserved.
+func (s *SettingService) migrateLegacyCustomerBillingMultiplier(ctx context.Context) error {
+	raw, err := s.settingRepo.GetValue(ctx, SettingKeyCustomerBillingMultiplier)
+	if errors.Is(err, ErrSettingNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	value, parseErr := strconv.ParseFloat(strings.TrimSpace(raw), 64)
+	if parseErr != nil || value != 6 {
+		return nil
+	}
+	return s.settingRepo.Set(ctx, SettingKeyCustomerBillingMultiplier, strconv.FormatFloat(CustomerBillingMultiplierDefault, 'f', -1, 64))
 }
 
 // migrateLegacyBranding updates only values that still equal the upstream

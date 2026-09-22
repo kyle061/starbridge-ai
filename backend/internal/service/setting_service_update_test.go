@@ -108,8 +108,12 @@ func (s *forwardedIPMigrationRepoStub) GetValue(_ context.Context, key string) (
 	return value, nil
 }
 
-func (s *forwardedIPMigrationRepoStub) Set(context.Context, string, string) error {
-	panic("unexpected Set call")
+func (s *forwardedIPMigrationRepoStub) Set(_ context.Context, key, value string) error {
+	if s.values == nil {
+		s.values = make(map[string]string)
+	}
+	s.values[key] = value
+	return nil
 }
 
 func (s *forwardedIPMigrationRepoStub) GetMultiple(_ context.Context, keys []string) (map[string]string, error) {
@@ -138,7 +142,11 @@ func (s *forwardedIPMigrationRepoStub) SetMultiple(_ context.Context, values map
 }
 
 func (s *forwardedIPMigrationRepoStub) GetAll(context.Context) (map[string]string, error) {
-	panic("unexpected GetAll call")
+	out := make(map[string]string, len(s.values))
+	for key, value := range s.values {
+		out[key] = value
+	}
+	return out, nil
 }
 
 func (s *forwardedIPMigrationRepoStub) Delete(context.Context, string) error {
@@ -592,10 +600,24 @@ func TestSettingService_InitializeDefaultSettingsMigratesOnlyLegacyBranding(t *t
 	require.JSONEq(t, `[{"id":"terms","title":"Starbridge AI 服务条款","content_md":""},{"id":"custom","title":"自定义条款","content_md":"正文"}]`, repo.values[SettingKeyLoginAgreementDocuments])
 }
 
-func TestSettingService_InitializeDefaultSettingsRefreshesCustomerBillingMultiplier(t *testing.T) {
+func TestSettingService_InitializeDefaultSettingsMigratesLegacyCustomerBillingMultiplier(t *testing.T) {
 	repo := &forwardedIPMigrationRepoStub{values: map[string]string{
 		SettingKeyRegistrationEnabled:       "true",
 		SettingKeyCustomerBillingMultiplier: "6",
+	}}
+	cfg := &config.Config{}
+	svc := NewSettingService(repo, cfg)
+
+	require.NoError(t, svc.InitializeDefaultSettings(context.Background()))
+	require.Equal(t, "12", repo.values[SettingKeyCustomerBillingMultiplier])
+	require.Equal(t, 12.0, cfg.Billing.RetailPricing.StandardMultiplier)
+	require.Equal(t, 12.0, cfg.Billing.RetailPricing.LatestMultiplier)
+}
+
+func TestSettingService_InitializeDefaultSettingsRefreshesCustomerBillingMultiplier(t *testing.T) {
+	repo := &forwardedIPMigrationRepoStub{values: map[string]string{
+		SettingKeyRegistrationEnabled:       "true",
+		SettingKeyCustomerBillingMultiplier: "12",
 	}}
 	cfg := &config.Config{}
 	cfg.Billing.RetailPricing = config.RetailPricingConfig{
@@ -608,8 +630,8 @@ func TestSettingService_InitializeDefaultSettingsRefreshesCustomerBillingMultipl
 
 	require.NoError(t, svc.InitializeDefaultSettings(context.Background()))
 	require.True(t, cfg.Billing.RetailPricing.Enabled)
-	require.Equal(t, 6.0, cfg.Billing.RetailPricing.StandardMultiplier)
-	require.Equal(t, 6.0, cfg.Billing.RetailPricing.LatestMultiplier)
+	require.Equal(t, 12.0, cfg.Billing.RetailPricing.StandardMultiplier)
+	require.Equal(t, 12.0, cfg.Billing.RetailPricing.LatestMultiplier)
 
 	cost := &CostBreakdown{TotalCost: 0.026308}
 	applyRetailCost(cfg, "gpt-5.6-luna", cost)

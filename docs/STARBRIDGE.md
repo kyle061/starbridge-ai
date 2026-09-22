@@ -93,7 +93,7 @@ docker compose logs --tail=100 caddy
 2. 选择 **OpenAI → OAuth**，点击下一步。
 3. 默认选择 **设备码登录**，点击「获取登录设备码」，复制一次性设备码，再点击「打开 OpenAI 登录页面」。在官方页面登录自己的 Plus / Pro 账号并输入设备码，完成后切回原来的星桥标签页，账号会自动保存。设备码 15 分钟内有效；首次使用请先在 **ChatGPT → 设置 → 安全** 中开启设备码登录。服务器无法直连 OpenAI 时，先给该账号选择可用代理。
 4. 保存账号并点击测试。标准模式启动时会自动创建 `openai-default`、`deepseek-default` 和 `composite-default`，新建 OpenAI/DeepSeek 账号不指定分组时会自动加入对应默认分组和 Composite 分组，无需手动切换。
-5. 在 **API 密钥 → 创建密钥** 中选择 `composite-default`（页面会优先预选），生成面向客户端的 Starbridge API Key。公开模型 `gpt-6` / `gpt-6-astra` 会先由已有的便宜模型（优先 DeepSeek `deepseek-v4-pro`）生成内部需求文档，再由 OpenAI `gpt-6-astra` 完成原任务；客户和后台的请求模型仍显示 GPT6，只有独立 DeepSeek 分组显示 DeepSeek。预处理阶段按 6 倍客户倍率计费，真实上游模型、原始成本和客户扣费分别保存在用量审计中。管理端用量页可在「真实口径 / 客户口径」之间切换，客户接口只返回倍率处理后的数据。升级会调整未被管理员修改的默认线路，用量窗口缓存约 5 秒刷新。
+5. 在 **API 密钥 → 创建密钥** 中选择 `composite-default`（页面会优先预选），生成面向客户端的 Starbridge API Key。公开模型 `gpt-6` / `gpt-6-astra` 会先由已有的便宜模型（优先 DeepSeek `deepseek-v4-pro`）生成内部需求文档，再由 OpenAI `gpt-6-astra` 完成原任务；客户和后台的请求模型仍显示 GPT6，只有独立 DeepSeek 分组显示 DeepSeek。预处理阶段按 12 倍客户倍率计费，真实上游模型、原始成本和客户扣费分别保存在用量审计中。管理端用量页可在「真实口径 / 客户口径」之间切换，客户接口只返回倍率处理后的数据。升级会调整未被管理员修改的默认线路，用量窗口缓存约 5 秒刷新。
 6. 在密钥列表点击 **使用密钥**，OpenAI、DeepSeek 和 Composite 分组默认打开 **Codex CLI**。组合分组生成的单文件 `~/.codex/config.toml` 包含 `model = "gpt-6-astra"`、`model_provider = "starbridaeai"`、`name = "starbridaeai"`、`model_reasoning_effort = "xhigh"`、`wire_api = "responses"`、`supports_websockets = false`、`responses_websockets_v2 = false`、`requires_openai_auth = true` 和当前站点 `/v1` 地址，使用 HTTP/SSE 兼容跨平台主备线路。单独 OpenAI 分组仍支持 WebSocket。保存后重启 Codex 即可；OpenAI 和 Composite 也可切换到环境变量模式。
 7. 标准模式下，星桥用户还需要有站内余额或分组订阅。管理员可以在用户管理中分配站内余额；这个余额是站内记账，与 OpenAI Pro 的上游额度分别管理。
 

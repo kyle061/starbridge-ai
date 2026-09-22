@@ -6,10 +6,9 @@ import (
 	"testing"
 )
 
-// TestBuildUsageBillingCommand_SubscriptionAppliesRateMultiplier locks in the fix
-// that subscription-mode billing honours the group (and any user-specific) rate
-// multiplier — i.e. cmd.SubscriptionCost tracks ActualCost (= TotalCost *
-// RateMultiplier), not raw TotalCost.
+// TestBuildUsageBillingCommand_SubscriptionAppliesRateMultiplier locks in the
+// subscription billing contract: a purchased subscription multiplier is the
+// complete customer multiplier and is applied once to raw TotalCost.
 func TestBuildUsageBillingCommand_SubscriptionAppliesRateMultiplier(t *testing.T) {
 	t.Parallel()
 
@@ -35,12 +34,12 @@ func TestBuildUsageBillingCommand_SubscriptionAppliesRateMultiplier(t *testing.T
 			wantBalance:            0,
 		},
 		{
-			name:                   "purchased subscription multiplier compounds raw cost",
+			name:                   "purchased subscription multiplier applies once to raw cost",
 			totalCost:              1.0,
 			actualCost:             2.0,
 			subscriptionMultiplier: 12.0,
 			isSubscription:         true,
-			wantSub:                24.0,
+			wantSub:                12.0,
 			wantBalance:            0,
 		},
 		{

@@ -7907,7 +7907,7 @@
                     data-testid="customer-billing-multiplier"
                   />
                   <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {{ localText("所有普通用户模型请求统一按此倍率计费；用户端不会显示倍率。默认 6 倍。", "All customer model requests use this multiplier; the multiplier is hidden from users. Default: 6x.") }}
+                    {{ localText("所有普通用户模型请求统一按此倍率计费；用户端不会显示倍率。默认 12 倍。", "All customer model requests use this multiplier; the multiplier is hidden from users. Default: 12x.") }}
                   </p>
                 </div>
 

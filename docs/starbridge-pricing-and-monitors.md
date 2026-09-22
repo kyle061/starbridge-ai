@@ -1,7 +1,7 @@
 # 全站计费和渠道监控
 
-默认所有模型按基础价的 **6 倍**扣费。
-用户侧用量、余额扣除和额度消耗均按 6 倍客户口径计算；管理端仍可查看原始上游成本与真实 Token 用量。
+默认所有模型按基础价的 **12 倍**扣费。
+用户侧用量、余额扣除和额度消耗均按 12 倍客户口径计算；管理端仍可查看原始上游成本与真实 Token 用量。
 余额、Key 用量和用户用量共用同一笔实际费用；组合线路不会叠加父分组和成员分组倍率。
 历史记录保留当时的实际扣款，不追溯涨价。
 
@@ -12,13 +12,13 @@
 billing:
   retail_pricing:
     enabled: true
-    standard_multiplier: 6
-    latest_multiplier: 6
+    standard_multiplier: 12
+    latest_multiplier: 12
     latest_model_prefixes: [gpt-6, deepseek-v4]
 ```
 
 某平台推出下一代后，在 `latest_model_prefixes` 中替换该平台的旧一代，扣费和模型广场自动采用相同倍率。
-即使后续替换 `latest_model_prefixes`，当前普通模型和最新模型仍统一按 6 倍扣费；不要累计保留历代型号。
+即使后续替换 `latest_model_prefixes`，当前普通模型和最新模型仍统一按 12 倍扣费；不要累计保留历代型号。
 列表匹配完整型号或后接 `-` 的变体，支持 `openai/gpt-6-astra` 这样的前缀。
 开启全站规则后，分组倍率、用户专属倍率及高峰倍率由全站规则覆盖。
 基础价仍使用现有模型价卡，包含已配置的缓存、长上下文及渠道分时定价。
