@@ -121,11 +121,37 @@
                   {{ selectedPlan.description }}
                 </p>
                 <div v-if="isDailyPlan" class="mt-4 rounded-lg border border-gray-200 px-3 py-3 dark:border-dark-600">
-                  <div class="flex items-center justify-between gap-4">
+                  <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ t('payment.purchaseDays') }}</p>
                       <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ t('payment.dailyResetAtMidnight') }}</p>
                     </div>
+                    <div data-testid="subscription-current-discount" :data-discount-factor="subscriptionDiscountFactor(selectedDays)" class="shrink-0 text-right">
+                      <p class="text-xs text-gray-400 dark:text-gray-500">{{ t('payment.currentDiscount') }}</p>
+                      <p class="mt-0.5 text-base font-semibold text-green-600 dark:text-green-400">{{ subscriptionDiscountRateLabel(selectedDays) }}</p>
+                    </div>
+                  </div>
+                  <div class="mt-3 grid grid-cols-4 gap-2" :aria-label="t('payment.quickDuration')">
+                    <button
+                      v-for="days in discountedDayOptions"
+                      :key="days"
+                      type="button"
+                      :data-testid="`subscription-days-${days}`"
+                      :aria-pressed="selectedDays === days"
+                      :class="[
+                        'flex min-h-14 flex-col items-center justify-center rounded-md border px-1.5 py-2 text-center transition-colors',
+                        selectedDays === days
+                          ? 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-950/30 dark:text-primary-300'
+                          : 'border-gray-200 text-gray-600 hover:border-primary-300 hover:bg-gray-50 dark:border-dark-600 dark:text-gray-300 dark:hover:border-primary-700 dark:hover:bg-dark-700',
+                      ]"
+                      @click="selectedDays = days"
+                    >
+                      <span class="text-sm font-semibold">{{ t('payment.dayCount', { days }) }}</span>
+                      <span class="mt-0.5 text-xs">{{ subscriptionDiscountRateLabel(days) }}</span>
+                    </button>
+                  </div>
+                  <div class="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-3 dark:border-dark-700">
+                    <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('payment.customDays') }}</span>
                     <div class="flex h-10 shrink-0 items-stretch overflow-hidden rounded-md border border-gray-300 dark:border-dark-600">
                       <button type="button" class="flex w-10 items-center justify-center text-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 dark:text-gray-300 dark:hover:bg-dark-700" :aria-label="t('payment.decreaseDays')" :disabled="selectedDays <= 1" @click="selectedDays--">-</button>
                       <input v-model.number="selectedDays" data-testid="subscription-days" type="number" min="1" max="365" class="w-16 border-x border-gray-300 bg-white text-center text-sm font-semibold text-gray-900 outline-none dark:border-dark-600 dark:bg-dark-800 dark:text-white" @change="normalizeSelectedDays" />
@@ -135,7 +161,6 @@
                   <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 pt-3 text-sm dark:border-dark-700">
                     <span class="text-gray-500 dark:text-gray-400">{{ t('payment.subscriptionValidity') }}</span>
                     <span class="font-medium text-gray-900 dark:text-white">{{ t('payment.dayCount', { days: selectedDays }) }}</span>
-                    <span v-if="subscriptionDiscountPercent > 0" class="rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-950/40 dark:text-green-300">{{ t('payment.multiDayDiscount', { discount: subscriptionDiscountPercent }) }}</span>
                   </div>
                 </div>
                 <!-- Limits grid -->
@@ -725,7 +750,15 @@ function subscriptionDiscountFactor(days: number): number {
   return 1
 }
 
-const subscriptionDiscountPercent = computed(() => Math.round((1 - subscriptionDiscountFactor(selectedDays.value)) * 100))
+const discountedDayOptions = [15, 30, 45, 60] as const
+
+function subscriptionDiscountRateLabel(days: number): string {
+  const factor = subscriptionDiscountFactor(days)
+  if (factor === 1) return t('payment.fullPrice')
+  const discount = (factor * 10).toFixed(1).replace(/\.0$/, '')
+  return t('payment.discountRate', { discount })
+}
+
 const subscriptionBaseAmount = computed(() => {
   const price = selectedPlan.value?.price ?? 0
   if (!isDailyPlan.value) return price

@@ -501,7 +501,7 @@ describe('PaymentView subscription confirmation amounts', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain(formatPaymentAmount(270, 'CNY'))
-    expect(wrapper.text()).toContain('payment.multiDayDiscount')
+    expect(wrapper.get('[data-testid="subscription-current-discount"]').attributes('data-discount-factor')).toBe('0.9')
     expect(wrapper.text()).toContain('3000.00')
 
     createOrder.mockResolvedValueOnce({
@@ -525,6 +525,30 @@ describe('PaymentView subscription confirmation amounts', () => {
       plan_id: 7,
       quantity: 30,
     }), expect.any(String))
+  })
+
+  it.each([
+    [15, '0.95', 142.5],
+    [30, '0.9', 270],
+    [45, '0.85', 382.5],
+    [60, '0.8', 480],
+  ])('selects the %i-day discount tier from a shortcut', async (days, factor, expectedAmount) => {
+    const wrapper = await mountSubscriptionConfirm({
+      method: { currency: 'CNY' },
+      plan: {
+        price: 10,
+        validity_days: 1,
+        validity_unit: 'day',
+      },
+    })
+
+    await wrapper.get(`[data-testid="subscription-days-${days}"]`).trigger('click')
+    await flushPromises()
+
+    expect((wrapper.get('[data-testid="subscription-days"]').element as HTMLInputElement).value).toBe(String(days))
+    expect(wrapper.get(`[data-testid="subscription-days-${days}"]`).attributes('aria-pressed')).toBe('true')
+    expect(wrapper.get('[data-testid="subscription-current-discount"]').attributes('data-discount-factor')).toBe(factor)
+    expect(wrapper.text()).toContain(formatPaymentAmount(expectedAmount, 'CNY'))
   })
 
   it('shows converted CNY pay amount using the subscription rate, not the balance multiplier', async () => {
