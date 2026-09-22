@@ -73,6 +73,20 @@ describe('AppSidebar subscription feature flag', () => {
     expect(componentSource).toMatch(/path: '\/admin\/subscriptions'[^\n]*featureFlag: flagSubscription/)
   })
 
+  it('groups subscription management and plans under a dedicated admin section', () => {
+    const subscriptionGroup = componentSource.match(
+      /path: '\/admin\/subscription-center'[\s\S]*?\n {4}\},\n {4}\{ path: '\/admin\/accounts'/,
+    )?.[0]
+    const orderGroup = componentSource.match(
+      /path: '\/admin\/orders',[\s\S]*?\n {4}\},\n {4}\{ path: '\/admin\/usage'/,
+    )?.[0]
+
+    expect(subscriptionGroup).toContain("label: t('nav.subscriptionCenter')")
+    expect(subscriptionGroup).toContain("path: '/admin/subscriptions'")
+    expect(subscriptionGroup).toContain("path: '/admin/orders/plans'")
+    expect(orderGroup).not.toContain("path: '/admin/orders/plans'")
+  })
+
   it('derives the purchase entry label from the site billing mode', () => {
     expect(componentSource).toContain("import { resolveSiteBillingMode } from '@/utils/siteBillingMode'")
     expect(componentSource).toMatch(/case 'recharge_only':\s*return t\('nav\.recharge'\)/)
