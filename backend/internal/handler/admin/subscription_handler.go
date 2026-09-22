@@ -229,6 +229,29 @@ func (h *SubscriptionHandler) SetQuota(c *gin.Context) {
 	response.Success(c, dto.UserSubscriptionFromServiceAdmin(sub))
 }
 
+// SetMultiplier updates only the selected subscription's usage multiplier.
+// Quota, recorded usage, expiry, and plan metadata are preserved.
+func (h *SubscriptionHandler) SetMultiplier(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		response.BadRequest(c, "Invalid subscription ID")
+		return
+	}
+	var req struct {
+		UsageMultiplier float64 `json:"usage_multiplier" binding:"required,gt=0"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return
+	}
+	sub, err := h.subscriptionService.SetSubscriptionUsageMultiplier(c.Request.Context(), id, req.UsageMultiplier)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, dto.UserSubscriptionFromServiceAdmin(sub))
+}
+
 // BulkAction applies one operation to selected subscriptions, returning each outcome.
 // POST /api/v1/admin/subscriptions/bulk-action
 func (h *SubscriptionHandler) BulkAction(c *gin.Context) {

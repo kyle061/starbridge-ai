@@ -234,6 +234,10 @@ export const subscriptionsAPI = {
     const { data } = await apiClient.put<UserSubscription>(`/admin/subscriptions/${id}/quota`, request)
     return data
   },
+  async setMultiplier(id: number, request: { usage_multiplier: number }): Promise<UserSubscription> {
+    const { data } = await apiClient.put<UserSubscription>(`/admin/subscriptions/${id}/multiplier`, request)
+    return data
+  },
   list,
   getById,
   getProgress,

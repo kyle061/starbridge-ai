@@ -408,8 +408,8 @@
 
           <template #cell-actions="{ row }">
             <div class="flex items-center gap-1">
-              <button v-if="row.status !== 'revoked'" type="button" class="btn btn-secondary btn-sm" data-test="edit-subscription-quota" @click="openQuotaDialog(row)">
-                {{ t('admin.subscriptions.editQuota') }}
+              <button v-if="row.status !== 'revoked'" type="button" class="btn btn-secondary btn-sm" data-test="edit-subscription-multiplier" @click="openMultiplierDialog(row)">
+                {{ t('admin.subscriptions.editMultiplier') }}
               </button>
               <button
                 v-if="row.status === 'active' || row.status === 'expired'"
@@ -481,22 +481,18 @@
     />
 
     <!-- Subscription Quota Modal -->
-    <BaseDialog :show="quotaSubscription !== null" :title="t('admin.subscriptions.editQuota')" @close="closeQuotaDialog">
-      <form id="subscription-quota-form" class="space-y-4" @submit.prevent="saveQuota">
-        <SubscriptionQuotaSummary v-if="quotaSubscription" :quota="quotaSubscription.quota_usd || 0" :used="quotaSubscription.quota_used_usd || 0" />
+    <BaseDialog :show="multiplierSubscription !== null" :title="t('admin.subscriptions.editMultiplier')" @close="closeMultiplierDialog">
+      <form id="subscription-multiplier-form" class="space-y-4" @submit.prevent="saveMultiplier">
+        <SubscriptionQuotaSummary v-if="multiplierSubscription" :quota="multiplierSubscription.quota_usd || 0" :used="multiplierSubscription.quota_used_usd || 0" />
         <div>
-          <label class="input-label" for="subscription-total-quota">{{ t('admin.subscriptions.totalQuota') }}</label>
-          <input id="subscription-total-quota" v-model.number="quotaForm.quota_usd" class="input" type="number" min="0.000001" step="0.000001" required :disabled="quotaSaving" />
-          <p class="input-hint">{{ t('admin.subscriptions.quotaEditHint') }}</p>
-        </div>
-        <div>
-          <label class="input-label" for="subscription-usage-multiplier">{{ t('payment.admin.usageMultiplier') }}</label>
-          <input id="subscription-usage-multiplier" v-model.number="quotaForm.usage_multiplier" class="input" type="number" min="0.01" step="0.01" required :disabled="quotaSaving" />
+          <label class="input-label" for="subscription-usage-multiplier">{{ t('admin.subscriptions.subscriptionMultiplier') }}</label>
+          <input id="subscription-usage-multiplier" v-model.number="multiplierForm.usage_multiplier" class="input" type="number" min="0.01" step="0.01" required :disabled="multiplierSaving" />
+          <p class="input-hint">{{ t('admin.subscriptions.subscriptionMultiplierHint') }}</p>
         </div>
       </form>
       <template #footer><div class="flex justify-end gap-3">
-        <button type="button" class="btn btn-secondary" :disabled="quotaSaving" @click="closeQuotaDialog">{{ t('common.cancel') }}</button>
-        <button type="submit" form="subscription-quota-form" class="btn btn-primary" :disabled="quotaSaving">{{ t('common.save') }}</button>
+        <button type="button" class="btn btn-secondary" :disabled="multiplierSaving" @click="closeMultiplierDialog">{{ t('common.cancel') }}</button>
+        <button type="submit" form="subscription-multiplier-form" class="btn btn-primary" :disabled="multiplierSaving">{{ t('common.save') }}</button>
       </div></template>
     </BaseDialog>
 
@@ -634,8 +630,9 @@
           <p class="input-hint">{{ t('admin.subscriptions.quotaHint') }}</p>
         </div>
         <div>
-          <label class="input-label" for="assign-usage-multiplier">{{ t('payment.admin.usageMultiplier') }}</label>
+          <label class="input-label" for="assign-usage-multiplier">{{ t('admin.subscriptions.subscriptionMultiplier') }}</label>
           <input id="assign-usage-multiplier" v-model.number="assignForm.usage_multiplier" type="number" min="0.01" step="0.01" required :disabled="submitting" class="input" />
+          <p class="input-hint">{{ t('admin.subscriptions.assignmentMultiplierHint') }}</p>
         </div>
         <div v-if="batchAssignResult" class="space-y-2 text-sm" role="status" data-test="batch-assign-result">
           <p>{{ t('admin.subscriptions.batchAssign.result', { success: batchAssignResult.success_count, failed: batchAssignResult.failed_count }) }}</p>
@@ -1165,32 +1162,28 @@ watch(assignmentPlanId, id => {
   assignForm.usage_multiplier = plan.usage_multiplier || 12
   assignForm.plan_name = plan.name
 })
-const quotaSubscription = ref<UserSubscription | null>(null)
-const quotaSaving = ref(false)
-const quotaForm = reactive({ quota_usd: 50, usage_multiplier: 12 })
-function openQuotaDialog(subscription: UserSubscription) {
-  quotaSubscription.value = subscription
-  quotaForm.quota_usd = subscription.quota_usd || 50
-  quotaForm.usage_multiplier = subscription.usage_multiplier || 1
+const multiplierSubscription = ref<UserSubscription | null>(null)
+const multiplierSaving = ref(false)
+const multiplierForm = reactive({ usage_multiplier: 12 })
+function openMultiplierDialog(subscription: UserSubscription) {
+  multiplierSubscription.value = subscription
+  multiplierForm.usage_multiplier = subscription.usage_multiplier || 1
 }
-function closeQuotaDialog() { if (!quotaSaving.value) quotaSubscription.value = null }
-async function saveQuota() {
-  if (!quotaSubscription.value || quotaSaving.value) return
-  if (!Number.isFinite(quotaForm.quota_usd) || quotaForm.quota_usd <= 0 || !Number.isFinite(quotaForm.usage_multiplier) || quotaForm.usage_multiplier <= 0) {
-    appStore.showError(t('admin.subscriptions.quotaRequired')); return
+function closeMultiplierDialog() { if (!multiplierSaving.value) multiplierSubscription.value = null }
+async function saveMultiplier() {
+  if (!multiplierSubscription.value || multiplierSaving.value) return
+  if (!Number.isFinite(multiplierForm.usage_multiplier) || multiplierForm.usage_multiplier <= 0) {
+    appStore.showError(t('admin.subscriptions.multiplierRequired')); return
   }
-  if (quotaForm.quota_usd < (quotaSubscription.value.quota_used_usd || 0)) {
-    appStore.showError(t('admin.subscriptions.quotaBelowUsage')); return
-  }
-  quotaSaving.value = true
+  multiplierSaving.value = true
   try {
-    await adminAPI.subscriptions.setQuota(quotaSubscription.value.id, { ...quotaForm })
+    await adminAPI.subscriptions.setMultiplier(multiplierSubscription.value.id, { usage_multiplier: multiplierForm.usage_multiplier })
     appStore.showSuccess(t('common.saved'))
-    quotaSubscription.value = null
+    multiplierSubscription.value = null
     await loadSubscriptions()
   } catch (error: any) {
     appStore.showError(error.response?.data?.detail || t('admin.subscriptions.failedToAdjust'))
-  } finally { quotaSaving.value = false }
+  } finally { multiplierSaving.value = false }
 }
 
 const extendForm = reactive({

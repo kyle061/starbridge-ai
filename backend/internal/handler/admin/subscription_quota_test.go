@@ -54,6 +54,7 @@ func TestSubscriptionQuotaHandlerPassesEntitlementsAndPreservesUsage(t *testing.
 	router := gin.New()
 	router.POST("/assign", h.Assign)
 	router.PUT("/:id/quota", h.SetQuota)
+	router.PUT("/:id/multiplier", h.SetMultiplier)
 	request := httptest.NewRequest(http.MethodPost, "/assign", bytes.NewBufferString(`{"user_id":1,"group_id":9,"validity_days":1,"quota_usd":50,"usage_multiplier":12,"plan_name":"Daily"}`))
 	request.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()
@@ -63,6 +64,14 @@ func TestSubscriptionQuotaHandlerPassesEntitlementsAndPreservesUsage(t *testing.
 	require.Equal(t, float64(12), repo.sub.UsageMultiplier)
 	require.Equal(t, "Daily", repo.sub.PlanName)
 	repo.sub.QuotaUsedUSD = 0.000024
+	request = httptest.NewRequest(http.MethodPut, "/5/multiplier", bytes.NewBufferString(`{"usage_multiplier":18}`))
+	request.Header.Set("Content-Type", "application/json")
+	response = httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+	require.Equal(t, float64(18), repo.sub.UsageMultiplier)
+	require.Equal(t, float64(50), repo.sub.QuotaUSD)
+	require.Equal(t, 0.000024, repo.sub.QuotaUsedUSD)
 	for _, body := range []string{`{"quota_usd":0}`, `{"quota_usd":-1}`, `{}`, `{"quota_usd":100,"usage_multiplier":0}`} {
 		request = httptest.NewRequest(http.MethodPut, "/5/quota", bytes.NewBufferString(body))
 		request.Header.Set("Content-Type", "application/json")

@@ -643,7 +643,7 @@ export default {
       quotaMultiplier: '订阅额度倍率',
       usageMultiplier: '订阅消耗倍率',
       quotaMultiplierHint: '订阅额度 = 价格 × 此倍率（默认 10 倍）',
-      usageMultiplierHint: '订阅消耗按此倍率计费（默认 12 倍）',
+      usageMultiplierHint: '新分配或购买的订阅默认按此倍率计费；已有订阅不会跟随套餐修改（默认 12 倍）',
       quotaMultiplierShort: '额度',
       usageMultiplierShort: '消耗',
       currency: '币种标注',

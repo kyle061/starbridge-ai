@@ -51,3 +51,32 @@ func (s *SubscriptionService) SetSubscriptionQuota(ctx context.Context, id int64
 	}
 	return s.userSubRepo.GetByID(ctx, id)
 }
+
+// SetSubscriptionUsageMultiplier updates only one subscription's complete
+// customer multiplier. The quota, recorded usage, term, and plan metadata are
+// intentionally left unchanged.
+func (s *SubscriptionService) SetSubscriptionUsageMultiplier(ctx context.Context, id int64, multiplier float64) (*UserSubscription, error) {
+	if err := validateSubscriptionEntitlements(0, multiplier); err != nil {
+		return nil, err
+	}
+	if multiplier <= 0 {
+		return nil, infraerrors.BadRequest("INVALID_SUBSCRIPTION_MULTIPLIER", "subscription multiplier must be greater than zero")
+	}
+	var userID, groupID int64
+	err := s.withSubscriptionUpdateTx(ctx, func(txCtx context.Context) error {
+		sub, err := s.userSubRepo.GetByIDForUpdate(txCtx, id)
+		if err != nil {
+			return err
+		}
+		sub.UsageMultiplier = multiplier
+		userID, groupID = sub.UserID, sub.GroupID
+		return s.userSubRepo.Update(txCtx, sub)
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := s.invalidateSubscriptionCaches(userID, groupID); err != nil {
+		return nil, err
+	}
+	return s.userSubRepo.GetByID(ctx, id)
+}

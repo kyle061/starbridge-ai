@@ -4,9 +4,9 @@ import { defineComponent } from 'vue'
 
 import SubscriptionsView from '../SubscriptionsView.vue'
 
-const { listSubscriptions, assignSubscription, getAllGroups, listUsers, searchUsageUsers, showError, getPlans, setQuota } = vi.hoisted(() => ({
+const { listSubscriptions, assignSubscription, getAllGroups, listUsers, searchUsageUsers, showError, getPlans, setMultiplier } = vi.hoisted(() => ({
   getPlans: vi.fn().mockResolvedValue({ data: [] }),
-  setQuota: vi.fn().mockResolvedValue({}),
+  setMultiplier: vi.fn().mockResolvedValue({}),
   listSubscriptions: vi.fn(),
   assignSubscription: vi.fn(),
   showError: vi.fn(),
@@ -19,7 +19,7 @@ vi.mock('@/api/admin/payment', () => ({ adminPaymentAPI: { getPlans } }))
 
 vi.mock('@/api/admin', () => ({
   adminAPI: {
-    subscriptions: { list: listSubscriptions, assign: assignSubscription, setQuota },
+    subscriptions: { list: listSubscriptions, assign: assignSubscription, setMultiplier },
     groups: { getAll: getAllGroups },
     users: { list: listUsers },
     usage: { searchUsers: searchUsageUsers }
@@ -289,17 +289,17 @@ describe('admin subscription users', () => {
     wrapper.unmount()
   })
 
-  it('shows quota and lets administrators change the total without resetting usage', async () => {
+  it('shows quota and lets administrators change only this subscription multiplier', async () => {
     listSubscriptions.mockResolvedValueOnce({ items: [{ id: 9, user_id: 42, group_id: 3, status: 'active', quota_usd: 50, quota_used_usd: 0.000024, usage_multiplier: 12 }], total: 1, pages: 1 })
     const wrapper = mountView()
     await flushPromises()
     expect(wrapper.text()).toContain('$0.000024')
-    await wrapper.get('[data-test="edit-subscription-quota"]').trigger('click')
-    const form = wrapper.get('#subscription-quota-form')
-    await form.get('#subscription-total-quota').setValue(100)
+    await wrapper.get('[data-test="edit-subscription-multiplier"]').trigger('click')
+    const form = wrapper.get('#subscription-multiplier-form')
+    await form.get('#subscription-usage-multiplier').setValue(15)
     await form.trigger('submit')
     await flushPromises()
-    expect(setQuota).toHaveBeenCalledWith(9, { quota_usd: 100, usage_multiplier: 12 })
+    expect(setMultiplier).toHaveBeenCalledWith(9, { usage_multiplier: 15 })
     wrapper.unmount()
   })
 

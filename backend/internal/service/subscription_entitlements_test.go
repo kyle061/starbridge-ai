@@ -66,6 +66,29 @@ func TestSetSubscriptionQuotaPreservesUsageAndChecksExhaustion(t *testing.T) {
 	require.ErrorIs(t, err, ErrSubscriptionQuotaExceeded)
 }
 
+func TestSetSubscriptionUsageMultiplierPreservesSubscriptionEntitlements(t *testing.T) {
+	start := time.Now().Add(-time.Hour)
+	repo := newSubscriptionUserSubRepoStub()
+	repo.seed(&UserSubscription{
+		ID: 7, UserID: 1, GroupID: 9, StartsAt: start,
+		ExpiresAt: start.AddDate(0, 0, 30), Status: SubscriptionStatusActive,
+		QuotaUSD: 50, QuotaUsedUSD: 2.345678, UsageMultiplier: 12,
+		PlanName: "Daily", DailyUsageUSD: 2, WeeklyUsageUSD: 3, MonthlyUsageUSD: 4,
+	})
+	svc := NewSubscriptionService(nil, repo, nil, nil, nil)
+	t.Cleanup(svc.Stop)
+	sub, err := svc.SetSubscriptionUsageMultiplier(context.Background(), 7, 18)
+	require.NoError(t, err)
+	require.Equal(t, float64(18), sub.UsageMultiplier)
+	require.Equal(t, float64(50), sub.QuotaUSD)
+	require.Equal(t, 2.345678, sub.QuotaUsedUSD)
+	require.Equal(t, "Daily", sub.PlanName)
+	require.Equal(t, start.AddDate(0, 0, 30), sub.ExpiresAt)
+	require.Equal(t, float64(2), sub.DailyUsageUSD)
+	require.Equal(t, float64(3), sub.WeeklyUsageUSD)
+	require.Equal(t, float64(4), sub.MonthlyUsageUSD)
+}
+
 func TestSetLegacySubscriptionQuotaStartsTracking(t *testing.T) {
 	repo := newSubscriptionUserSubRepoStub()
 	repo.seed(&UserSubscription{ID: 7, UserID: 1, GroupID: 9, QuotaUSD: 0, MonthlyUsageUSD: 10})
