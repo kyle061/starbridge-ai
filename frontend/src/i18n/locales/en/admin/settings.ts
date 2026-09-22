@@ -1,5 +1,18 @@
 export default {
     settings: {
+      secretReveal: {
+        view: 'View saved credential',
+        title: 'Verify administrator password',
+        hint: 'Enter the current administrator account password to view this saved credential. Unsaved edits are not shown.',
+        password: 'Administrator password',
+        confirm: 'Verify and view',
+        verifying: 'Verifying…',
+        savedValue: 'Saved credential',
+        expires: 'Automatically hidden after 30 seconds, when closing this dialog or leaving the page.',
+        incorrect: 'Incorrect administrator password. Please try again.',
+        rateLimited: 'Too many attempts. Please try again later.',
+        failed: 'Unable to view this credential. Check that it is saved and you are signed in as an administrator, then try again later.',
+      },
       title: 'System Settings',
       description: 'Manage registration, email verification, default values, and SMTP settings',
       tabs: {
@@ -1041,7 +1054,7 @@ export default {
         keyDeleted: 'Admin API key deleted',
         copyKey: 'Copy Key',
         keyCopied: 'Key copied to clipboard',
-        keyWarning: 'This key will only be shown once. Please copy it now.',
+        keyWarning: 'Keep this key secure. Viewing the saved key later requires your administrator password.',
         securityWarning: 'Warning: This key provides full admin access. Keep it secure.',
         usage: 'Usage: Add to request header - x-api-key: <your-admin-api-key>'
       },

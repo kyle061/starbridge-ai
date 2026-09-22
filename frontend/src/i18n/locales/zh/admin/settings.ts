@@ -1,5 +1,18 @@
 export default {
     settings: {
+      secretReveal: {
+        view: '查看已保存密钥',
+        title: '验证管理员密码',
+        hint: '输入当前登录管理员的密码后，查看此项已保存的密钥。未保存的修改不会显示。',
+        password: '管理员密码',
+        confirm: '验证并查看',
+        verifying: '验证中…',
+        savedValue: '已保存的密钥',
+        expires: '密钥将在 30 秒后自动隐藏，关闭弹窗或切换页面也会清除。',
+        incorrect: '管理员密码不正确，请重新输入。',
+        rateLimited: '尝试次数过多，请稍后再试。',
+        failed: '无法查看此密钥，请确认已保存配置且当前账号为管理员，稍后重试。',
+      },
       title: '系统设置',
       description: '管理注册、邮箱验证、默认值和 SMTP 设置',
       tabs: {
@@ -1035,7 +1048,7 @@ export default {
         keyDeleted: '管理员 API Key 已删除',
         copyKey: '复制密钥',
         keyCopied: '密钥已复制到剪贴板',
-        keyWarning: '此密钥仅显示一次，请立即复制保存。',
+        keyWarning: '请妥善保存此密钥。以后查看已保存密钥时，需要验证管理员密码。',
         securityWarning: '警告：此密钥拥有完整的管理员权限，请妥善保管。',
         usage: '使用方法：在请求头中添加 x-api-key: <your-admin-api-key>'
       },

@@ -56,6 +56,33 @@ func (p *PanelRateLimiter) Heavy() gin.HandlerFunc {
 	return p.userScoped("heavy", func(s service.PanelRateLimitSettings) int { return s.HeavyRPM })
 }
 
+// SecretReveal is mandatory even when panel limiting is disabled or admins are
+// exempt. A missing/unavailable Redis limiter must not permit password guessing.
+func (p *PanelRateLimiter) SecretReveal() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("Cache-Control", "no-store")
+		subject, ok := GetAuthSubjectFromContext(c)
+		if !ok || subject.UserID <= 0 {
+			AbortWithError(c, 401, "UNAUTHORIZED", "Authorization required")
+			return
+		}
+		if p == nil || p.limiter == nil {
+			AbortWithError(c, 503, "SECRET_VERIFICATION_UNAVAILABLE", "Credential verification is unavailable")
+			return
+		}
+		result, err := p.limiter.Allow(c.Request.Context(), "panel:secret-reveal:user:"+strconv.FormatInt(subject.UserID, 10), 5, time.Minute)
+		if err != nil {
+			AbortWithError(c, 503, "SECRET_VERIFICATION_UNAVAILABLE", "Credential verification is unavailable")
+			return
+		}
+		if !result.Allowed {
+			abortPanelRateLimited(c, result.RetryAfter)
+			return
+		}
+		c.Next()
+	}
+}
+
 func (p *PanelRateLimiter) userScoped(scope string, limitOf func(service.PanelRateLimitSettings) int) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if p == nil || p.limiter == nil || p.settingService == nil {

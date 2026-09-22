@@ -38,6 +38,7 @@
           <div>
             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('admin.backup.s3.secretAccessKey') }}</label>
             <input v-model="s3Form.secret_access_key" type="password" class="input w-full" :placeholder="s3SecretConfigured ? t('admin.backup.s3.secretConfigured') : ''" />
+            <SecretRevealButton :target="{ key: 'backup_s3_secret' }" :disabled="!s3SecretConfigured" />
           </div>
           <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 md:col-span-2">
             <input v-model="s3Form.force_path_style" type="checkbox" />
@@ -102,6 +103,7 @@
             <div>
               <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">{{ t('admin.backup.s3.secretAccessKey') }}</label>
               <input v-model="imageStorageForm.secret_access_key" type="password" class="input w-full" :placeholder="imageStorageSecretConfigured ? t('admin.backup.s3.secretConfigured') : ''" />
+              <SecretRevealButton :target="{ key: 'image_storage_s3_secret' }" :disabled="!imageStorageSecretConfigured" />
             </div>
             <label class="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 md:col-span-2">
               <input v-model="imageStorageForm.force_path_style" type="checkbox" />
@@ -414,6 +416,7 @@ import type {
 import { useStepUp, isStepUpBlocked, isStepUpCancelled, stepUpBlockReason } from '@/composables/useStepUp'
 import { useDialog } from '@/composables/useDialog'
 import TotpStepUpDialog from '@/components/auth/TotpStepUpDialog.vue'
+import SecretRevealButton from '@/components/admin/SecretRevealButton.vue'
 
 const { t } = useI18n()
 const appStore = useAppStore()

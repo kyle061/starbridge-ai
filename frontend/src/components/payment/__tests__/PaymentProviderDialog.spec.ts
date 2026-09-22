@@ -5,6 +5,8 @@ import PaymentProviderDialog from '@/components/payment/PaymentProviderDialog.vu
 import { STRIPE_SDK_API_VERSION } from '@/components/payment/providerConfig'
 import type { ProviderInstance } from '@/types/payment'
 
+vi.mock('@/api/admin/settings', () => ({ revealSecret: vi.fn() }))
+
 const messages: Record<string, string> = {
   'admin.settings.payment.providerConfig': 'Credentials',
   'admin.settings.payment.easypayCustomMethods': 'Custom EasyPay methods',

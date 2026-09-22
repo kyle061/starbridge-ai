@@ -142,6 +142,7 @@
                     >
                       {{ adminApiKeyMasked }}
                     </code>
+                    <SecretRevealButton :target="{ key: 'admin_api_key' }" />
                   </div>
                   <div class="flex gap-2">
                     <button
@@ -2160,6 +2161,7 @@
                       class="input font-mono text-sm"
                       placeholder="0x4AAAAAAA..."
                     />
+                    <SecretRevealButton :target="{ key: 'turnstile_secret_key' }" :disabled="!form.turnstile_secret_key_configured" />
                     <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                       {{
                         form.turnstile_secret_key_configured
@@ -2242,6 +2244,7 @@
                         class="input font-mono text-sm"
                         :placeholder="t('admin.settings.tencentCaptcha.keepExisting')"
                       />
+                      <SecretRevealButton :target="{ key: 'tencent_captcha_app_secret_key' }" :disabled="!form.tencent_captcha_app_secret_key_configured" />
                       <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                         {{ form.tencent_captcha_app_secret_key_configured ? t("admin.settings.tencentCaptcha.configured") : t("admin.settings.tencentCaptcha.required") }}
                       </p>
@@ -2265,6 +2268,7 @@
                         class="input font-mono text-sm"
                         :placeholder="t('admin.settings.tencentCaptcha.keepExisting')"
                       />
+                      <SecretRevealButton :target="{ key: 'tencent_captcha_cloud_secret_id' }" :disabled="!form.tencent_captcha_cloud_secret_id_configured" />
                       <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                         {{ form.tencent_captcha_cloud_secret_id_configured ? t("admin.settings.tencentCaptcha.configured") : t("admin.settings.tencentCaptcha.required") }}
                       </p>
@@ -2280,6 +2284,7 @@
                         class="input font-mono text-sm"
                         :placeholder="t('admin.settings.tencentCaptcha.keepExisting')"
                       />
+                      <SecretRevealButton :target="{ key: 'tencent_captcha_cloud_secret_key' }" :disabled="!form.tencent_captcha_cloud_secret_key_configured" />
                       <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                         {{ form.tencent_captcha_cloud_secret_key_configured ? t("admin.settings.tencentCaptcha.configured") : t("admin.settings.tencentCaptcha.required") }}
                       </p>
@@ -2422,6 +2427,7 @@
                       class="input font-mono text-sm"
                       placeholder="••••••••"
                     />
+                    <SecretRevealButton :target="{ key: 'aliyun_captcha_access_key_secret' }" :disabled="!form.aliyun_captcha_access_key_secret_configured" />
                     <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                       {{
                         form.aliyun_captcha_access_key_secret_configured
@@ -2504,6 +2510,7 @@
                           : t('admin.settings.linuxdo.clientSecretPlaceholder')
                       "
                     />
+                    <SecretRevealButton :target="{ key: 'linuxdo_connect_client_secret' }" :disabled="!form.linuxdo_connect_client_secret_configured" />
                     <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                       {{
                         form.linuxdo_connect_client_secret_configured
@@ -2640,6 +2647,7 @@
                               : 'GitHub OAuth Client Secret'
                           "
                         />
+                        <SecretRevealButton :target="{ key: 'github_oauth_client_secret' }" :disabled="!form.github_oauth_client_secret_configured" />
                       </div>
                     </div>
 
@@ -2734,6 +2742,7 @@
                               : 'Google OAuth Client Secret'
                           "
                         />
+                        <SecretRevealButton :target="{ key: 'google_oauth_client_secret' }" :disabled="!form.google_oauth_client_secret_configured" />
                       </div>
                     </div>
 
@@ -2883,6 +2892,7 @@
                                 )
                           "
                         />
+                        <SecretRevealButton :target="{ key: 'wechat_connect_open_app_secret' }" :disabled="!form.wechat_connect_open_app_secret_configured" />
                       </div>
                     </div>
                   </div>
@@ -2961,6 +2971,7 @@
                                 )
                           "
                         />
+                        <SecretRevealButton :target="{ key: 'wechat_connect_mp_app_secret' }" :disabled="!form.wechat_connect_mp_app_secret_configured" />
                       </div>
                     </div>
                   </div>
@@ -3034,6 +3045,7 @@
                                 )
                           "
                         />
+                        <SecretRevealButton :target="{ key: 'wechat_connect_mobile_app_secret' }" :disabled="!form.wechat_connect_mobile_app_secret_configured" />
                       </div>
                     </div>
                   </div>
@@ -3190,6 +3202,7 @@
                           : t('admin.settings.dingtalk.clientSecretPlaceholder')
                       "
                     />
+                    <SecretRevealButton :target="{ key: 'dingtalk_connect_client_secret' }" :disabled="!form.dingtalk_connect_client_secret_configured" />
                     <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                       {{
                         form.dingtalk_connect_client_secret_configured
@@ -3491,6 +3504,7 @@
                           : t('admin.settings.oidc.clientSecretPlaceholder')
                       "
                     />
+                    <SecretRevealButton :target="{ key: 'oidc_connect_client_secret' }" :disabled="!form.oidc_connect_client_secret_configured" />
                     <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                       {{
                         form.oidc_connect_client_secret_configured
@@ -5906,111 +5920,11 @@
                     v-if="expandedProviders[pIdx]"
                     class="space-y-3 border-t border-gray-100 px-4 pb-4 pt-3 dark:border-dark-700"
                   >
-                    <!-- API Key with inline show/copy -->
+                    <!-- Saved credentials require password verification. -->
                     <div>
-                      <label class="text-xs text-gray-500">{{
-                        t("admin.settings.webSearchEmulation.apiKey")
-                      }}</label>
-                      <div class="relative">
-                        <input
-                          v-model="provider.api_key"
-                          :type="apiKeyVisible[pIdx] ? 'text' : 'password'"
-                          class="input w-full text-sm"
-                          :class="
-                            provider.api_key || provider.api_key_configured
-                              ? 'pr-16'
-                              : ''
-                          "
-                          :placeholder="
-                            provider.api_key_configured
-                              ? '••••••••'
-                              : t(
-                                  'admin.settings.webSearchEmulation.apiKeyPlaceholder',
-                                )
-                          "
-                        />
-                        <div
-                          v-if="provider.api_key || provider.api_key_configured"
-                          class="absolute inset-y-0 right-0 flex items-center pr-1.5"
-                        >
-                          <button
-                            type="button"
-                            class="rounded p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                            :title="
-                              apiKeyVisible[pIdx]
-                                ? t(
-                                    'admin.settings.webSearchEmulation.hideApiKey',
-                                  )
-                                : t(
-                                    'admin.settings.webSearchEmulation.showApiKey',
-                                  )
-                            "
-                            @click="apiKeyVisible[pIdx] = !apiKeyVisible[pIdx]"
-                          >
-                            <svg
-                              v-if="!apiKeyVisible[pIdx]"
-                              class="h-4 w-4"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                              <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                              />
-                            </svg>
-                            <svg
-                              v-else
-                              class="h-4 w-4"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            type="button"
-                            class="rounded p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                            :class="{
-                              'opacity-30 cursor-not-allowed':
-                                !provider.api_key,
-                            }"
-                            :title="
-                              t('admin.settings.webSearchEmulation.copyApiKey')
-                            "
-                            :disabled="!provider.api_key"
-                            @click="copyApiKey(pIdx)"
-                          >
-                            <svg
-                              class="h-4 w-4"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                              />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
+                      <label class="text-xs text-gray-500">{{ t("admin.settings.webSearchEmulation.apiKey") }}</label>
+                      <input v-model="provider.api_key" type="password" autocomplete="new-password" class="input w-full text-sm" :placeholder="provider.api_key_configured ? '••••••••' : t('admin.settings.webSearchEmulation.apiKeyPlaceholder')" />
+                      <SecretRevealButton :target="{ key: 'web_search_api_key', provider_type: provider.type }" :disabled="!provider.api_key_configured" />
                     </div>
 
                     <!-- Quota + Subscription in compact row -->
@@ -8456,6 +8370,7 @@
                     spellcheck="false"
                     :placeholder="form.brevo_api_key_configured ? '********' : t('admin.settings.brevo.apiKeyPlaceholder')"
                   />
+                  <SecretRevealButton :target="{ key: 'brevo_api_key' }" :disabled="!form.brevo_api_key_configured" />
                   <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                     {{ form.brevo_api_key_configured ? t("admin.settings.resend.apiKeyConfiguredHint") : t("admin.settings.brevo.apiKeyHint") }}
                     <a href="https://app.brevo.com/settings/keys/api" target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:underline">
@@ -8594,6 +8509,7 @@
                         : t('admin.settings.smtp.passwordPlaceholder')
                     "
                   />
+                  <SecretRevealButton :target="{ key: 'smtp_password' }" :disabled="!form.smtp_password_configured" />
                   <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                     {{
                       form.smtp_password_configured
@@ -8694,6 +8610,7 @@
                         : t('admin.settings.resend.apiKeyPlaceholder')
                     "
                   />
+                  <SecretRevealButton :target="{ key: 'resend_api_key' }" :disabled="!form.resend_api_key_configured" />
                   <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                     {{
                       form.resend_api_key_configured
@@ -9103,6 +9020,7 @@ import type {
 import type { ProviderInstance } from "@/types/payment";
 import AppLayout from "@/components/layout/AppLayout.vue";
 import Icon from "@/components/icons/Icon.vue";
+import SecretRevealButton from "@/components/admin/SecretRevealButton.vue";
 import Select, { type SelectOption } from "@/components/common/Select.vue";
 import {
   SITE_BILLING_MODES,
@@ -10377,7 +10295,6 @@ const webSearchConfig = reactive<WebSearchEmulationConfig>({
 });
 
 const expandedProviders = reactive<Record<number, boolean>>({});
-const apiKeyVisible = reactive<Record<number, boolean>>({});
 const wsTestQuery = ref("");
 const wsTestLoading = ref(false);
 const wsTestResult = ref<WebSearchTestResult | null>(null);
@@ -10394,20 +10311,16 @@ function toggleProviderExpand(idx: number) {
 
 function removeWebSearchProvider(idx: number) {
   webSearchConfig.providers.splice(idx, 1);
-  // Re-index expandedProviders and apiKeyVisible after removal
+  // Re-index expanded providers after removal
   const newExpanded: Record<number, boolean> = {};
-  const newVisible: Record<number, boolean> = {};
   for (let i = 0; i < webSearchConfig.providers.length; i++) {
     const oldIdx = i >= idx ? i + 1 : i;
     newExpanded[i] = expandedProviders[oldIdx] ?? false;
-    newVisible[i] = apiKeyVisible[oldIdx] ?? false;
   }
   Object.keys(expandedProviders).forEach(
     (k) => delete expandedProviders[Number(k)],
   );
-  Object.keys(apiKeyVisible).forEach((k) => delete apiKeyVisible[Number(k)]);
   Object.assign(expandedProviders, newExpanded);
-  Object.assign(apiKeyVisible, newVisible);
 }
 
 function addWebSearchProvider() {
@@ -10460,22 +10373,6 @@ async function resetWebSearchUsage(idx: number) {
     );
   } catch (err: unknown) {
     appStore.showError(extractApiErrorMessage(err, t("common.error")));
-  }
-}
-
-async function copyApiKey(idx: number) {
-  const key = webSearchConfig.providers[idx]?.api_key;
-  if (!key) {
-    appStore.showError(
-      t("admin.settings.webSearchEmulation.apiKeyPlaceholder"),
-    );
-    return;
-  }
-  try {
-    await navigator.clipboard.writeText(key);
-    appStore.showSuccess(t("admin.settings.webSearchEmulation.copied"));
-  } catch {
-    appStore.showError(t("common.error"));
   }
 }
 

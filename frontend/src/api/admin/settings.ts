@@ -1618,7 +1618,22 @@ export async function resetWebSearchUsage(payload: {
   );
 }
 
+export interface SecretRevealTarget {
+  key: string;
+  provider_id?: number;
+  provider_type?: string;
+  field?: string;
+}
+
+export async function revealSecret(target: SecretRevealTarget, password: string): Promise<string> {
+  const { data } = await apiClient.post<{ value: string }>(
+    "/admin/settings/reveal-secret", { ...target, password },
+  );
+  return data.value;
+}
+
 export const settingsAPI = {
+  revealSecret,
   getSettings,
   updateSettings,
   testSmtpConnection,
