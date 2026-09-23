@@ -3,15 +3,17 @@
 // =====================
 
 // OpenAI 当前支持的 GPT 系列。
-// 这里只放可直接用于账号白名单/映射的公开模型，不把旧版、内部探针、
-// 预览别名或其他媒体模型混进通用模型选择器。
+// 这里只放可直接用于账号白名单/映射的公开模型，不把旧版、内部探针或
+// 未确认支持的预览别名混进通用模型选择器。
 const openaiModels = [
   // GPT-5.5 系列
   'gpt-5.5',
   // GPT-5.6 系列
   'gpt-5.6', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna',
   // GPT-6 系列
-  'gpt-6', 'gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna'
+  'gpt-6', 'gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna',
+  // 当前支持的 GPT Image 系列
+  'gpt-image-1.5', 'gpt-image-2', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'
 ]
 
 // Anthropic Claude

@@ -7,13 +7,14 @@ vi.mock('@/api/admin/accounts', () => ({
 import { buildModelMappingObject, getModelsByPlatform, getPresetMappingsByPlatform, splitModelMappingObject } from '../useModelWhitelist'
 
 describe('useModelWhitelist', () => {
-  it('openai 模型列表只包含当前支持的 GPT-5.5、GPT-5.6 和 GPT-6 系列', () => {
+  it('openai 模型列表只包含当前支持的 GPT 和 GPT Image 系列', () => {
     const models = getModelsByPlatform('openai')
 
     expect(models).toEqual([
       'gpt-5.5',
       'gpt-5.6', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna',
-      'gpt-6', 'gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna'
+      'gpt-6', 'gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna',
+      'gpt-image-1.5', 'gpt-image-2', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'
     ])
   })
 
@@ -41,6 +42,14 @@ describe('useModelWhitelist', () => {
     expect(models).not.toContain('gpt-5.4')
     expect(models).not.toContain('gpt-5.3-codex-spark')
     expect(models).not.toContain('gpt-image-1')
+  })
+
+  it('openai 模型列表保留当前支持的图片模型', () => {
+    const models = getModelsByPlatform('openai')
+
+    expect(models).toEqual(expect.arrayContaining([
+      'gpt-image-1.5', 'gpt-image-2', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'
+    ]))
   })
 
   it('antigravity 模型列表包含图片模型兼容项', () => {
