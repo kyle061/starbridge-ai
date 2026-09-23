@@ -67,7 +67,7 @@
                 </p>
               </div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center justify-end gap-2">
               <span
                 :class="[
                   'rounded-full px-2 py-0.5 text-xs font-medium',
@@ -80,6 +80,14 @@
               >
                 {{ t(`userSubscriptions.status.${subscription.status}`) }}
               </span>
+              <button
+                v-if="subscription.status === 'active'"
+                type="button"
+                class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:border-primary-300 hover:text-primary-700 dark:border-dark-600 dark:text-gray-200 dark:hover:border-primary-700 dark:hover:text-primary-300"
+                @click="createKeyForSubscription(subscription)"
+              >
+                {{ t('userSubscriptions.createKey') }}
+              </button>
               <button
                 v-if="subscription.status === 'active'"
                 :class="['rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors', platformButtonClass(subscription.group?.platform || '')]"
@@ -278,6 +286,13 @@ const appStore = useAppStore()
 const subscriptions = ref<UserSubscription[]>([])
 const loading = ref(true)
 const loadError = ref(false)
+
+function createKeyForSubscription(subscription: UserSubscription) {
+  router.push({
+    path: '/keys',
+    query: { create: '1', group: String(subscription.group_id) }
+  })
+}
 
 async function loadSubscriptions() {
   try {

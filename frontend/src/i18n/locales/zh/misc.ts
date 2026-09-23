@@ -141,6 +141,7 @@ export default {
     failedToLoad: '加载订阅失败',
     loadFailed: '订阅信息暂时无法加载',
     retry: '重试',
+    createKey: '为此订阅创建密钥',
     status: {
       active: '有效',
       expired: '已过期',

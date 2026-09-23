@@ -181,6 +181,10 @@
       </div>
 
       <template v-if="activeTab === 'usage'">
+        <div v-if="logsLoadFailed" class="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-300" role="alert">
+          <span>{{ t('usage.failedToLoad') }}</span>
+          <button type="button" class="btn btn-secondary btn-sm min-h-10" :disabled="loading" @click="loadLogs">{{ t('usage.retry') }}</button>
+        </div>
         <UsageTable
           :data="usageLogs"
           :loading="loading"
@@ -205,19 +209,24 @@
         />
       </template>
 
-      <UserErrorRequestsTable
-        v-else-if="errorViewEnabled"
-        :rows="errorRows"
-        :total="errorTotal"
-        :loading="errorLoading"
-        :page="errorPage"
-        :page-size="errorPageSize"
-        :visible-column-keys="errVisibleColumnKeys"
-        @sort="onErrorSort"
-        @update:page="onErrorPage"
-        @update:pageSize="onErrorPageSize"
-        @ipGeoBatchFailed="handleIpGeoBatchFailed"
-      />
+      <template v-else-if="errorViewEnabled">
+        <div v-if="errorRowsLoadFailed" class="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-300" role="alert">
+          <span>{{ t('usage.errors.failedToLoad') }}</span>
+          <button type="button" class="btn btn-secondary btn-sm min-h-10" :disabled="errorLoading" @click="loadErrors">{{ t('usage.retry') }}</button>
+        </div>
+        <UserErrorRequestsTable
+          :rows="errorRows"
+          :total="errorTotal"
+          :loading="errorLoading"
+          :page="errorPage"
+          :page-size="errorPageSize"
+          :visible-column-keys="errVisibleColumnKeys"
+          @sort="onErrorSort"
+          @update:page="onErrorPage"
+          @update:pageSize="onErrorPageSize"
+          @ipGeoBatchFailed="handleIpGeoBatchFailed"
+        />
+      </template>
     </div>
   </AppLayout>
 
@@ -282,12 +291,14 @@ const endpointPathStats = ref<EndpointStat[]>([])
 const platformQuotas = ref<PlatformQuotaItem[]>([])
 
 const loading = ref(false)
+const logsLoadFailed = ref(false)
 const chartsLoading = ref(false)
 const modelStatsLoading = ref(false)
 const endpointStatsLoading = ref(false)
 const exporting = ref(false)
 const errorRows = ref<UserErrorRequest[]>([])
 const errorLoading = ref(false)
+const errorRowsLoadFailed = ref(false)
 const errorPage = ref(1)
 const errorPageSize = ref(20)
 const errorSortBy = ref('created_at')
@@ -459,6 +470,7 @@ const loadLogs = async () => {
   const controller = new AbortController()
   abortController = controller
   loading.value = true
+  logsLoadFailed.value = false
   try {
     const res = await usageAPI.query(buildUsageListParams(pagination.page, pagination.page_size), {
       signal: controller.signal,
@@ -469,6 +481,7 @@ const loadLogs = async () => {
     }
   } catch (error: any) {
     if (error?.name !== 'AbortError' && error?.code !== 'ERR_CANCELED') {
+      logsLoadFailed.value = true
       appStore.showError(t('usage.failedToLoad'))
     }
   } finally {
@@ -876,6 +889,7 @@ const resetErrorRows = () => {
 
 const loadErrors = async () => {
   errorLoading.value = true
+  errorRowsLoadFailed.value = false
   try {
     const resp = await usageAPI.listMyErrorRequests({
       page: errorPage.value,
@@ -893,6 +907,7 @@ const loadErrors = async () => {
     errorTotal.value = resp.total
   } catch (error) {
     console.error('[UsageView] loadErrors failed:', error)
+    errorRowsLoadFailed.value = true
     appStore.showError(t('usage.errors.failedToLoad'))
   } finally {
     errorLoading.value = false

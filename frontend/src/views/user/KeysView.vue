@@ -733,34 +733,34 @@
 </template>
 
 <script setup lang="ts">
-	import { ref, reactive, computed, watch, onMounted, onUnmounted, type ComponentPublicInstance } from 'vue'
-	import { useI18n } from 'vue-i18n'
-	import { useAppStore } from '@/stores/app'
-	import { useOnboardingStore } from '@/stores/onboarding'
-	import { useSubscriptionStore } from '@/stores/subscriptions'
-	import { useClipboard } from '@/composables/useClipboard'
+import { inject, ref, reactive, computed, watch, onMounted, onUnmounted, type ComponentPublicInstance } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { routeLocationKey, routerKey } from 'vue-router'
+import { useAppStore } from '@/stores/app'
+import { useOnboardingStore } from '@/stores/onboarding'
+import { useSubscriptionStore } from '@/stores/subscriptions'
+import { useClipboard } from '@/composables/useClipboard'
+import { useDialog } from '@/composables/useDialog'
 import { getPersistedPageSize } from '@/composables/usePersistedPageSize'
-
-const { t } = useI18n()
 import { keysAPI, authAPI, usageAPI, userGroupsAPI } from '@/api'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TablePageLayout from '@/components/layout/TablePageLayout.vue'
 import BulkEditKeysModal from '@/components/keys/BulkEditKeysModal.vue'
-	import DataTable from '@/components/common/DataTable.vue'
-	import Pagination from '@/components/common/Pagination.vue'
-	import BaseDialog from '@/components/common/BaseDialog.vue'
-	import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
-	import EmptyState from '@/components/common/EmptyState.vue'
-	import Select from '@/components/common/Select.vue'
-	import SearchInput from '@/components/common/SearchInput.vue'
-	import Icon from '@/components/icons/Icon.vue'
-	import UseKeyModal from '@/components/keys/UseKeyModal.vue'
+import DataTable from '@/components/common/DataTable.vue'
+import Pagination from '@/components/common/Pagination.vue'
+import BaseDialog from '@/components/common/BaseDialog.vue'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import Select from '@/components/common/Select.vue'
+import SearchInput from '@/components/common/SearchInput.vue'
+import Icon from '@/components/icons/Icon.vue'
+import UseKeyModal from '@/components/keys/UseKeyModal.vue'
 import CcsCodexBindingModal from '@/components/keys/CcsCodexBindingModal.vue'
 import { formatSubscriptionQuota } from '@/utils/subscriptionQuota'
-	import EndpointPopover from '@/components/keys/EndpointPopover.vue'
-	import GroupBadge from '@/components/common/GroupBadge.vue'
-	import GroupOptionItem from '@/components/common/GroupOptionItem.vue'
-	import type { ApiKey, Group, PublicSettings, SubscriptionType, GroupPlatform, UpdateApiKeyRequest } from '@/types'
+import EndpointPopover from '@/components/keys/EndpointPopover.vue'
+import GroupBadge from '@/components/common/GroupBadge.vue'
+import GroupOptionItem from '@/components/common/GroupOptionItem.vue'
+import type { ApiKey, Group, PublicSettings, SubscriptionType, GroupPlatform, UpdateApiKeyRequest } from '@/types'
 import type { Column } from '@/components/common/types'
 import type { BatchApiKeyUsageStats } from '@/api/usage'
 import type { PrepaidAccess } from '@/api/keys'
@@ -771,6 +771,11 @@ import {
   resolveCcSwitchImportConfig,
   type CcSwitchClientType
 } from '@/utils/ccswitchImport'
+
+const { t } = useI18n()
+const route = inject(routeLocationKey, null)
+const router = inject(routerKey, null)
+const { confirm } = useDialog()
 
 interface GroupOption {
   value: number
@@ -1242,13 +1247,34 @@ const loadGroups = async () => {
   } catch (error) {
     console.error('Failed to load groups:', error)
   }
-  try {
-    userGroupRates.value = await userGroupsAPI.getUserGroupRates()
-  } catch (error) {
+  void Promise.resolve().then(() => userGroupsAPI.getUserGroupRates()).then((rates) => {
+    userGroupRates.value = rates
+  }).catch((error) => {
     // Rate visibility is supplemental; a rates endpoint failure must not hide
     // the available group list or prevent key creation.
     console.error('Failed to load user group rates:', error)
+  })
+}
+
+const openRequestedCreateKey = async () => {
+  if (route?.query.create !== '1') return
+  const requestedGroupId = Number(route.query.group)
+  const requestedGroup = Number.isSafeInteger(requestedGroupId)
+    ? groupOptions.value.find((group) => group.value === requestedGroupId)
+    : undefined
+
+  if (requestedGroup) {
+    formData.value = { name: t('keys.suggestedKeyName', { group: requestedGroup.label }), group_id: requestedGroup.value, status: 'active' }
+    showCreateModal.value = true
+  } else {
+    appStore.showError(t('keys.requestedGroupUnavailable'))
   }
+
+  if (!router) return
+  const query = { ...route.query }
+  delete query.create
+  delete query.group
+  await router.replace({ path: route.path, query })
 }
 
 const loadPublicSettings = async () => {
@@ -1355,6 +1381,9 @@ const changeGroup = async (key: ApiKey, newGroupId: number | null) => {
   groupSelectorKeyId.value = null
   dropdownPosition.value = null
   if (key.group_id === newGroupId) return
+
+  const newGroupName = groupOptions.value.find((group) => group.value === newGroupId)?.label ?? t('keys.noGroup')
+  if (!(await confirm(t('keys.groupChangeConfirm', { group: newGroupName })))) return
 
   try {
     await keysAPI.update(key.id, { group_id: newGroupId })
@@ -1547,14 +1576,15 @@ const closeCcsClientSelect = () => {
   pendingCcsRow.value = null
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadSavedColumns()
   loadApiKeys()
-  loadGroups()
-  loadPublicSettings()
   document.addEventListener('click', closeGroupSelector)
   window.addEventListener('focus', loadPrepaidAccess)
   prepaidTimer = setInterval(() => { if (!document.hidden) void loadPrepaidAccess() }, 30000)
+  void loadPublicSettings()
+  await loadGroups()
+  await openRequestedCreateKey()
 })
 
 onUnmounted(() => {

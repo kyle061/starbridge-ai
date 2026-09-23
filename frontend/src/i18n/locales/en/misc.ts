@@ -144,6 +144,7 @@ export default {
     failedToLoad: 'Failed to load subscriptions',
     loadFailed: 'Subscription information is temporarily unavailable',
     retry: 'Retry',
+    createKey: 'Create key for this subscription',
     status: {
       active: 'Active',
       expired: 'Expired',
