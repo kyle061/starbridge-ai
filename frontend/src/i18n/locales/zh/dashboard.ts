@@ -132,6 +132,7 @@ export default {
     groupLabel: '分组',
     selectGroup: '选择分组',
     groupSelectionHint: '订阅套餐已在订阅页面购买，请选择该套餐对应的订阅分组。普通分组需要账户余额。',
+    groupChangeHint: '切换已有密钥的分组会立即改变可用模型和扣费来源，请确认后再选择。',
     statusLabel: '状态',
     selectStatus: '选择状态',
     saving: '保存中...',

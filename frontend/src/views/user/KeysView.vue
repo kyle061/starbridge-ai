@@ -691,6 +691,7 @@
               @click.stop
             />
           </div>
+          <p class="mt-2 px-1 text-xs leading-5 text-gray-500 dark:text-gray-400">{{ t('keys.groupChangeHint') }}</p>
         </div>
         <!-- Group list -->
         <div class="max-h-80 overflow-y-auto p-1.5">

@@ -132,6 +132,7 @@ export default {
     groupLabel: 'Group',
     selectGroup: 'Select a group',
     groupSelectionHint: 'Subscription plans are purchased on the Subscriptions page. Select the group included with your plan; standard groups require account balance.',
+    groupChangeHint: 'Changing an existing key’s group immediately changes its available models and billing source. Check the target group before selecting it.',
     statusLabel: 'Status',
     selectStatus: 'Select status',
     saving: 'Saving...',
