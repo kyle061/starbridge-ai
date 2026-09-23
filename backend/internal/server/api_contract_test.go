@@ -645,6 +645,8 @@ func TestAPIContracts(t *testing.T) {
 					service.SettingKeyEmailVerifyEnabled:               "false",
 					service.SettingKeyRegistrationEmailSuffixWhitelist: "[]",
 					service.SettingKeyPromoCodeEnabled:                 "true",
+					service.SettingKeyLoginAgreementDocuments:          `[{"id":"terms","title":"Starbridge AI 服务条款","content_md":""},{"id":"usage-policy","title":"Starbridge AI 使用政策","content_md":""},{"id":"supported-regions","title":"Starbridge AI 支持的国家和地区","content_md":""},{"id":"service-specific-terms","title":"Starbridge AI 服务特定条款","content_md":""}]`,
+					service.SettingKeyLoginAgreementUpdatedAt:           "2026-03-31",
 
 					service.SettingKeySMTPHost:     "smtp.example.com",
 					service.SettingKeySMTPPort:     "587",
@@ -1056,6 +1058,8 @@ func TestAPIContracts(t *testing.T) {
 					service.SettingKeyRegistrationEnabled:              "true",
 					service.SettingKeyEmailVerifyEnabled:               "false",
 					service.SettingKeyRegistrationEmailSuffixWhitelist: "[]",
+					service.SettingKeyLoginAgreementDocuments:          `[{"id":"terms","title":"Starbridge AI 服务条款","content_md":""},{"id":"usage-policy","title":"Starbridge AI 使用政策","content_md":""},{"id":"supported-regions","title":"Starbridge AI 支持的国家和地区","content_md":""},{"id":"service-specific-terms","title":"Starbridge AI 服务特定条款","content_md":""}]`,
+					service.SettingKeyLoginAgreementUpdatedAt:           "2026-03-31",
 				})
 			},
 			method:     http.MethodGet,

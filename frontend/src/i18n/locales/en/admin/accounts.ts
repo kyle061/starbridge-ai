@@ -1315,9 +1315,9 @@ export default {
           noProjectIdNeededDesc: 'Requires admin-configured OAuth client',
 	          aiStudioNotConfiguredShort: 'Not configured',
 	          aiStudioNotConfiguredTip:
-	            'AI Studio OAuth is not configured: set GEMINI_OAUTH_CLIENT_ID / GEMINI_OAUTH_CLIENT_SECRET and add Redirect URI: http://localhost:1455/auth/callback (Consent screen scopes must include https://www.googleapis.com/auth/generative-language.retriever)',
+	            'AI Studio OAuth is not configured: set GEMINI_OAUTH_CLIENT_ID / GEMINI_OAUTH_CLIENT_SECRET and add the current site callback (usually https://starbridaeai.top/auth/callback; consent screen scopes must include https://www.googleapis.com/auth/generative-language.retriever)',
 	          aiStudioNotConfigured:
-	            'AI Studio OAuth is not configured: set GEMINI_OAUTH_CLIENT_ID / GEMINI_OAUTH_CLIENT_SECRET and add Redirect URI: http://localhost:1455/auth/callback'
+	            'AI Studio OAuth is not configured: set GEMINI_OAUTH_CLIENT_ID / GEMINI_OAUTH_CLIENT_SECRET and add the current site /auth/callback redirect URI'
 	        },
         // Antigravity specific
         antigravity: {
@@ -1328,13 +1328,13 @@ export default {
           step2OpenUrl: 'Open the URL in your browser and complete authorization',
           openUrlDesc: 'Open the authorization URL in a new tab, log in to your Google account and authorize.',
           importantNotice:
-            'Important: The page may take a while to load after authorization. Please wait patiently. When the browser address bar shows http://localhost..., authorization is complete.',
+            'Important: The page may take a while to load after authorization. Please wait patiently. Authorization is complete when the browser reaches the callback page provided by the authorization flow.',
           step3EnterCode: 'Enter Authorization URL or Code',
           authCodeDesc:
-            'After authorization, when the page URL becomes http://localhost:xxx/auth/callback?code=...:',
+            'After authorization, when the page URL becomes the callback?code=... page provided by the authorization flow:',
           authCode: 'Authorization URL or Code',
           authCodePlaceholder:
-            'Option 1: Copy the complete URL\n(http://localhost:xxx/auth/callback?code=...)\nOption 2: Copy only the code parameter value',
+            'Option 1: Copy the complete callback URL (including the code parameter)\nOption 2: Copy only the code parameter value',
                     authCodeHint: 'You can copy the entire URL or just the code parameter value, the system will auto-detect',
                     failedToGenerateUrl: 'Failed to generate Antigravity auth URL',
                     missingExchangeParams: 'Missing code, session ID, or state',

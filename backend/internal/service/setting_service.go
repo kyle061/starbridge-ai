@@ -283,7 +283,7 @@ const (
 	defaultGoogleOAuthScopes     = "openid email profile"
 	defaultGoogleOAuthFrontend   = "/auth/oauth/callback"
 	defaultLoginAgreementMode    = "modal"
-	defaultLoginAgreementDate    = "2026-03-31"
+	defaultLoginAgreementDate    = "2026-09-23"
 )
 
 // NewSettingService 创建系统设置服务实例

@@ -6176,6 +6176,44 @@
               </p>
             </div>
             <div class="space-y-6 p-6">
+              <!-- Launch checklist: make implicit defaults and optional public links visible. -->
+              <div class="rounded-2xl border border-primary-100 bg-primary-50/60 p-4 dark:border-primary-500/20 dark:bg-primary-500/10">
+                <div class="flex items-start gap-3">
+                  <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-primary-700 shadow-sm dark:bg-dark-800 dark:text-primary-300">
+                    <Icon name="checkCircle" size="sm" />
+                  </span>
+                  <div class="min-w-0 flex-1">
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+                      {{ localText("上线前检查", "Launch checklist") }}
+                    </h3>
+                    <p class="mt-1 text-xs leading-5 text-gray-600 dark:text-dark-300">
+                      {{ localText("空的可选项不会在前台渲染入口；启用登录条款前请确认每份文档都有正文。", "Empty optional fields stay hidden on the public site. Add content to every document before enabling mandatory consent.") }}
+                    </p>
+                  </div>
+                </div>
+                <div class="mt-4 grid gap-2 sm:grid-cols-2">
+                  <div
+                    v-for="item in [
+                      { label: localText('站点名称', 'Site name'), ready: Boolean(form.site_name.trim()) },
+                      { label: localText('API 地址（留空使用当前域名）', 'API endpoint (current site when empty)'), ready: Boolean(form.api_base_url.trim()), optional: true },
+                      { label: localText('客服微信或联系渠道', 'Support contact'), ready: Boolean(form.contact_info.trim()), optional: true },
+                      { label: localText('条款正文', 'Policy content'), ready: !form.login_agreement_enabled || form.login_agreement_documents.every((doc) => Boolean(doc.title.trim() && doc.content_md.trim())) },
+                    ]"
+                    :key="item.label"
+                    class="flex min-w-0 items-center gap-2 rounded-xl bg-white/80 px-3 py-2 text-xs dark:bg-dark-900/60"
+                  >
+                    <span
+                      class="h-2 w-2 shrink-0 rounded-full"
+                      :class="item.ready ? 'bg-emerald-500' : 'bg-amber-400'"
+                    ></span>
+                    <span class="min-w-0 truncate text-gray-700 dark:text-dark-200">{{ item.label }}</span>
+                    <span v-if="!item.ready && item.optional" class="ml-auto shrink-0 text-gray-400">{{ localText('可选', 'Optional') }}</span>
+                    <span v-else-if="item.ready" class="ml-auto shrink-0 text-emerald-600 dark:text-emerald-400">{{ localText('已配置', 'Ready') }}</span>
+                    <span v-else class="ml-auto shrink-0 text-amber-600 dark:text-amber-400">{{ localText('待配置', 'Review') }}</span>
+                  </div>
+                </div>
+              </div>
+
               <!-- Backend Mode -->
               <div
                 class="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20"
@@ -6854,15 +6892,7 @@
                       <div class="flex min-w-0 items-center gap-3">
                         <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-700 dark:bg-dark-700 dark:text-dark-200">
                           <Icon
-                            :name="
-                              index === 1
-                                ? 'shield'
-                                : index === 2
-                                  ? 'globe'
-                                  : index === 3
-                                    ? 'cog'
-                                    : 'document'
-                            "
+                            :name="loginAgreementDocumentIcon(doc.title)"
                             size="sm"
                           />
                         </span>
@@ -9313,22 +9343,42 @@ function defaultLoginAgreementDocuments(): LoginAgreementDocument[] {
     {
       id: "terms",
       title: localText("Starbridge AI 服务条款", "Starbridge AI Terms of Service"),
-      content_md: "",
+      content_md: localText(
+        "# Starbridge AI 服务条款\n\n这是站点运营者可编辑的初始模板。请在启用强制确认前补充主体信息、计费、退款、客服和适用法律。",
+        "# Starbridge AI Terms of Service\n\nThis is an editable starter template. Review it and add the operator, billing, refund, support, and governing-law details before enabling mandatory consent.",
+      ),
+    },
+    {
+      id: "privacy-policy",
+      title: localText("Starbridge AI 隐私政策", "Starbridge AI Privacy Policy"),
+      content_md: localText(
+        "# Starbridge AI 隐私政策\n\n说明站点收集的账号、请求、用量和安全日志，说明上游共享范围、保存期限和用户权利。请按实际部署补充并审阅。",
+        "# Starbridge AI Privacy Policy\n\nDescribe account, request, usage, and security logs, upstream sharing, retention, and user rights. Update this template for the actual deployment.",
+      ),
     },
     {
       id: "usage-policy",
       title: localText("Starbridge AI 使用政策", "Starbridge AI Usage Policy"),
-      content_md: "",
+      content_md: localText(
+        "# Starbridge AI 使用政策\n\n禁止违法、绕过额度或安全控制、滥用凭据、恶意刷量和侵害他人权利的行为。",
+        "# Starbridge AI Usage Policy\n\nDo not use the service for illegal activity, bypassing limits or security controls, credential abuse, abusive traffic, or rights violations.",
+      ),
     },
     {
       id: "supported-regions",
       title: localText("Starbridge AI 支持的国家和地区", "Starbridge AI Supported Countries and Regions"),
-      content_md: "",
+      content_md: localText(
+        "# Starbridge AI 支持的国家和地区\n\n支持范围由站点运营者、上游服务商、支付渠道和适用法律共同决定。请在上线前列出实际支持范围。",
+        "# Starbridge AI Supported Countries and Regions\n\nAvailability depends on the operator, upstream providers, payment channels, and applicable law. List the actual supported regions before launch.",
+      ),
     },
     {
       id: "service-specific-terms",
       title: localText("Starbridge AI 服务特定条款", "Starbridge AI Service-Specific Terms"),
-      content_md: "",
+      content_md: localText(
+        "# Starbridge AI 服务特定条款\n\nAPI Key、订阅、分组、模型范围和账号调度以当前站点配置为准。上游账号不足或故障时，请求可能失败或切换。",
+        "# Starbridge AI Service-Specific Terms\n\nAPI keys, subscriptions, groups, model access, and account scheduling follow the current site configuration. Requests may fail or switch accounts when upstream capacity is unavailable.",
+      ),
     },
   ];
 }
@@ -9349,6 +9399,30 @@ function loginAgreementRoutePath(
   const id =
     normalizeLoginAgreementDocumentId(doc.id || doc.title) || `doc-${index + 1}`;
   return `/legal/${id}`;
+}
+
+function loginAgreementDocumentIcon(title: string): "document" | "shield" | "globe" | "cog" {
+  const normalized = title.toLowerCase();
+  if (
+    normalized.includes("privacy") ||
+    normalized.includes("policy") ||
+    title.includes("隐私") ||
+    title.includes("政策")
+  ) {
+    return "shield";
+  }
+  if (
+    normalized.includes("region") ||
+    normalized.includes("country") ||
+    title.includes("国家") ||
+    title.includes("地区")
+  ) {
+    return "globe";
+  }
+  if (normalized.includes("specific") || title.includes("特定")) {
+    return "cog";
+  }
+  return "document";
 }
 
 type ClaudeOAuthSystemPromptPreset =
@@ -9811,7 +9885,7 @@ const form = reactive<SettingsForm>({
   audit_log_retention_days: 180,
   login_agreement_enabled: false,
   login_agreement_mode: "modal",
-  login_agreement_updated_at: "2026-03-31",
+  login_agreement_updated_at: "2026-09-23",
   login_agreement_documents: defaultLoginAgreementDocuments(),
   default_balance: 0,
   default_platform_quotas: normalizePlatformQuotasMap() as DefaultPlatformQuotasMap,
@@ -11121,7 +11195,7 @@ async function loadSettings() {
       settings.channel_monitor_hide_user_ranking
     );
     form.login_agreement_updated_at =
-      settings.login_agreement_updated_at || "2026-03-31";
+      settings.login_agreement_updated_at || "2026-09-23";
     form.login_agreement_documents =
       Array.isArray(settings.login_agreement_documents) &&
       settings.login_agreement_documents.length > 0

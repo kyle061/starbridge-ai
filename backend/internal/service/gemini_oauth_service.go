@@ -162,11 +162,16 @@ func (s *GeminiOAuthService) GenerateAuthURL(ctx context.Context, proxyID *int64
 
 	// Redirect URI strategy:
 	// - built-in Gemini CLI OAuth client: use upstream redirect URI (codeassist.google.com/authcode)
-	// - custom OAuth client: use localhost callback for manual copy/paste flow
+	// - custom OAuth client: use the current public site callback supplied by the
+	// handler. This keeps hosted deployments on their own domain instead of
+	// sending users to a localhost address.
 	if isBuiltinClient {
 		redirectURI = geminicli.GeminiCLIRedirectURI
 	} else {
-		redirectURI = geminicli.AIStudioOAuthRedirectURI
+		redirectURI = strings.TrimSpace(redirectURI)
+		if redirectURI == "" {
+			redirectURI = geminicli.AIStudioOAuthRedirectURI
+		}
 	}
 	session.RedirectURI = redirectURI
 	s.sessionStore.Set(sessionID, session)

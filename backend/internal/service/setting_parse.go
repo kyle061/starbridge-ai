@@ -323,6 +323,7 @@ func (s *SettingService) migrateLegacyBranding(ctx context.Context) error {
 		SettingKeySMTPFromName,
 		SettingProductNamePrefix,
 		SettingKeyLoginAgreementDocuments,
+		SettingKeyLoginAgreementUpdatedAt,
 	}
 	values, err := s.settingRepo.GetMultiple(ctx, keys)
 	if err != nil {
@@ -348,6 +349,9 @@ func (s *SettingService) migrateLegacyBranding(ctx context.Context) error {
 	}
 	if brandedDocuments, changed := migrateLegacyLoginAgreementDocuments(values[SettingKeyLoginAgreementDocuments]); changed {
 		updates[SettingKeyLoginAgreementDocuments] = brandedDocuments
+		if strings.TrimSpace(values[SettingKeyLoginAgreementUpdatedAt]) == "" || strings.TrimSpace(values[SettingKeyLoginAgreementUpdatedAt]) == "2026-03-31" {
+			updates[SettingKeyLoginAgreementUpdatedAt] = defaultLoginAgreementDate
+		}
 	}
 	if len(updates) == 0 {
 		return nil
@@ -363,14 +367,42 @@ func migrateLegacyLoginAgreementDocuments(raw string) (string, bool) {
 	if err := json.Unmarshal([]byte(raw), &documents); err != nil {
 		return "", false
 	}
+	// Older installations shipped the built-in document titles with empty
+	// bodies. Replace that exact built-in set with the current reviewed
+	// templates, while leaving any operator-authored document untouched.
+	builtInIDs := map[string]bool{
+		"terms": true, "privacy-policy": true, "usage-policy": true,
+		"supported-regions": true, "service-specific-terms": true,
+	}
+	allBuiltIn := len(documents) >= 4 && len(documents) <= len(builtInIDs)
+	seenBuiltIn := make(map[string]bool, len(documents))
+	if allBuiltIn {
+		for _, document := range documents {
+			id := normalizeLoginAgreementDocumentID(document.ID)
+			if !builtInIDs[id] || strings.TrimSpace(document.ContentMD) != "" || seenBuiltIn[id] {
+				allBuiltIn = false
+				break
+			}
+			seenBuiltIn[id] = true
+		}
+	}
+	if allBuiltIn {
+		encoded, err := marshalLoginAgreementDocuments(defaultLoginAgreementDocuments())
+		if err != nil {
+			return "", false
+		}
+		return encoded, true
+	}
 	legacyTitles := map[string]string{
 		"terms":                   "服务条款",
+		"privacy-policy":          "隐私政策",
 		"usage-policy":            "使用政策",
 		"supported-regions":       "支持的国家和地区",
 		"service-specific-terms":  "服务特定条款",
 	}
 	brandedTitles := map[string]string{
 		"terms":                   "Starbridge AI 服务条款",
+		"privacy-policy":          "Starbridge AI 隐私政策",
 		"usage-policy":            "Starbridge AI 使用政策",
 		"supported-regions":       "Starbridge AI 支持的国家和地区",
 		"service-specific-terms":  "Starbridge AI 服务特定条款",

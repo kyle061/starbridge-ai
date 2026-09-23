@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-gray-50 text-gray-900 dark:bg-dark-950 dark:text-white">
     <header class="border-b border-gray-200 bg-white/95 dark:border-dark-800 dark:bg-dark-900/95">
-      <div class="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+      <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6 sm:py-4">
         <RouterLink to="/home" class="flex min-w-0 items-center gap-3">
           <template v-if="settings">
             <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200 dark:bg-dark-800 dark:ring-dark-700">
@@ -18,14 +18,14 @@
         </RouterLink>
         <RouterLink
           to="/login"
-          class="inline-flex flex-shrink-0 items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary-600/20 transition hover:bg-primary-700"
+          class="inline-flex min-h-11 flex-shrink-0 items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary-600/20 transition hover:bg-primary-700"
         >
           {{ t('home.login') }}
         </RouterLink>
       </div>
     </header>
 
-    <main class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:py-10">
+    <main class="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:py-10">
       <div v-if="loading" class="flex min-h-[320px] items-center justify-center">
         <div class="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-600"></div>
       </div>
@@ -55,37 +55,72 @@
         </div>
       </section>
 
-      <article v-else>
-        <div class="mb-8 border-b border-gray-200 pb-6 dark:border-dark-700">
-          <div class="flex items-start gap-4">
-            <span class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300">
-              <Icon :name="documentIcon" size="md" />
-            </span>
-            <div class="min-w-0">
-              <p class="text-sm font-medium text-primary-700 dark:text-primary-300">{{ documentTypeLabel }}</p>
-              <h1 class="mt-2 break-words text-2xl font-bold tracking-normal text-gray-950 dark:text-white sm:text-3xl">
-                {{ currentDocument.title }}
-              </h1>
-              <p v-if="updatedAt" class="mt-3 text-sm text-gray-500 dark:text-dark-400">
-                {{ t('legal.updatedAt', { date: updatedAt }) }}
-              </p>
+      <div v-else class="grid gap-6 lg:grid-cols-[230px_minmax(0,1fr)] lg:items-start">
+        <aside
+          v-if="documentNav.length > 1"
+          class="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm dark:border-dark-700 dark:bg-dark-900 lg:sticky lg:top-6"
+          :aria-label="t('legal.documentNavigation')"
+        >
+          <p class="px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-dark-500">
+            {{ t('legal.documentNavigation') }}
+          </p>
+          <nav class="grid gap-1">
+            <RouterLink
+              v-for="document in documentNav"
+              :key="document.id"
+              :to="{ name: 'LegalDocument', params: { documentId: document.id } }"
+              class="flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm text-gray-600 transition hover:bg-gray-50 hover:text-primary-700 dark:text-dark-300 dark:hover:bg-dark-800 dark:hover:text-primary-300"
+              :class="document.id === documentId && 'bg-primary-50 font-semibold text-primary-700 dark:bg-primary-500/10 dark:text-primary-300'"
+            >
+              <Icon :name="documentIconForTitle(document.title)" size="sm" class="shrink-0" />
+              <span class="min-w-0 truncate">{{ document.title }}</span>
+            </RouterLink>
+          </nav>
+        </aside>
+
+        <article class="min-w-0">
+          <div class="mb-6 rounded-2xl border border-gray-200 bg-white px-5 py-5 shadow-sm dark:border-dark-700 dark:bg-dark-900 sm:px-7 sm:py-6">
+            <div class="flex items-start gap-3 sm:gap-4">
+              <span class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-700 ring-1 ring-primary-100 dark:bg-primary-500/10 dark:text-primary-300 dark:ring-primary-500/20 sm:h-12 sm:w-12">
+                <Icon :name="documentIcon" size="md" />
+              </span>
+              <div class="min-w-0">
+                <p class="text-xs font-semibold uppercase tracking-wide text-primary-700 dark:text-primary-300 sm:text-sm">{{ documentTypeLabel }}</p>
+                <h1 class="mt-1.5 break-words text-2xl font-bold tracking-normal text-gray-950 dark:text-white sm:text-3xl">
+                  {{ currentDocument.title }}
+                </h1>
+                <p v-if="updatedAt" class="mt-2 text-xs text-gray-500 dark:text-dark-400 sm:text-sm">
+                  {{ t('legal.updatedAt', { date: updatedAt }) }}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div
-          v-if="hasContent"
-          class="legal-document-content"
-          v-html="renderedHtml"
-        ></div>
-        <div
-          v-else
-          class="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-14 text-center text-sm text-gray-500 dark:border-dark-700 dark:bg-dark-900 dark:text-dark-400"
-        >
-          {{ t('legal.empty') }}
-        </div>
-      </article>
+          <div
+            v-if="hasContent"
+            class="legal-document-content rounded-2xl border border-gray-200 bg-white px-5 py-6 shadow-sm dark:border-dark-700 dark:bg-dark-900 sm:px-8 sm:py-8"
+            v-html="renderedHtml"
+          ></div>
+          <div
+            v-else
+            class="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-14 text-center dark:border-dark-700 dark:bg-dark-900"
+          >
+            <Icon name="document" size="lg" class="mx-auto text-gray-400 dark:text-dark-500" />
+            <p class="mt-3 text-sm font-medium text-gray-700 dark:text-dark-200">{{ t('legal.emptyTitle') }}</p>
+            <p class="mx-auto mt-1 max-w-md text-sm leading-6 text-gray-500 dark:text-dark-400">{{ t('legal.emptyDescription') }}</p>
+          </div>
+        </article>
+      </div>
     </main>
+
+    <footer class="border-t border-gray-200 bg-white/70 px-4 py-5 dark:border-dark-800 dark:bg-dark-900/70 sm:px-6">
+      <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 text-sm text-gray-500 dark:text-dark-400">
+        <RouterLink to="/home" class="inline-flex min-h-11 items-center font-medium text-primary-700 hover:text-primary-800 dark:text-primary-300 dark:hover:text-primary-200">
+          {{ t('legal.backHome') }}
+        </RouterLink>
+        <SupportContact :contact="contactInfo" />
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -99,6 +134,7 @@ import Icon from '@/components/icons/Icon.vue'
 import { getLocale } from '@/i18n'
 import { sanitizeUrl } from '@/utils/url'
 import { useAppStore } from '@/stores/app'
+import SupportContact from '@/components/common/SupportContact.vue'
 import type { LoginAgreementDocument } from '@/types'
 import zhAdminCompliance from '../../../../docs/legal/admin-compliance.zh.md?raw'
 import enAdminCompliance from '../../../../docs/legal/admin-compliance.en.md?raw'
@@ -120,7 +156,9 @@ marked.setOptions({
 const documentId = computed(() => String(route.params.documentId || ''))
 const isAdminComplianceDocument = computed(() => documentId.value === 'admin-compliance')
 const documents = computed(() => settings.value?.login_agreement_documents ?? [])
+const documentNav = computed(() => documents.value.filter((document) => document.id && document.title.trim()))
 const siteName = computed(() => settings.value?.site_name || 'Starbridge AI')
+const contactInfo = computed(() => (settings.value?.contact_info || '').trim())
 const siteLogo = computed(() => sanitizeUrl(settings.value?.site_logo || '', {
   allowRelative: true,
   allowDataUrl: true,
@@ -159,7 +197,10 @@ const renderedHtml = computed(() => {
 })
 
 const documentIcon = computed<LegalDocumentIcon>(() => {
-  const title = currentDocument.value?.title || ''
+  return documentIconForTitle(currentDocument.value?.title || '')
+})
+
+function documentIconForTitle(title: string): LegalDocumentIcon {
   if (title.includes('政策') || title.includes('隐私')) {
     return 'shield'
   }
@@ -170,7 +211,7 @@ const documentIcon = computed<LegalDocumentIcon>(() => {
     return 'cog'
   }
   return 'document'
-})
+}
 
 onMounted(async () => {
   loadError.value = false
