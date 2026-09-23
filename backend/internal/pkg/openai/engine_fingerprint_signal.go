@@ -33,6 +33,43 @@ var DefaultEngineFingerprintSignals = []EngineFingerprintSignal{
 	{Type: FingerprintSignalBodyPath, Match: []string{"client_metadata.x-codex-window-id", "client_metadata.x-codex-installation-id"}, Required: false},
 }
 
+// HasCodexBodyEngineFingerprint reports whether a request body carries one of
+// the Codex engine identifiers that can be sent by Codex Desktop when a proxy
+// does not preserve x-codex-* headers.  The value must be non-empty; merely
+// having the JSON key is not enough to establish a useful fingerprint.
+func HasCodexBodyEngineFingerprint(body []byte) bool {
+	if len(body) == 0 {
+		return false
+	}
+	for _, path := range []string{
+		"client_metadata.x-codex-window-id",
+		"client_metadata.x-codex-installation-id",
+	} {
+		value := gjson.GetBytes(body, path)
+		if value.Exists() && strings.TrimSpace(value.String()) != "" {
+			return true
+		}
+	}
+	// Older/current Codex clients may carry the same values inside the JSON
+	// string used by client_metadata.x-codex-turn-metadata.
+	turnMetadata := gjson.GetBytes(body, "client_metadata.x-codex-turn-metadata")
+	if turnMetadata.Exists() {
+		var nested gjson.Result
+		if turnMetadata.Type == gjson.String {
+			nested = gjson.Parse(turnMetadata.String())
+		} else {
+			nested = turnMetadata
+		}
+		for _, path := range []string{"installation_id", "window_id"} {
+			value := nested.Get(path)
+			if value.Exists() && strings.TrimSpace(value.String()) != "" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // EvaluateEngineFingerprint 应用「勾选 AND / 行内变体 OR」规则。
 // 只有 Required=true 的条目参与;全部命中→true;任一缺失→false;无任何 Required→true。
 func EvaluateEngineFingerprint(h http.Header, body []byte, signals []EngineFingerprintSignal) bool {

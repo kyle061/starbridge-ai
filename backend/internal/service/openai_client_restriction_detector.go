@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"net/http"
+	"reflect"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
@@ -163,7 +164,19 @@ func (d *OpenAICodexClientRestrictionDetector) Detect(c *gin.Context, account *A
 	//    按全局信号列表判定:所有勾选(Required)信号都命中即放行,每条命中任一变体即满足(行内 OR);
 	//    无任何勾选信号 → 视为无要求放行(即「关闭指纹门」=取消所有勾选)。ForceCodexCLI 与黑名单不经此门。
 	if !skipFingerprint {
-		if !openai.EvaluateEngineFingerprint(header, body, policy.EngineFingerprintSignals) {
+		fingerprintMatched := openai.EvaluateEngineFingerprint(header, body, policy.EngineFingerprintSignals)
+		// Codex Desktop can place the same engine identifiers in
+		// client_metadata instead of forwarding x-codex-* headers.  Keep the
+		// strict header gate for custom policies and non-official candidates;
+		// only the shipped default policy gets this narrowly-scoped compatibility
+		// fallback, and only after the request already matched an official
+		// Codex identity.
+		if !fingerprintMatched &&
+			(reason == CodexClientRestrictionReasonMatchedUA || reason == CodexClientRestrictionReasonMatchedOriginator) &&
+			reflect.DeepEqual(policy.EngineFingerprintSignals, openai.DefaultEngineFingerprintSignals) {
+			fingerprintMatched = openai.HasCodexBodyEngineFingerprint(body)
+		}
+		if !fingerprintMatched {
 			return CodexClientRestrictionDetectionResult{Enabled: true, Matched: false, Reason: CodexClientRestrictionReasonMissingEngineFingerprint}
 		}
 	}

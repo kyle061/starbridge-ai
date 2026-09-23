@@ -36,6 +36,27 @@ func TestEvaluateEngineFingerprint_DefaultSeed(t *testing.T) {
 	}
 }
 
+func TestHasCodexBodyEngineFingerprint(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want bool
+	}{
+		{name: "window id", body: `{"client_metadata":{"x-codex-window-id":"w1"}}`, want: true},
+		{name: "installation id", body: `{"client_metadata":{"x-codex-installation-id":"i1"}}`, want: true},
+		{name: "embedded turn metadata", body: `{"client_metadata":{"x-codex-turn-metadata":"{\"installation_id\":\"i1\",\"window_id\":\"w1\"}"}}`, want: true},
+		{name: "embedded empty metadata", body: `{"client_metadata":{"x-codex-turn-metadata":"{\"installation_id\":\"\"}"}}`, want: false},
+		{name: "empty value", body: `{"client_metadata":{"x-codex-window-id":""}}`, want: false},
+		{name: "unrelated metadata", body: `{"client_metadata":{"session_id":"s1"}}`, want: false},
+		{name: "invalid json", body: `not-json`, want: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, HasCodexBodyEngineFingerprint([]byte(tc.body)))
+		})
+	}
+}
+
 func TestEvaluateEngineFingerprint_Rules(t *testing.T) {
 	exactSession := EngineFingerprintSignal{Type: FingerprintSignalHeaderExact, Match: []string{"session-id", "session_id"}, Required: true}
 	prefixCodex := EngineFingerprintSignal{Type: FingerprintSignalHeaderPrefix, Match: []string{"x-codex-"}, Required: true}

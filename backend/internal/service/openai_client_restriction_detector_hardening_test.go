@@ -75,6 +75,26 @@ func TestDetect_Hardening(t *testing.T) {
 		require.True(t, r.Matched)
 	})
 
+	t.Run("官方UA + client_metadata指纹→默认策略兼容放行", func(t *testing.T) {
+		h := map[string]string{"User-Agent": "Codex Desktop/0.155.0-alpha.9.2"}
+		body := []byte(`{"client_metadata":{"x-codex-turn-metadata":"{\"installation_id\":\"installation-body\",\"window_id\":\"window-body\"}"}}`)
+		r := det.Detect(hdrCtx(h), acc, CodexRestrictionPolicy{EngineFingerprintSignals: openai.DefaultEngineFingerprintSignals}, body)
+		require.True(t, r.Matched)
+		require.Equal(t, CodexClientRestrictionReasonMatchedUA, r.Reason)
+	})
+
+	t.Run("非官方候选 + client_metadata指纹仍拒绝", func(t *testing.T) {
+		h := map[string]string{"User-Agent": "opencode/0.155.0", "originator": "opencode"}
+		body := []byte(`{"client_metadata":{"x-codex-window-id":"window-body"}}`)
+		pol := CodexRestrictionPolicy{
+			Whitelist:                []openai.AllowedClientEntry{{Originator: "opencode", UAContains: []string{"opencode/"}}},
+			EngineFingerprintSignals: openai.DefaultEngineFingerprintSignals,
+		}
+		r := det.Detect(hdrCtx(h), acc, pol, body)
+		require.False(t, r.Matched)
+		require.Equal(t, CodexClientRestrictionReasonMissingEngineFingerprint, r.Reason)
+	})
+
 	t.Run("版本过低→拒", func(t *testing.T) {
 		h := map[string]string{"User-Agent": "codex_cli_rs/0.130.0 (x)"}
 		for k, v := range fp {

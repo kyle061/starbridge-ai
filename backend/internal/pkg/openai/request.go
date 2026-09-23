@@ -53,7 +53,8 @@ var codexOfficialClientOriginators = map[string]bool{
 	"codex_vscode":          true, // VSCode/Cursor 扩展
 	"codex_vscode_copilot":  true, // 扩展 GitHub Copilot 集成模式
 	"codex_app":             true, // 历史保留
-	"codex_chatgpt_desktop": true, // is_first_party_chat_originator
+	"codex_chatgpt_desktop":    true, // is_first_party_chat_originator
+	"codex_chatgpt_ios_remote": true, // ChatGPT iOS remote Codex client
 	"codex_atlas":           true, // is_first_party_chat_originator
 	"codex_exec":            true, // codex exec 非交互
 	"codex_sdk_ts":          true, // TypeScript SDK

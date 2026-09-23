@@ -105,6 +105,7 @@ func TestIsCodexOfficialClientOriginator(t *testing.T) {
 		{name: "codex_vscode", originator: "codex_vscode", want: true},
 		{name: "codex_app", originator: "codex_app", want: true},
 		{name: "codex_chatgpt_desktop", originator: "codex_chatgpt_desktop", want: true},
+		{name: "codex_chatgpt_ios_remote", originator: "codex_chatgpt_ios_remote", want: true},
 		{name: "codex_atlas", originator: "codex_atlas", want: true},
 		{name: "codex_exec", originator: "codex_exec", want: true},
 		{name: "codex_sdk_ts", originator: "codex_sdk_ts", want: true},
