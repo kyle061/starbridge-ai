@@ -53,7 +53,7 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 import { useClipboard } from '@/composables/useClipboard'
 
 const props = defineProps<{ show: boolean; apiKey: string; endpoint: string }>()
-const emit = defineEmits<{ (event: 'close'): void; (event: 'import-new'): void }>()
+const emit = defineEmits<{ (event: 'close'): void; (event: 'import-new'): void; (event: 'open-ccs'): void }>()
 const { t } = useI18n()
 const { copyToClipboard } = useClipboard()
 const source = ref('')
@@ -72,10 +72,11 @@ watch([source, mode, () => props.apiKey, () => props.endpoint, () => props.show]
 })
 
 async function copyMergedConfig() {
-  // Capture the result before an async clipboard operation. CCS deeplinks
-  // rebuild Codex config and cannot carry arbitrary existing TOML settings.
+  // Launch from the synchronous click handler so browsers do not block the
+  // custom protocol after an awaited clipboard operation.
   const merged = updated.value
   if (!merged) return
+  emit('open-ccs')
   await copyToClipboard(merged, t('keys.ccsCodex.mergedCopied'))
 }
 

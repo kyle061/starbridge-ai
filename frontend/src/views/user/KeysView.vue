@@ -615,6 +615,7 @@
       :endpoint="ccsCodexEndpoint"
       @close="closeCcsCodexBinding"
       @import-new="importNewCcsCodexConfig"
+      @open-ccs="openCcsWithPreservedConfig"
     />
 
     <!-- CCS Client Selection Dialog for Antigravity -->
@@ -1513,6 +1514,12 @@ const closeCcsCodexBinding = () => {
 }
 
 const importNewCcsCodexConfig = () => {
+  if (!showCcsCodexBinding.value || !pendingCcsRow.value) return
+  executeCcsImport(pendingCcsRow.value, 'claude', 'new')
+  closeCcsCodexBinding()
+}
+
+const openCcsWithPreservedConfig = () => {
   if (!showCcsCodexBinding.value || !pendingCcsRow.value) return
   executeCcsImport(pendingCcsRow.value, 'claude', 'new')
   closeCcsCodexBinding()

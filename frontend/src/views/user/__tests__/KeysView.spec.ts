@@ -462,7 +462,7 @@ describe('user KeysView column settings', () => {
     } finally { open.mockRestore() }
   })
 
-  it('copies the merged Codex config without importing a default CCS provider', async () => {
+  it('copies the merged Codex config and opens the CCS import entry', async () => {
     const row = { ...createApiKey(), group: { platform: 'openai' } } as ApiKey
     listKeys.mockResolvedValue({ items: [row], total: 1, page: 1, page_size: 20 })
     const open = vi.spyOn(window, 'open').mockReturnValue(null)
@@ -489,8 +489,7 @@ supports_websockets = true`)
 
       await getButtonByText(wrapper, 'keys.ccsCodex.copyAndOpenCcs').trigger('click')
       expect(copyToClipboard).toHaveBeenCalledWith(merged, 'keys.ccsCodex.mergedCopied')
-      expect(open).not.toHaveBeenCalled()
-      expect((wrapper.get('#ccs-updated-config').element as HTMLTextAreaElement).value).toBe(merged)
+      expect(open).toHaveBeenCalledWith(expect.stringContaining('ccswitch://v1/import?'), '_blank')
       wrapper.unmount()
     } finally { open.mockRestore() }
   })
