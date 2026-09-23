@@ -7,23 +7,25 @@ vi.mock('@/api/admin/accounts', () => ({
 import { buildModelMappingObject, getModelsByPlatform, getPresetMappingsByPlatform, splitModelMappingObject } from '../useModelWhitelist'
 
 describe('useModelWhitelist', () => {
-  it('openai 模型列表包含 GPT-5.4 官方快照', () => {
+  it('openai 模型列表只包含当前支持的 GPT-5.5、GPT-5.6 和 GPT-6 系列', () => {
     const models = getModelsByPlatform('openai')
 
-    expect(models).toContain('gpt-5.4')
-    expect(models).toContain('gpt-5.4-mini')
-    expect(models).toContain('gpt-5.4-2026-03-05')
-    expect(models).toContain('codex-auto-review')
-    expect(models).toContain('gpt-5.6')
-    expect(models).toContain('gpt-6')
-    expect(models).toContain('gpt-6-astra')
+    expect(models).toEqual([
+      'gpt-5.5',
+      'gpt-5.6', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna',
+      'gpt-6', 'gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna'
+    ])
   })
 
   it('openai 预设映射包含 GPT-6 别名和 Astra', () => {
-    expect(getPresetMappingsByPlatform('openai')).toEqual(expect.arrayContaining([
+    const supported = new Set(getModelsByPlatform('openai'))
+    const presets = getPresetMappingsByPlatform('openai')
+
+    expect(presets).toEqual(expect.arrayContaining([
       expect.objectContaining({ label: 'GPT-6', from: 'gpt-6', to: 'gpt-6' }),
       expect.objectContaining({ label: 'GPT-6 Astra', from: 'gpt-6-astra', to: 'gpt-6-astra' })
     ]))
+    expect(presets.every(preset => supported.has(preset.from) && supported.has(preset.to))).toBe(true)
   })
 
   it('openai 模型列表不再暴露已下线的 ChatGPT 登录 Codex 模型', () => {
@@ -35,6 +37,10 @@ describe('useModelWhitelist', () => {
     expect(models).not.toContain('gpt-5.1-codex-max')
     expect(models).not.toContain('gpt-5.1-codex-mini')
     expect(models).not.toContain('gpt-5.2-codex')
+    expect(models).not.toContain('gpt-5.2')
+    expect(models).not.toContain('gpt-5.4')
+    expect(models).not.toContain('gpt-5.3-codex-spark')
+    expect(models).not.toContain('gpt-image-1')
   })
 
   it('antigravity 模型列表包含图片模型兼容项', () => {
@@ -124,50 +130,50 @@ describe('useModelWhitelist', () => {
     })
   })
 
-  it('whitelist 模式会保留 GPT-5.4 官方快照的精确映射', () => {
-    const mapping = buildModelMappingObject('whitelist', ['gpt-5.4-2026-03-05'], [])
+  it('whitelist 模式会保留 GPT-5.6 的精确映射', () => {
+    const mapping = buildModelMappingObject('whitelist', ['gpt-5.6'], [])
 
     expect(mapping).toEqual({
-      'gpt-5.4-2026-03-05': 'gpt-5.4-2026-03-05'
+      'gpt-5.6': 'gpt-5.6'
     })
   })
 
-  it('whitelist keeps GPT-5.4 mini exact mappings', () => {
-    const mapping = buildModelMappingObject('whitelist', ['gpt-5.4-mini'], [])
+  it('whitelist keeps GPT-5.6 Sol exact mappings', () => {
+    const mapping = buildModelMappingObject('whitelist', ['gpt-5.6-sol'], [])
 
     expect(mapping).toEqual({
-      'gpt-5.4-mini': 'gpt-5.4-mini'
+      'gpt-5.6-sol': 'gpt-5.6-sol'
     })
   })
 
   it('combined 模式会同时保留白名单身份映射和模型映射', () => {
     const mapping = buildModelMappingObject(
       'combined',
-      ['gpt-5.4', 'claude-*'],
+      ['gpt-5.6', 'claude-*'],
       [
-        { from: 'gpt-latest', to: 'gpt-5.4' },
-        { from: 'gpt-5.4', to: 'gpt-5.4-mini' }
+        { from: 'gpt-latest', to: 'gpt-5.6' },
+        { from: 'gpt-5.6', to: 'gpt-5.6-sol' }
       ]
     )
 
     expect(mapping).toEqual({
-      'gpt-5.4': 'gpt-5.4-mini',
+      'gpt-5.6': 'gpt-5.6-sol',
       'claude-*': 'claude-*',
-      'gpt-latest': 'gpt-5.4'
+      'gpt-latest': 'gpt-5.6'
     })
   })
 
   it('splitModelMappingObject 会把身份映射还原成白名单，其余保留为映射', () => {
     const parsed = splitModelMappingObject({
-      'gpt-5.4': 'gpt-5.4',
-      'gpt-latest': 'gpt-5.4',
+      'gpt-5.6': 'gpt-5.6',
+      'gpt-latest': 'gpt-5.6',
       ' ': 'gpt-empty',
       broken: 123
     })
 
     expect(parsed).toEqual({
-      allowedModels: ['gpt-5.4'],
-      modelMappings: [{ from: 'gpt-latest', to: 'gpt-5.4' }]
+      allowedModels: ['gpt-5.6'],
+      modelMappings: [{ from: 'gpt-latest', to: 'gpt-5.6' }]
     })
   })
 })
