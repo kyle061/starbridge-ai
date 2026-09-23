@@ -130,7 +130,7 @@ func TestGeminiV1BetaListModels_FiltersFallbackByAllowlist(t *testing.T) {
 	}
 	// models/ 前缀的候选形式也应命中条目。
 	require.Contains(t, names, "models/gemini-2.5-pro")
-	require.Contains(t, names, "models/gemini-3-pro-preview")
+	require.Contains(t, names, "models/gemini-3.5-flash")
 	require.NotContains(t, names, "models/gemini-2.5-flash")
 	require.NotContains(t, names, "models/gemini-2.0-flash")
 }

@@ -1534,7 +1534,7 @@ describe("admin SettingsView payment visible method controls", () => {
     const mappingToggle = wrapper.get(
       '[data-testid="grok-cross-client-model-map-toggle"]',
     );
-    expect((modelInput.element as HTMLInputElement).value).toBe("grok-4.1-fast");
+    expect((modelInput.element as HTMLInputElement).value).toBe("grok-4.5");
     expect((mappingToggle.element as HTMLInputElement).checked).toBe(true);
 
     await modelInput.setValue("grok-custom-text");

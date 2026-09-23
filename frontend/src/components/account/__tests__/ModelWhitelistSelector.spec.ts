@@ -120,7 +120,7 @@ describe('ModelWhitelistSelector', () => {
 
   it('warns when model IDs sync but capability metadata is incomplete', async () => {
     syncUpstreamModels.mockResolvedValue({
-      models: ['x-preview-f-free'],
+      models: ['gpt-6'],
       warnings: [
         {
           code: 'upstream_model_metadata_incomplete',
@@ -148,7 +148,7 @@ describe('ModelWhitelistSelector', () => {
     await syncButton!.trigger('click')
     await flushPromises()
 
-    expect(wrapper.emitted('update:modelValue')).toEqual([[['x-preview-f-free']]])
+    expect(wrapper.emitted('update:modelValue')).toEqual([[['gpt-6']]])
     expect(showWarning).toHaveBeenCalledWith('admin.accounts.syncUpstreamModelsMetadataIncomplete')
     expect(showSuccess).not.toHaveBeenCalled()
   })

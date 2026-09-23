@@ -3,6 +3,8 @@ package antigravity
 import (
 	"encoding/json"
 	"strings"
+
+	"github.com/Wei-Shaw/sub2api/internal/pkg/modelcatalog"
 )
 
 // Claude 请求/响应类型定义
@@ -218,6 +220,23 @@ func DefaultModels() []ClaudeModel {
 	return result
 }
 
+// SelectableModels excludes compatibility and preview entries from the
+// catalogue displayed by selectors and static model-list fallbacks.
+func SelectableModels() []ClaudeModel {
+	supported := make(map[string]struct{})
+	for _, id := range modelcatalog.ModelsForPlatform("antigravity") {
+		supported[id] = struct{}{}
+	}
+	models := DefaultModels()
+	filtered := make([]ClaudeModel, 0, len(models))
+	for _, model := range models {
+		if _, ok := supported[model.ID]; ok {
+			filtered = append(filtered, model)
+		}
+	}
+	return filtered
+}
+
 // ========== Gemini v1beta 格式 (/v1beta/models) ==========
 
 // GeminiModel Gemini v1beta 模型格式
@@ -243,9 +262,26 @@ func DefaultGeminiModels() []GeminiModel {
 	return result
 }
 
+func SelectableGeminiModels() []GeminiModel {
+	supported := make(map[string]struct{})
+	for _, id := range modelcatalog.ModelsForPlatform("antigravity") {
+		if strings.HasPrefix(id, "gemini-") {
+			supported[id] = struct{}{}
+		}
+	}
+	models := make([]GeminiModel, 0)
+	for _, model := range DefaultGeminiModels() {
+		id := strings.TrimPrefix(model.Name, "models/")
+		if _, ok := supported[id]; ok {
+			models = append(models, model)
+		}
+	}
+	return models
+}
+
 // FallbackGeminiModelsList 返回 Gemini v1beta 格式的模型列表响应
 func FallbackGeminiModelsList() GeminiModelsListResponse {
-	return GeminiModelsListResponse{Models: DefaultGeminiModels()}
+	return GeminiModelsListResponse{Models: SelectableGeminiModels()}
 }
 
 // FallbackGeminiModel 返回单个模型信息（v1beta 格式）

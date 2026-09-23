@@ -4,7 +4,7 @@ vi.mock('@/api/admin/accounts', () => ({
   getAntigravityDefaultModelMapping: vi.fn()
 }))
 
-import { buildModelMappingObject, getModelsByPlatform, getPresetMappingsByPlatform, splitModelMappingObject } from '../useModelWhitelist'
+import { buildModelMappingObject, filterSupportedModelIds, getModelsByPlatform, getPresetMappingsByPlatform, splitModelMappingObject } from '../useModelWhitelist'
 
 describe('useModelWhitelist', () => {
   it('openai 模型列表只包含当前支持的 GPT 和 GPT Image 系列', () => {
@@ -14,7 +14,7 @@ describe('useModelWhitelist', () => {
       'gpt-5.5',
       'gpt-5.6', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna',
       'gpt-6', 'gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna',
-      'gpt-image-1.5', 'gpt-image-2', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'
+      'gpt-image-2', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'
     ])
   })
 
@@ -48,7 +48,7 @@ describe('useModelWhitelist', () => {
     const models = getModelsByPlatform('openai')
 
     expect(models).toEqual(expect.arrayContaining([
-      'gpt-image-1.5', 'gpt-image-2', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'
+      'gpt-image-2', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'
     ]))
   })
 
@@ -57,7 +57,7 @@ describe('useModelWhitelist', () => {
 
     expect(models).toContain('gemini-2.5-flash-image')
     expect(models).toContain('gemini-3.1-flash-image')
-    expect(models).toContain('gemini-3-pro-image')
+    expect(models).not.toContain('gemini-3-pro-image')
   })
 
   it('Claude 模型列表包含新发布的 Claude 模型', () => {
@@ -69,16 +69,15 @@ describe('useModelWhitelist', () => {
     expect(getModelsByPlatform('antigravity')).toContain('claude-opus-4-8')
   })
 
-  it('xAI 模型列表包含 Grok 4.5 官方模型和别名', () => {
+  it('xAI 模型列表只包含官方模型 ID，不展示兼容别名', () => {
     const models = getModelsByPlatform('grok')
 
     expect(models).toContain('grok-4.6')
-    expect(models).toContain('grok-4.6-latest')
     expect(models).toContain('grok-4.5')
-    expect(models).toContain('grok-4.5-latest')
-    expect(models).toContain('grok-build-latest')
     expect(models).toContain('grok-imagine-image-2.0')
     expect(models).toContain('grok-imagine-video-1.5')
+    expect(models).not.toContain('grok-4.6-latest')
+    expect(models).not.toContain('grok-build-latest')
   })
 
   it('combined 模式支持 Grok 4.5 官方别名映射', () => {
@@ -100,12 +99,12 @@ describe('useModelWhitelist', () => {
     })
   })
 
-  it('grok 模型列表包含 Composer 默认项和兼容别名', () => {
+  it('grok 模型列表包含 Composer 官方模型且不展示兼容别名', () => {
     const models = getModelsByPlatform('grok')
 
     expect(models).toContain('grok-composer-2.5-fast')
     expect(models).not.toContain('grok-composer')
-    expect(models).toContain('composer-2.5')
+    expect(models).not.toContain('composer-2.5')
   })
 
   it('gemini 模型列表包含原生生图模型', () => {
@@ -113,7 +112,7 @@ describe('useModelWhitelist', () => {
 
     expect(models).toContain('gemini-2.5-flash-image')
     expect(models).toContain('gemini-3.1-flash-image')
-    expect(models.indexOf('gemini-3.1-flash-image')).toBeLessThan(models.indexOf('gemini-2.0-flash'))
+    expect(models.indexOf('gemini-3.1-flash-image')).toBeLessThan(models.indexOf('gemini-3.5-flash'))
     expect(models.indexOf('gemini-2.5-flash-image')).toBeLessThan(models.indexOf('gemini-2.5-flash'))
   })
 
@@ -124,10 +123,36 @@ describe('useModelWhitelist', () => {
     expect(models.indexOf('gemini-2.5-flash-image')).toBeLessThan(models.indexOf('gemini-2.5-flash-lite'))
   })
 
-  it('antigravity 模型列表包含 Gemini 3.1 Pro 通用别名', () => {
+  it('antigravity 模型列表只包含精确的 Gemini 3.1 Pro 模型 ID', () => {
     const models = getModelsByPlatform('antigravity')
 
-    expect(models).toContain('gemini-3.1-pro')
+    expect(models).toContain('gemini-3.1-pro-high')
+    expect(models).toContain('gemini-3.1-pro-low')
+    expect(models).not.toContain('gemini-3.1-pro')
+  })
+
+  it('同步上游模型时过滤旧版、预览版和兼容别名', () => {
+    expect(filterSupportedModelIds('gemini', [
+      'gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-3-pro-preview', 'gemini-unknown'
+    ])).toEqual(['gemini-2.5-flash'])
+    expect(filterSupportedModelIds('openai', [
+      'gpt-image-1.5', 'gpt-image-2', 'gpt-5.4'
+    ])).toEqual(['gpt-image-2'])
+  })
+
+  it('保留 Bedrock 指向官方 Claude 模型的 provider-qualified 映射', () => {
+    const presets = getPresetMappingsByPlatform('bedrock')
+
+    expect(presets).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        from: 'claude-opus-4-6',
+        to: 'us.anthropic.claude-opus-4-6-v1'
+      }),
+      expect.objectContaining({
+        from: 'claude-sonnet-4-5-20250929',
+        to: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0'
+      })
+    ]))
   })
 
   it('whitelist 模式会保留合法通配符身份映射', () => {

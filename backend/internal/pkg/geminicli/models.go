@@ -1,5 +1,7 @@
 package geminicli
 
+import "github.com/Wei-Shaw/sub2api/internal/pkg/modelcatalog"
+
 // Model represents a selectable Gemini model for UI/testing purposes.
 // Keep JSON fields consistent with existing frontend expectations.
 type Model struct {
@@ -11,14 +13,10 @@ type Model struct {
 
 // DefaultModels is the curated Gemini model list used by the admin UI "test account" flow.
 var DefaultModels = []Model{
-	{ID: "gemini-2.0-flash", Type: "model", DisplayName: "Gemini 2.0 Flash", CreatedAt: ""},
 	{ID: "gemini-2.5-flash", Type: "model", DisplayName: "Gemini 2.5 Flash", CreatedAt: ""},
 	{ID: "gemini-2.5-flash-image", Type: "model", DisplayName: "Gemini 2.5 Flash Image", CreatedAt: ""},
 	{ID: "gemini-2.5-pro", Type: "model", DisplayName: "Gemini 2.5 Pro", CreatedAt: ""},
 	{ID: "gemini-3.5-flash", Type: "model", DisplayName: "Gemini 3.5 Flash", CreatedAt: ""},
-	{ID: "gemini-3-flash-preview", Type: "model", DisplayName: "Gemini 3 Flash Preview", CreatedAt: ""},
-	{ID: "gemini-3-pro-preview", Type: "model", DisplayName: "Gemini 3 Pro Preview", CreatedAt: ""},
-	{ID: "gemini-3.1-pro-preview", Type: "model", DisplayName: "Gemini 3.1 Pro Preview", CreatedAt: ""},
 	{ID: "gemini-3.1-flash-image", Type: "model", DisplayName: "Gemini 3.1 Flash Image", CreatedAt: ""},
 }
 
@@ -29,6 +27,22 @@ var GoogleOneModels = []Model{
 	{ID: "gemini-2.5-flash", Type: "model", DisplayName: "Gemini 2.5 Flash", CreatedAt: ""},
 	{ID: "gemini-2.5-pro", Type: "model", DisplayName: "Gemini 2.5 Pro", CreatedAt: ""},
 	{ID: "gemini-2.0-flash", Type: "model", DisplayName: "Gemini 2.0 Flash", CreatedAt: ""},
+}
+
+// SelectableModels is the stable Gemini catalogue used by UI and static
+// fallbacks. Google One has a separate legacy catalogue below.
+func SelectableModels() []Model {
+	byID := make(map[string]Model, len(DefaultModels))
+	for _, model := range DefaultModels {
+		byID[model.ID] = model
+	}
+	models := make([]Model, 0, len(modelcatalog.ModelsForPlatform("gemini")))
+	for _, id := range modelcatalog.ModelsForPlatform("gemini") {
+		if model, ok := byID[id]; ok {
+			models = append(models, model)
+		}
+	}
+	return models
 }
 
 // GoogleOneModelMapping returns a new whitelist map for each account so callers
@@ -42,4 +56,4 @@ func GoogleOneModelMapping() map[string]string {
 }
 
 // DefaultTestModel is the default model to preselect in test flows.
-const DefaultTestModel = "gemini-2.0-flash"
+const DefaultTestModel = "gemini-2.5-flash"

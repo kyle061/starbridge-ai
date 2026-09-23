@@ -215,7 +215,7 @@ func (s *AccountTestService) FetchOpenAIAccountModels(ctx context.Context, accou
 		for _, model := range payload.Data {
 			seen[model.ID] = true
 		}
-		for _, model := range openai.DefaultModels {
+		for _, model := range openai.SelectableModels() {
 			if IsGPTImageGenerationModel(model.ID) && account.IsModelSupported(model.ID) && !seen[model.ID] {
 				payload.Data = append(payload.Data, model)
 				seen[model.ID] = true

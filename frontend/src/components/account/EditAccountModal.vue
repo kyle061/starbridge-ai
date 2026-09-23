@@ -3117,6 +3117,7 @@ import {
 } from '@/utils/openaiWsMode'
 import {
   getPresetMappingsByPlatform,
+  filterSupportedModelIds,
   commonErrorCodes,
   buildModelMappingObject,
   splitModelMappingObject,
@@ -4456,7 +4457,10 @@ const syncAntigravityUpstreamModels = async () => {
   isSyncingAntigravityUpstream.value = true
   try {
     const result = await adminAPI.accounts.syncUpstreamModels(props.account.id)
-    const upstreamModels = result.models.map((model) => model.trim()).filter(Boolean)
+    const upstreamModels = filterSupportedModelIds(
+      props.account?.platform || 'anthropic',
+      result.models.map((model) => model.trim()).filter(Boolean)
+    )
     if (upstreamModels.length === 0) {
       appStore.showInfo(t('admin.accounts.syncUpstreamModelsEmpty'))
       return

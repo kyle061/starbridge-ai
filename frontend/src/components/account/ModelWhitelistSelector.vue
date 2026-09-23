@@ -153,7 +153,7 @@ import type { SyncUpstreamPreviewParams } from '@/api/admin/accounts'
 import { useClipboard } from '@/composables/useClipboard'
 import ModelIcon from '@/components/common/ModelIcon.vue'
 import Icon from '@/components/icons/Icon.vue'
-import { allModels, getModelsByPlatform } from '@/composables/useModelWhitelist'
+import { allModels, filterSupportedModelIds, getModelsByPlatform } from '@/composables/useModelWhitelist'
 
 const { t } = useI18n()
 
@@ -222,6 +222,24 @@ const canSyncUpstream = computed(() => {
   }
   return false
 })
+
+const isOfficialUpstream = (platform: string, baseURL?: string) => {
+  if (!baseURL) return true
+  try {
+    const host = new URL(baseURL).hostname.toLowerCase()
+    const officialHosts: Record<string, string[]> = {
+      openai: ['api.openai.com'],
+      anthropic: ['api.anthropic.com'],
+      claude: ['api.anthropic.com'],
+      gemini: ['generativelanguage.googleapis.com'],
+      grok: ['api.x.ai'],
+      xai: ['api.x.ai']
+    }
+    return officialHosts[platform.toLowerCase()]?.includes(host) ?? false
+  } catch {
+    return false
+  }
+}
 
 const availableOptions = computed(() => {
   if (normalizedPlatforms.value.length === 0) {
@@ -309,7 +327,13 @@ const syncUpstreamModels = async () => {
       return
     }
 
-    const upstreamModels = result.models.map(model => model.trim()).filter(Boolean)
+    const rawUpstreamModels = result.models.map(model => model.trim()).filter(Boolean)
+    const upstreamModels = props.syncCredentials && !isOfficialUpstream(
+      props.syncCredentials.platform,
+      props.syncCredentials.base_url
+    )
+      ? rawUpstreamModels
+      : filterSupportedModelIds(normalizedPlatforms.value, rawUpstreamModels)
     if (upstreamModels.length === 0) {
       appStore.showInfo(t('admin.accounts.syncUpstreamModelsEmpty'))
       return

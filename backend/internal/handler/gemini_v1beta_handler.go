@@ -63,7 +63,7 @@ func (h *GatewayHandler) GeminiV1BetaListModels(c *gin.Context) {
 	// 强制 antigravity 模式：返回 antigravity 支持的模型列表
 	if forcePlatform == service.PlatformAntigravity {
 		if apiKey.Group != nil && apiKey.Group.ModelAllowlistEnabled() {
-			agModels := antigravity.DefaultGeminiModels()
+			agModels := antigravity.SelectableGeminiModels()
 			filtered := make([]antigravity.GeminiModel, 0, len(agModels))
 			for _, model := range agModels {
 				if apiKey.Group.ModelAllowlist.Allows(model.Name) {
@@ -73,7 +73,7 @@ func (h *GatewayHandler) GeminiV1BetaListModels(c *gin.Context) {
 			c.JSON(http.StatusOK, antigravity.GeminiModelsListResponse{Models: filtered})
 			return
 		}
-		c.JSON(http.StatusOK, antigravity.FallbackGeminiModelsList())
+		c.JSON(http.StatusOK, antigravity.GeminiModelsListResponse{Models: antigravity.SelectableGeminiModels()})
 		return
 	}
 
@@ -83,7 +83,7 @@ func (h *GatewayHandler) GeminiV1BetaListModels(c *gin.Context) {
 		hasAntigravity, _ := h.geminiCompatService.HasAntigravityAccounts(c.Request.Context(), apiKey.GroupID)
 		if hasAntigravity {
 			// antigravity 账户使用静态模型列表
-			c.JSON(http.StatusOK, gemini.ModelsListResponse{Models: filterGeminiModels(gemini.DefaultModels())})
+			c.JSON(http.StatusOK, gemini.ModelsListResponse{Models: filterGeminiModels(gemini.SelectableModels())})
 			return
 		}
 		markOpsRoutingCapacityLimitedIfNoAvailable(c, err)
@@ -97,7 +97,7 @@ func (h *GatewayHandler) GeminiV1BetaListModels(c *gin.Context) {
 		return
 	}
 	if shouldFallbackGeminiModels(res) {
-		c.JSON(http.StatusOK, gemini.ModelsListResponse{Models: filterGeminiModels(gemini.DefaultModels())})
+		c.JSON(http.StatusOK, gemini.ModelsListResponse{Models: filterGeminiModels(gemini.SelectableModels())})
 		return
 	}
 	if apiKey.Group != nil && apiKey.Group.ModelAllowlistEnabled() {

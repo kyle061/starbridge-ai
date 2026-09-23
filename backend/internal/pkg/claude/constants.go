@@ -1,6 +1,8 @@
 // Package claude provides constants and helpers for Claude API integration.
 package claude
 
+import "github.com/Wei-Shaw/sub2api/internal/pkg/modelcatalog"
+
 // Claude Code 客户端相关常量
 
 // Beta header 常量
@@ -208,6 +210,31 @@ func DefaultModelIDs() []string {
 	ids := make([]string, len(DefaultModels))
 	for i, m := range DefaultModels {
 		ids[i] = m.ID
+	}
+	return ids
+}
+
+// SelectableModels is the stable public catalogue shown by UI and static
+// model-list fallbacks. Request compatibility still accepts configured IDs.
+func SelectableModels() []Model {
+	byID := make(map[string]Model, len(DefaultModels))
+	for _, model := range DefaultModels {
+		byID[model.ID] = model
+	}
+	models := make([]Model, 0, len(modelcatalog.ModelsForPlatform("anthropic")))
+	for _, id := range modelcatalog.ModelsForPlatform("anthropic") {
+		if model, ok := byID[id]; ok {
+			models = append(models, model)
+		}
+	}
+	return models
+}
+
+func SelectableModelIDs() []string {
+	models := SelectableModels()
+	ids := make([]string, 0, len(models))
+	for _, model := range models {
+		ids = append(ids, model.ID)
 	}
 	return ids
 }

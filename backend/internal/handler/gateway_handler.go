@@ -23,6 +23,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/pkg/geminicli"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/ip"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/modelcatalog"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/timezone"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
@@ -1183,22 +1184,8 @@ func (h *GatewayHandler) Models(c *gin.Context) {
 		return
 	}
 
-	// Fallback to default models
-	if platform == service.PlatformOpenAI {
-		writeModelsListResponse(c, openai.DefaultModels)
-		return
-	}
-
-	if platform == service.PlatformGemini {
-		writeModelsListResponse(c, geminicli.DefaultModels)
-		return
-	}
-	if platform == service.PlatformGrok {
-		writeGrokModelsList(c, xai.DefaultModelIDs())
-		return
-	}
-
-	writeModelsListResponse(c, claude.DefaultModels)
+	// Fallback to the same curated catalogue used by the admin selectors.
+	writeModelsList(c, platform, defaultModelIDsForPlatform(platform))
 }
 
 // CodexModels returns the effective group model list using the manifest shape
@@ -1432,17 +1419,13 @@ func modelListingSource(platform string, availableModels, fallbackModels []strin
 }
 
 func defaultCodexModelIDsForPlatform(platform string) []string {
-	switch platform {
-	case service.PlatformDeepseek:
-		return []string{"deepseek-v4-pro", "deepseek-v4-flash", "deepseek-flash"}
-	case service.PlatformMiniMax:
-		return []string{"MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.5"}
-	default:
-		return defaultModelIDsForPlatform(platform)
-	}
+	return defaultModelIDsForPlatform(platform)
 }
 
 func defaultModelIDsForPlatform(platform string) []string {
+	if models := modelcatalog.ModelsForPlatform(platform); len(models) > 0 {
+		return models
+	}
 	switch platform {
 	case service.PlatformOpenAI:
 		return openai.DefaultModelIDs()
@@ -1510,7 +1493,7 @@ func mergeModelIDs(primary, secondary []string) []string {
 // GET /antigravity/models
 // 分组级模型白名单开启时按白名单过滤。
 func (h *GatewayHandler) AntigravityModels(c *gin.Context) {
-	models := antigravity.DefaultModels()
+	models := antigravity.SelectableModels()
 	if apiKey, ok := middleware2.GetAPIKeyFromContext(c); ok && apiKey != nil && apiKey.Group != nil && apiKey.Group.ModelAllowlistEnabled() {
 		filtered := make([]antigravity.ClaudeModel, 0, len(models))
 		for _, model := range models {

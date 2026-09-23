@@ -48,6 +48,7 @@ import type { SubscriptionPlan } from '@/types/payment'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import { extractApiErrorMessage } from '@/utils/apiError'
 import { addCustomModelAllowlistItem, buildModelAllowlistConfig, hydrateModelAllowlistState } from '../groupModelAllowlist'
+import { filterSupportedModelIds } from '@/composables/useModelWhitelist'
 
 const props = defineProps<{ show: boolean; plan: SubscriptionPlan | null; plans: SubscriptionPlan[] }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
@@ -77,7 +78,10 @@ async function loadModels() {
   try {
     const [group, candidates] = await Promise.all([groupsAPI.getById(groupID), groupsAPI.getModelAllowlistCandidates(groupID)])
     if (version !== loadVersion) return
-    state.value = hydrateModelAllowlistState(group.model_allowlist, candidates)
+    state.value = hydrateModelAllowlistState(
+      group.model_allowlist,
+      filterSupportedModelIds(group.platform, candidates)
+    )
   } catch {
     if (version === loadVersion) loadFailed.value = true
   } finally {

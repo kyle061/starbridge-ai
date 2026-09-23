@@ -189,7 +189,7 @@ describe('AccountTestModal', () => {
 
   it('OpenAI Compact 探测会携带 compact 测试模式', async () => {
     getAvailableModels.mockResolvedValue([
-      { id: 'gpt-5.4', display_name: 'GPT-5.4' }
+      { id: 'gpt-5.6-sol', display_name: 'GPT-5.6 Sol' }
     ])
     global.fetch = vi.fn().mockResolvedValue(
       createStreamResponse([
@@ -207,7 +207,7 @@ describe('AccountTestModal', () => {
     await wrapper.setProps({ show: true })
     await flushPromises()
 
-    ;(wrapper.vm as any).selectedModelId = 'gpt-5.4'
+    ;(wrapper.vm as any).selectedModelId = 'gpt-5.6-sol'
     ;(wrapper.vm as any).testMode = 'compact'
     await (wrapper.vm as any).startTest()
     await flushPromises()
@@ -215,7 +215,7 @@ describe('AccountTestModal', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1)
     const [, request] = (global.fetch as any).mock.calls[0]
     expect(JSON.parse(request.body)).toMatchObject({
-      model_id: 'gpt-5.4',
+      model_id: 'gpt-5.6-sol',
       prompt: '',
       mode: 'compact'
     })

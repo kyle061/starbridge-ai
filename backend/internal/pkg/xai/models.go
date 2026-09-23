@@ -3,6 +3,8 @@ package xai
 import (
 	"strings"
 	"sync/atomic"
+
+	"github.com/Wei-Shaw/sub2api/internal/pkg/modelcatalog"
 )
 
 // runtimeMappingOpts holds operator-configured defaults applied when Grok
@@ -133,6 +135,23 @@ func DefaultModels() []Model {
 	out := make([]Model, len(defaultModels))
 	copy(out, defaultModels)
 	return out
+}
+
+// SelectableModels is the public xAI catalogue used by UI and static
+// fallbacks. Alias handling remains available in DefaultModelMapping.
+func SelectableModels() []Model {
+	supported := make(map[string]struct{})
+	for _, id := range modelcatalog.ModelsForPlatform("grok") {
+		supported[id] = struct{}{}
+	}
+	models := DefaultModels()
+	filtered := make([]Model, 0, len(models))
+	for _, model := range models {
+		if _, ok := supported[model.ID]; ok {
+			filtered = append(filtered, model)
+		}
+	}
+	return filtered
 }
 
 func DefaultModelIDs() []string {

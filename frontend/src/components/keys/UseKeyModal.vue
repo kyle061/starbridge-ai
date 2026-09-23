@@ -202,6 +202,7 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { useClipboard } from '@/composables/useClipboard'
 import type { GroupPlatform } from '@/types'
+import { getModelsByPlatform } from '@/composables/useModelWhitelist'
 
 interface Props {
   show: boolean
@@ -739,7 +740,7 @@ function generateGrokClaudeFiles(baseUrl: string, apiKey: string): FileConfig[] 
 }
 
 function generateGeminiCliContent(baseUrl: string, apiKey: string): FileConfig {
-  const model = 'gemini-2.0-flash'
+  const model = 'gemini-2.5-flash'
   const modelComment = t('keys.useKeyModal.gemini.modelComment')
   let path: string
   let content: string
@@ -1171,22 +1172,6 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
         max: {}
       }
     },
-    'gpt-5.2': {
-      name: 'GPT-5.2',
-      limit: {
-        context: 400000,
-        output: 128000
-      },
-      options: {
-        store: false
-      },
-      variants: {
-        low: {},
-        medium: {},
-        high: {},
-        xhigh: {}
-      }
-    },
     'gpt-5.6': {
       name: 'GPT-5.6 (Sol)',
       limit: {
@@ -1270,83 +1255,9 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
         high: {},
         xhigh: {}
       }
-    },
-    'gpt-5.4': {
-      name: 'GPT-5.4',
-      limit: {
-        context: 1050000,
-        output: 128000
-      },
-      options: {
-        store: false
-      },
-      variants: {
-        low: {},
-        medium: {},
-        high: {},
-        xhigh: {}
-      }
-    },
-    'gpt-5.4-mini': {
-      name: 'GPT-5.4 Mini',
-      limit: {
-        context: 400000,
-        output: 128000
-      },
-      options: {
-        store: false
-      },
-      variants: {
-        low: {},
-        medium: {},
-        high: {},
-        xhigh: {}
-      }
-    },
-    'gpt-5.3-codex-spark': {
-      name: 'GPT-5.3 Codex Spark',
-      limit: {
-        context: 128000,
-        output: 32000
-      },
-      options: {
-        store: false
-      },
-      variants: {
-        low: {},
-        medium: {},
-        high: {},
-        xhigh: {}
-      }
-    },
-    'codex-mini-latest': {
-      name: 'Codex Mini',
-      limit: {
-        context: 200000,
-        output: 100000
-      },
-      options: {
-        store: false
-      },
-      variants: {
-        low: {},
-        medium: {},
-        high: {}
-      }
     }
   }
   const geminiModels = {
-    'gemini-2.0-flash': {
-      name: 'Gemini 2.0 Flash',
-      limit: {
-        context: 1048576,
-        output: 65536
-      },
-      modalities: {
-        input: ['text', 'image', 'pdf'],
-        output: ['text']
-      }
-    },
     'gemini-2.5-flash': {
       name: 'Gemini 2.5 Flash',
       limit: {
@@ -1384,51 +1295,6 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
       modalities: {
         input: ['text', 'image', 'pdf'],
         output: ['text']
-      }
-    },
-    'gemini-3-flash-preview': {
-      name: 'Gemini 3 Flash Preview',
-      limit: {
-        context: 1048576,
-        output: 65536
-      },
-      modalities: {
-        input: ['text', 'image', 'pdf'],
-        output: ['text']
-      }
-    },
-    'gemini-3-pro-preview': {
-      name: 'Gemini 3 Pro Preview',
-      limit: {
-        context: 1048576,
-        output: 65536
-      },
-      modalities: {
-        input: ['text', 'image', 'pdf'],
-        output: ['text']
-      },
-      options: {
-        thinking: {
-          budgetTokens: 24576,
-          type: 'enabled'
-        }
-      }
-    },
-    'gemini-3.1-pro-preview': {
-      name: 'Gemini 3.1 Pro Preview',
-      limit: {
-        context: 1048576,
-        output: 65536
-      },
-      modalities: {
-        input: ['text', 'image', 'pdf'],
-        output: ['text']
-      },
-      options: {
-        thinking: {
-          budgetTokens: 24576,
-          type: 'enabled'
-        }
       }
     }
   }
@@ -1663,27 +1529,34 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
       limit: { context: 500000, output: 64000 }
     }
   }
+  const filterConfiguredModels = <T extends Record<string, unknown>>(models: T, modelPlatform: string): T => {
+    const supported = new Set(getModelsByPlatform(modelPlatform))
+    return Object.fromEntries(
+      Object.entries(models).filter(([modelID]) => supported.has(modelID))
+    ) as T
+  }
+  const catalogPlatform = platform.startsWith('antigravity-') ? 'antigravity' : platform
 
   if (platform === 'gemini') {
     provider[platform].npm = '@ai-sdk/google'
-    provider[platform].models = geminiModels
+    provider[platform].models = filterConfiguredModels(geminiModels, catalogPlatform)
   } else if (platform === 'anthropic') {
     provider[platform].npm = '@ai-sdk/anthropic'
   } else if (platform === 'antigravity-claude') {
     provider[platform].npm = '@ai-sdk/anthropic'
     provider[platform].name = 'Antigravity (Claude)'
-    provider[platform].models = claudeModels
+    provider[platform].models = filterConfiguredModels(claudeModels, catalogPlatform)
   } else if (platform === 'antigravity-gemini') {
     provider[platform].npm = '@ai-sdk/google'
     provider[platform].name = 'Antigravity (Gemini)'
-    provider[platform].models = antigravityGeminiModels
+    provider[platform].models = filterConfiguredModels(antigravityGeminiModels, catalogPlatform)
   } else if (platform === 'openai') {
-    provider[platform].models = openaiModels
+    provider[platform].models = filterConfiguredModels(openaiModels, catalogPlatform)
   } else if (platform === 'grok') {
     // Custom provider pointing at Starbridge AI OpenAI-compatible Responses/Chat endpoints.
     provider[platform].npm = '@ai-sdk/openai-compatible'
     provider[platform].name = 'Grok via Starbridge AI'
-    provider[platform].models = grokModels
+    provider[platform].models = filterConfiguredModels(grokModels, catalogPlatform)
   }
 
   const agent =

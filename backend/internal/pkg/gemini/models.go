@@ -2,7 +2,11 @@
 // It is used when upstream model listing is unavailable (e.g. OAuth token missing AI Studio scopes).
 package gemini
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/Wei-Shaw/sub2api/internal/pkg/modelcatalog"
+)
 
 type Model struct {
 	Name                       string   `json:"name"`
@@ -31,6 +35,15 @@ func DefaultModels() []Model {
 	}
 }
 
+func SelectableModels() []Model {
+	methods := []string{"generateContent", "streamGenerateContent"}
+	models := make([]Model, 0, len(modelcatalog.ModelsForPlatform("gemini")))
+	for _, id := range modelcatalog.ModelsForPlatform("gemini") {
+		models = append(models, Model{Name: "models/" + id, SupportedGenerationMethods: methods})
+	}
+	return models
+}
+
 func HasFallbackModel(model string) bool {
 	trimmed := strings.TrimSpace(model)
 	if trimmed == "" {
@@ -48,7 +61,7 @@ func HasFallbackModel(model string) bool {
 }
 
 func FallbackModelsList() ModelsListResponse {
-	return ModelsListResponse{Models: DefaultModels()}
+	return ModelsListResponse{Models: SelectableModels()}
 }
 
 func FallbackModel(model string) Model {

@@ -553,6 +553,7 @@ import { extractApiErrorMessage } from '@/utils/apiError'
 import { sanitizeUrl } from '@/utils/url'
 import { getFloatingPanelPosition } from '@/utils/floatingPanel'
 import { formatMultiplier } from '@/utils/formatters'
+import { filterSupportedModels } from '@/composables/useModelWhitelist'
 import type { Account, AccountListItem, AccountPlatform, AccountSchedulerGroupScore, AccountType, AccountUsageInfo, Proxy as AccountProxy, AdminGroup, WindowStats, ClaudeModel, UpstreamBillingProbeSnapshot } from '@/types'
 
 const { t } = useI18n()
@@ -2349,7 +2350,7 @@ const handleSchedule = async (a: Account) => {
   scheduleModelOptions.value = []
   showSchedulePanel.value = true
   try {
-    const models = await adminAPI.accounts.getAvailableModels(a.id)
+    const models = filterSupportedModels(a.platform, await adminAPI.accounts.getAvailableModels(a.id))
     scheduleModelOptions.value = models.map((m: ClaudeModel) => ({ value: m.id, label: m.display_name || m.id }))
   } catch {
     scheduleModelOptions.value = []

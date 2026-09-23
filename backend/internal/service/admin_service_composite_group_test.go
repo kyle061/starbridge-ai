@@ -6,7 +6,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/modelcatalog"
 	"github.com/stretchr/testify/require"
 )
 
@@ -206,14 +206,9 @@ func TestAdminService_CompositeModelsListCandidatesIncludeConcreteAccountMapping
 	require.Contains(t, candidates, "gemini-2.5-flash")
 }
 
-// 独立 CN 分组的模型列表候选沿用 default 分支的 Claude 默认列表；
-// composite 支持不得改变独立分组的候选语义。
-func TestAdminService_CNProviderModelsListCandidatesKeepClaudeDefaults(t *testing.T) {
-	want := make([]string, 0, len(claude.DefaultModels))
-	for _, model := range claude.DefaultModels {
-		want = append(want, model.ID)
-	}
+// 独立 CN 分组使用各自的公开模型目录；composite 支持不得改变独立分组的候选语义。
+func TestAdminService_CNProviderModelsListCandidatesUseProviderCatalog(t *testing.T) {
 	for _, platform := range []string{PlatformKimi, PlatformZhipu, PlatformDeepseek, PlatformMiniMax} {
-		require.Equal(t, want, defaultModelsListCandidateIDs(platform), "platform=%s", platform)
+		require.Equal(t, modelcatalog.ModelsForPlatform(platform), defaultModelsListCandidateIDs(platform), "platform=%s", platform)
 	}
 }

@@ -24,6 +24,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/geminicli"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/modelcatalog"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/timezone"
@@ -2791,13 +2792,13 @@ func (h *AccountHandler) GetAvailableModels(c *gin.Context) {
 		}
 		// OpenAI 自动透传会绕过常规模型改写，测试/模型列表也应回落到默认模型集。
 		if account.IsOpenAIPassthroughEnabled() {
-			response.Success(c, openai.DefaultModels)
+			response.Success(c, openai.SelectableModels())
 			return
 		}
 
 		mapping := account.GetModelMapping()
 		if len(mapping) == 0 {
-			response.Success(c, openai.DefaultModels)
+			response.Success(c, openai.SelectableModels())
 			return
 		}
 
@@ -2835,14 +2836,14 @@ func (h *AccountHandler) GetAvailableModels(c *gin.Context) {
 				response.Success(c, geminicli.GoogleOneModels)
 				return
 			}
-			response.Success(c, geminicli.DefaultModels)
+			response.Success(c, geminicli.SelectableModels())
 			return
 		}
 
 		// For API Key accounts: return models based on model_mapping
 		mapping := account.GetModelMapping()
 		if len(mapping) == 0 {
-			response.Success(c, geminicli.DefaultModels)
+			response.Success(c, geminicli.SelectableModels())
 			return
 		}
 
@@ -2872,7 +2873,7 @@ func (h *AccountHandler) GetAvailableModels(c *gin.Context) {
 	// Handle Antigravity accounts: return Claude + Gemini models
 	if account.Platform == service.PlatformAntigravity {
 		// 直接复用 antigravity.DefaultModels()，与 /v1/models 端点保持同步
-		response.Success(c, antigravity.DefaultModels())
+		response.Success(c, antigravity.SelectableModels())
 		return
 	}
 
@@ -2888,13 +2889,13 @@ func (h *AccountHandler) GetAvailableModels(c *gin.Context) {
 			hasExplicitMapping = len(rawMapping) > 0
 		}
 		if !hasExplicitMapping {
-			response.Success(c, defaultModels)
+			response.Success(c, xai.SelectableModels())
 			return
 		}
 
 		mapping := account.GetModelMapping()
 		if len(mapping) == 0 {
-			response.Success(c, defaultModels)
+			response.Success(c, xai.SelectableModels())
 			return
 		}
 
@@ -2926,10 +2927,29 @@ func (h *AccountHandler) GetAvailableModels(c *gin.Context) {
 		return
 	}
 
+	// Other first-party providers use the shared curated public catalogue.
+	// Custom model IDs remain accepted by routing and can still be entered
+	// explicitly; they are intentionally not added to this selector fallback.
+	if account.Platform != service.PlatformAnthropic {
+		if modelIDs := modelcatalog.ModelsForPlatform(account.Platform); len(modelIDs) > 0 {
+			models := make([]claude.Model, 0, len(modelIDs))
+			for _, modelID := range modelIDs {
+				models = append(models, claude.Model{
+					ID:          modelID,
+					Type:        "model",
+					DisplayName: modelID,
+					CreatedAt:   "2024-01-01T00:00:00Z",
+				})
+			}
+			response.Success(c, models)
+			return
+		}
+	}
+
 	// Handle Claude/Anthropic accounts
 	// For OAuth and Setup-Token accounts: return default models
 	if account.IsOAuth() {
-		response.Success(c, claude.DefaultModels)
+		response.Success(c, claude.SelectableModels())
 		return
 	}
 
@@ -2937,7 +2957,7 @@ func (h *AccountHandler) GetAvailableModels(c *gin.Context) {
 	mapping := account.GetModelMapping()
 	if len(mapping) == 0 {
 		// No mapping configured, return default models
-		response.Success(c, claude.DefaultModels)
+		response.Success(c, claude.SelectableModels())
 		return
 	}
 

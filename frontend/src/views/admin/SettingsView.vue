@@ -5237,8 +5237,8 @@
                   />
                   <datalist id="grok-default-text-model-options">
                     <option value="grok-4.5" />
-                    <option value="grok-4.1-fast" />
-                    <option value="grok-4" />
+                    <option value="grok-4.6" />
+                    <option value="grok-4.3" />
                   </datalist>
                   <p class="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                     {{ t("admin.settings.gatewayForwarding.grokDefaultTextModelHint") }}
@@ -9116,6 +9116,7 @@ import {
   defaultFingerprintSignalRows,
   type FingerprintSignalRow,
 } from "./codexFingerprintSignals";
+import { getModelsByPlatform } from "@/composables/useModelWhitelist";
 
 const { t, locale } = useI18n();
 const appStore = useAppStore();
@@ -9127,6 +9128,11 @@ const isZhLocale = computed(() => locale.value.startsWith("zh"));
 
 function localText(zh: string, en: string): string {
   return isZhLocale.value ? zh : en;
+}
+
+function normalizeSettingModel(platform: string, value: unknown, fallback: string): string {
+  const model = typeof value === "string" ? value.trim() : "";
+  return getModelsByPlatform(platform).includes(model) ? model : fallback;
 }
 
 const paymentGuideHref = computed(() =>
@@ -10081,8 +10087,8 @@ const form = reactive<SettingsForm>({
   google_oauth_frontend_redirect_url: "/auth/oauth/callback",
   // Model fallback
   enable_model_fallback: false,
-  fallback_model_anthropic: "claude-3-5-sonnet-20241022",
-  fallback_model_openai: "gpt-4o",
+  fallback_model_anthropic: "claude-sonnet-4-5-20250929",
+  fallback_model_openai: "gpt-5.6-sol",
   fallback_model_gemini: "gemini-2.5-pro",
   fallback_model_antigravity: "gemini-2.5-pro",
   grok_default_text_model: "grok-4.5",
@@ -11161,6 +11167,31 @@ async function loadSettings() {
         (form as Record<string, unknown>)[key] = value;
       }
     }
+    form.fallback_model_anthropic = normalizeSettingModel(
+      "anthropic",
+      form.fallback_model_anthropic,
+      "claude-sonnet-4-5-20250929",
+    );
+    form.fallback_model_openai = normalizeSettingModel(
+      "openai",
+      form.fallback_model_openai,
+      "gpt-5.6-sol",
+    );
+    form.fallback_model_gemini = normalizeSettingModel(
+      "gemini",
+      form.fallback_model_gemini,
+      "gemini-2.5-pro",
+    );
+    form.fallback_model_antigravity = normalizeSettingModel(
+      "antigravity",
+      form.fallback_model_antigravity,
+      "gemini-2.5-pro",
+    );
+    form.grok_default_text_model = normalizeSettingModel(
+      "grok",
+      form.grok_default_text_model,
+      "grok-4.5",
+    );
     normalizePaymentVisibleMethodSettings();
     syncCaptchaProviderSelection();
     if (!form.claude_oauth_system_prompt_blocks?.trim()) {

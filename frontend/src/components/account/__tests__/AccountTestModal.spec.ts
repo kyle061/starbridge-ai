@@ -135,7 +135,7 @@ describe('AccountTestModal', () => {
     })
 
     await flushPromises()
-    ;(wrapper.vm as any).selectedModelId = 'gpt-5.4'
+    ;(wrapper.vm as any).selectedModelId = 'gpt-5.6-sol'
     ;(wrapper.vm as any).testMode = 'compact'
     await (wrapper.vm as any).startTest()
     await flushPromises()
@@ -143,7 +143,7 @@ describe('AccountTestModal', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1)
     const [, options] = (global.fetch as any).mock.calls[0]
     expect(JSON.parse(options.body)).toMatchObject({
-      model_id: 'gpt-5.4',
+      model_id: 'gpt-5.6-sol',
       mode: 'compact'
     })
   })
