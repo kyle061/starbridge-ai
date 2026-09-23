@@ -163,9 +163,8 @@ func (h *OpenAIGatewayHandler) ChatCompletions(c *gin.Context) {
 	preparedBody, preparationErr := h.prepareGPT6Request(c, apiKey, reqModel, body, false)
 	if preparationErr != nil {
 		reqLog.Warn("openai_chat_completions.gpt6_preparation_failed", zap.Error(preparationErr))
-		h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "preparation_unavailable", "GPT6 requirements preparation is temporarily unavailable", streamStarted)
-		return
 	}
+	preparedBody = gpt6PreparedBodyOrOriginal(body, preparedBody, preparationErr)
 	body = preparedBody
 
 	for {

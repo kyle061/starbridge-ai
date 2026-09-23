@@ -2,20 +2,21 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/stretchr/testify/require"
 )
 
-func TestRequiresGPT6PreparationOnlyForGPTGroups(t *testing.T) {
+func TestRequiresGPT6PreparationOnlyForCompositeGroups(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
 		platform string
 		model    string
 		want     bool
 	}{
-		{name: "openai gpt6", platform: service.PlatformOpenAI, model: "gpt-6-astra", want: true},
+		{name: "openai gpt6 bypasses composite preparation", platform: service.PlatformOpenAI, model: "gpt-6-astra", want: false},
 		{name: "composite gpt6", platform: service.PlatformComposite, model: "gpt-6", want: true},
 		{name: "standalone deepseek", platform: service.PlatformDeepseek, model: "deepseek-v4-pro", want: false},
 		{name: "openai older model", platform: service.PlatformOpenAI, model: "gpt-5.4", want: false},
@@ -25,6 +26,14 @@ func TestRequiresGPT6PreparationOnlyForGPTGroups(t *testing.T) {
 			require.Equal(t, tc.want, requiresGPT6Preparation(apiKey, tc.model))
 		})
 	}
+}
+
+func TestGPT6PreparationFailureKeepsOriginalRequest(t *testing.T) {
+	original := []byte(`{"model":"gpt-6-astra","input":"keep this request unchanged"}`)
+	prepared := []byte(`{"model":"gpt-6-astra","input":"rewritten"}`)
+
+	require.Equal(t, original, gpt6PreparedBodyOrOriginal(original, prepared, errors.New("no preparation account")))
+	require.Equal(t, prepared, gpt6PreparedBodyOrOriginal(original, prepared, nil))
 }
 
 func TestBuildGPT6PreparationBodyKeepsTaskButDisablesTools(t *testing.T) {

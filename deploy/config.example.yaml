@@ -1115,8 +1115,8 @@ billing:
   # Set to 0 to only require balance > 0.
   # 余额计费请求转发前要求的保守最小余额；设为 0 则仅要求余额 > 0。
   minimum_balance_reserve: 0.000001
-  # GPT6 in OpenAI/Composite groups first creates an internal requirements
-  # document, then executes the original request with GPT6.
+  # Composite GPT6 requests may use a DeepSeek requirements pass before OpenAI
+  # execution. If preparation is unavailable, the original GPT6 request proceeds.
   gpt6_preparation:
     enabled: true
     model: deepseek-v4-pro

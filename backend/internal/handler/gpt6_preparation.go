@@ -28,10 +28,19 @@ func requiresGPT6Preparation(apiKey *service.APIKey, model string) bool {
 	if apiKey == nil || apiKey.Group == nil {
 		return false
 	}
-	if apiKey.Group.Platform != service.PlatformOpenAI && apiKey.Group.Platform != service.PlatformComposite {
+	// Only the composite route has a DeepSeek preparation stage. OpenAI groups
+	// should send GPT6 requests directly to their selected OpenAI account.
+	if apiKey.Group.Platform != service.PlatformComposite {
 		return false
 	}
 	return service.IsGPT6Model(model)
+}
+
+func gpt6PreparedBodyOrOriginal(original, prepared []byte, preparationErr error) []byte {
+	if preparationErr != nil || prepared == nil {
+		return original
+	}
+	return prepared
 }
 
 func (h *OpenAIGatewayHandler) prepareGPT6Request(c *gin.Context, apiKey *service.APIKey, model string, body []byte, responses bool) ([]byte, error) {

@@ -78,10 +78,8 @@ func (s *OpenAIOAuthService) GenerateAuthURL(ctx context.Context, proxyID *int64
 		}
 	}
 
-	// Use default redirect URI if not specified
-	if redirectURI == "" {
-		redirectURI = openai.DefaultRedirectURI
-	}
+	// The Codex OAuth client only accepts its registered localhost callback.
+	redirectURI = openai.DefaultRedirectURI
 	normalizedPlatform := normalizeOpenAIOAuthPlatform(platform)
 	clientID, _ := openai.OAuthClientConfigByPlatform(normalizedPlatform)
 
@@ -159,10 +157,10 @@ func (s *OpenAIOAuthService) ExchangeCode(ctx context.Context, input *OpenAIExch
 		}
 	}
 
-	// Use redirect URI from session or input
+	// The code exchange must use the same registered callback as authorization.
 	redirectURI := session.RedirectURI
-	if input.RedirectURI != "" {
-		redirectURI = input.RedirectURI
+	if redirectURI == "" {
+		redirectURI = openai.DefaultRedirectURI
 	}
 	clientID := strings.TrimSpace(session.ClientID)
 	if clientID == "" {

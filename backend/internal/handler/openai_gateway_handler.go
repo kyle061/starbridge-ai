@@ -643,9 +643,8 @@ func (h *OpenAIGatewayHandler) Responses(c *gin.Context) {
 	preparedBody, preparationErr := h.prepareGPT6Request(c, apiKey, reqModel, body, true)
 	if preparationErr != nil {
 		reqLog.Warn("openai.gpt6_preparation_failed", zap.Error(preparationErr))
-		h.handleStreamingAwareError(c, http.StatusServiceUnavailable, "preparation_unavailable", "GPT6 requirements preparation is temporarily unavailable", streamStarted)
-		return
 	}
+	preparedBody = gpt6PreparedBodyOrOriginal(body, preparedBody, preparationErr)
 	body = preparedBody
 	forwardBody = openAIModelMappedBody(preparedBody, channelMapping.Mapped, channelMapping.MappedModel, h.gatewayService.ReplaceModelInBody)
 
@@ -2551,9 +2550,8 @@ func (h *OpenAIGatewayHandler) ResponsesWebSocket(c *gin.Context) {
 	wsAttemptMessage, preparationErr := h.prepareGPT6Request(c, apiKey, reqModel, firstMessage, true)
 	if preparationErr != nil {
 		reqLog.Warn("openai.websocket_gpt6_preparation_failed", zap.Error(preparationErr))
-		closeOpenAIClientWS(wsConn, coderws.StatusTryAgainLater, "GPT6 requirements preparation is temporarily unavailable")
-		return
 	}
+	wsAttemptMessage = gpt6PreparedBodyOrOriginal(firstMessage, wsAttemptMessage, preparationErr)
 	waitForWSSameAccountRetry := func(account *service.Account, failoverErr *service.UpstreamFailoverError) bool {
 		if account == nil || failoverErr == nil || failoverErr.StatusCode != http.StatusTooManyRequests || failoverErr.SameAccountRetryDeadline.IsZero() {
 			return false
@@ -2809,7 +2807,11 @@ func (h *OpenAIGatewayHandler) ResponsesWebSocket(c *gin.Context) {
 				if turn <= 1 || !service.IsGPT6Model(originalModel) {
 					return payload, nil
 				}
-				return h.prepareGPT6Request(c, apiKey, originalModel, payload, true)
+				prepared, preparationErr := h.prepareGPT6Request(c, apiKey, originalModel, payload, true)
+				if preparationErr != nil {
+					reqLog.Warn("openai.websocket_gpt6_preparation_failed", zap.Int("turn", turn), zap.Error(preparationErr))
+				}
+				return gpt6PreparedBodyOrOriginal(payload, prepared, preparationErr), nil
 			},
 			BeforeRequest: func(turn int, payload []byte, originalModel string) error {
 				c.Set(securityAuditWSTurnContextKey, turn)

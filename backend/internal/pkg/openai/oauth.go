@@ -22,10 +22,8 @@ const (
 	AuthorizeURL = "https://auth.openai.com/oauth/authorize"
 	TokenURL     = "https://auth.openai.com/oauth/token"
 
-	// Hosted fallback redirect URI. Browser clients pass their current site
-	// callback explicitly; this value keeps non-browser callers on the hosted
-	// Starbridge domain instead of a local development address.
-	DefaultRedirectURI = "https://starbridaeai.top/auth/callback"
+	// Codex's public OAuth client is registered with this local callback.
+	DefaultRedirectURI = "http://localhost:1455/auth/callback"
 
 	// Scopes
 	DefaultScopes = "openid profile email offline_access"

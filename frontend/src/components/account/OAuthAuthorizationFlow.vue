@@ -934,7 +934,11 @@ import type { AccountPlatform } from '@/types'
 import { adminAPI } from '@/api/admin'
 import OpenAIDeviceAuthorization from './OpenAIDeviceAuthorization.vue'
 import type { OpenAITokenInfo } from '@/composables/useOpenAIOAuth'
-import { getPublicOAuthCallbackUrl, parseOAuthCallbackInput } from '@/utils/oauthCallback'
+import {
+  getPublicOAuthCallbackUrl,
+  OPENAI_OAUTH_CALLBACK_URL,
+  parseOAuthCallbackInput
+} from '@/utils/oauthCallback'
 
 interface Props {
   proxyId?: number | null
@@ -1018,7 +1022,9 @@ const emailPasswordOptionEnabled = computed(
 )
 
 const showCallbackNotice = computed(() => props.platform === 'openai' || props.platform === 'grok')
-const publicCallbackUrl = computed(() => getPublicOAuthCallbackUrl())
+const publicCallbackUrl = computed(() =>
+  props.platform === 'openai' ? OPENAI_OAUTH_CALLBACK_URL : getPublicOAuthCallbackUrl()
+)
 
 // Get translation key based on platform
 const getOAuthKey = (key: string) => {

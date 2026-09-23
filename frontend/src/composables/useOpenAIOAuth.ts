@@ -3,7 +3,7 @@ import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 import { adminAPI } from '@/api/admin'
 import { extractApiErrorMessage, extractI18nErrorMessage } from '@/utils/apiError'
-import { getPublicOAuthCallbackUrl } from '@/utils/oauthCallback'
+import { OPENAI_OAUTH_CALLBACK_URL } from '@/utils/oauthCallback'
 
 export interface OpenAITokenInfo {
   access_token?: string
@@ -50,10 +50,7 @@ export function useOpenAIOAuth() {
   }
 
   // Generate auth URL for OpenAI OAuth
-  const generateAuthUrl = async (
-    proxyId?: number | null,
-    redirectUri?: string
-  ): Promise<boolean> => {
+  const generateAuthUrl = async (proxyId?: number | null): Promise<boolean> => {
     loading.value = true
     authUrl.value = ''
     sessionId.value = ''
@@ -65,7 +62,7 @@ export function useOpenAIOAuth() {
       if (proxyId) {
         payload.proxy_id = proxyId
       }
-      payload.redirect_uri = redirectUri?.trim() || getPublicOAuthCallbackUrl()
+      payload.redirect_uri = OPENAI_OAUTH_CALLBACK_URL
 
       const response = await adminAPI.accounts.generateAuthUrl(
         `${endpointPrefix}/generate-auth-url`,

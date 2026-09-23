@@ -1147,8 +1147,8 @@ export default {
           step2OpenUrl: 'Open the URL in your browser and complete authorization',
           openUrlDesc: 'Click the button above, sign in to the ChatGPT Plus / Pro account you want to bind, and approve access. Bind one account at a time, then repeat to add more.',
           importantNotice:
-            'After approval, the browser redirects to {callbackUrl}. Copy the complete address-bar URL, return to Starbridge, and paste it into step 3. On mobile, press and hold the address bar to copy it.',
-          step3EnterCode: 'Paste the site callback URL',
+            'The official Codex OAuth client requires the local callback {callbackUrl}. After approval, copy the complete address-bar URL even if the page says it cannot connect, then paste it into step 3. On mobile, press and hold the address bar to copy it.',
+          step3EnterCode: 'Paste the OpenAI local callback URL',
           authCodeDesc:
             'Copy and paste the complete address-bar URL beginning with {callbackUrl}?code=...:',
           authCode: 'Complete callback URL or code',
