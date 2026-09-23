@@ -161,7 +161,7 @@ type Group struct {
 
 	// RPMLimit 分组级每分钟请求数上限（0 = 不限制），设置后覆盖用户级 rpm_limit。
 	RPMLimit int `json:"rpm_limit"`
-	// ConcurrencyLimit 分组总并发上限；实际容量取该值与账号并发总和的较小值。
+	// ConcurrencyLimit 保留用于兼容旧客户端；实际容量始终按可调度账号并发总和计算。
 	ConcurrencyLimit int `json:"concurrency_limit"`
 	// MaxReasoningEffort Anthropic/OpenAI 请求的推理强度上限，空字符串表示不限制。
 	MaxReasoningEffort string `json:"max_reasoning_effort"`

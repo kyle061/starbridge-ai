@@ -561,10 +561,6 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 		return nil, err
 	}
 
-	concurrencyLimit := input.ConcurrencyLimit
-	if concurrencyLimit == 0 {
-		concurrencyLimit = 1000
-	}
 	group := &Group{
 		Name:                            input.Name,
 		Description:                     input.Description,
@@ -624,7 +620,9 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 		// 成员关系无从校验（前端创建对话框也不展示）。
 		CodexModelsManifestConfig:   normalizeCodexModelsManifestConfig(platform, input.CodexModelsManifestConfig),
 		RPMLimit:                    input.RPMLimit,
-		ConcurrencyLimit:            normalizeGroupConcurrencyLimit(concurrencyLimit),
+		// Group capacity is derived from schedulable account capacity. Keep the
+		// legacy database field at zero so old clients cannot reintroduce a cap.
+		ConcurrencyLimit:            0,
 		MaxReasoningEffort:          maxReasoningEffort,
 		MaxReasoningEffortOverLimit: maxReasoningEffortOverLimit,
 		ReasoningEffortMappings:     reasoningEffortMappings,
@@ -1027,7 +1025,9 @@ func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *Upd
 		if *input.ConcurrencyLimit < 0 {
 			return nil, errors.New("concurrency_limit must be >= 0")
 		}
-		group.ConcurrencyLimit = *input.ConcurrencyLimit
+		// Deprecated: group capacity is always the sum of schedulable account
+		// capacities. Ignore legacy client-provided ceilings.
+		group.ConcurrencyLimit = 0
 	}
 	if input.MaxReasoningEffort != nil {
 		maxReasoningEffort, err := normalizeMaxReasoningEffortForPlatform(group.Platform, *input.MaxReasoningEffort)
@@ -1150,13 +1150,6 @@ func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *Upd
 	}
 
 	return group, nil
-}
-
-func normalizeGroupConcurrencyLimit(limit int) int {
-	if limit < 0 {
-		return 0
-	}
-	return limit
 }
 
 func normalizeGroupModelPricing(platform string, pricing []ChannelModelPricing) ([]ChannelModelPricing, error) {

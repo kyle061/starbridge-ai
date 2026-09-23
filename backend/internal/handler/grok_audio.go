@@ -43,15 +43,6 @@ func (h *OpenAIGatewayHandler) GrokRealtime(c *gin.Context) {
 		h.errorResponse(c, status, code, message)
 		return
 	}
-	groupRelease, groupErr := h.concurrencyHelper.AcquireGroupSlotWithWait(c, derefGroupID(apiKey.GroupID), apiKey.Group.ConcurrencyLimit, false, nil)
-	if groupErr != nil {
-		h.handleConcurrencyError(c, groupErr, "group", false)
-		return
-	}
-	if groupRelease != nil {
-		defer groupRelease()
-	}
-
 	reqLog := requestLogger(c, "handler.openai_gateway.grok_realtime")
 	model := c.Query("model")
 	if strings.TrimSpace(model) == "" {
@@ -196,15 +187,6 @@ func (h *OpenAIGatewayHandler) GrokVoice(c *gin.Context, endpoint string) {
 		h.errorResponse(c, status, code, message)
 		return
 	}
-	groupRelease, groupErr := h.concurrencyHelper.AcquireGroupSlotWithWait(c, derefGroupID(apiKey.GroupID), apiKey.Group.ConcurrencyLimit, false, nil)
-	if groupErr != nil {
-		h.handleConcurrencyError(c, groupErr, "group", false)
-		return
-	}
-	if groupRelease != nil {
-		defer groupRelease()
-	}
-
 	body, err := readGrokVoiceGatewayBody(c)
 	if err != nil {
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", err.Error())

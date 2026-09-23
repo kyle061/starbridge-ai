@@ -122,21 +122,6 @@ func (h *GatewayHandler) WebSearch(c *gin.Context) {
 		}})
 		return
 	}
-	groupRelease, groupErr := h.concurrencyHelper.AcquireGroupSlotWithWait(
-		c,
-		*groupID,
-		apiKey.Group.ConcurrencyLimit,
-		false,
-		nil,
-	)
-	if groupErr != nil {
-		h.handleConcurrencyError(c, groupErr, "group", false)
-		return
-	}
-	if groupRelease != nil {
-		defer groupRelease()
-	}
-
 	failedAccounts := make(map[int64]struct{})
 	var account *service.Account
 	var accountReleaseFunc func()

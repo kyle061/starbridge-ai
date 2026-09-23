@@ -299,7 +299,7 @@ type CreateGroupInput struct {
 	CodexModelsManifestConfig GroupCodexModelsManifestConfig
 	// RPMLimit 分组 RPM 上限（0 = 不限制）
 	RPMLimit int
-	// ConcurrencyLimit 分组总并发上限（0 = 沿用账号并发容量之和）
+	// ConcurrencyLimit 已废弃；分组容量始终按可调度账号并发总和计算。
 	ConcurrencyLimit int
 	// MaxReasoningEffort Anthropic/OpenAI 请求的推理强度上限，空字符串表示不限制。
 	MaxReasoningEffort string
@@ -382,7 +382,7 @@ type UpdateGroupInput struct {
 	CodexModelsManifestConfig *GroupCodexModelsManifestConfig
 	// RPMLimit 分组 RPM 上限（0 = 不限制），nil 表示未提供不改动。
 	RPMLimit *int
-	// ConcurrencyLimit 分组总并发上限，nil 表示未提供不改动。
+	// ConcurrencyLimit 已废弃；保留用于兼容旧客户端提交。
 	ConcurrencyLimit *int
 	// MaxReasoningEffort 空字符串表示清除上限；nil 表示未提供不改动。
 	MaxReasoningEffort *string

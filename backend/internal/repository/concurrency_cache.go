@@ -28,13 +28,10 @@ const (
 	accountSlotKeyPrefix = "concurrency:account:"
 	// 格式: concurrency:user:{userID}
 	userSlotKeyPrefix = "concurrency:user:"
-	// 格式: concurrency:group:{groupID}
-	groupSlotKeyPrefix = "concurrency:group:"
 	// 格式: concurrency:api_key:{apiKeyID}
 	apiKeySlotKeyPrefix      = "concurrency:api_key:"
 	liveAccountSlotKeyPrefix = "concurrency:live:account:"
 	liveUserSlotKeyPrefix    = "concurrency:live:user:"
-	liveGroupSlotKeyPrefix   = "concurrency:live:group:"
 	liveAPIKeySlotKeyPrefix  = "concurrency:live:api_key:"
 	// API-key-scoped client WebSocket ingress leases use a shorter TTL than
 	// ordinary request slots, because idle ingress sessions do not hold a turn slot.
@@ -389,14 +386,6 @@ func userSlotKey(userID int64) string {
 	return fmt.Sprintf("%s%d", userSlotKeyPrefix, userID)
 }
 
-func groupSlotKey(groupID int64) string {
-	return fmt.Sprintf("%s%d", groupSlotKeyPrefix, groupID)
-}
-
-func liveGroupSlotKey(groupID int64) string {
-	return fmt.Sprintf("%s%d", liveGroupSlotKeyPrefix, groupID)
-}
-
 func apiKeySlotKey(apiKeyID int64) string {
 	return fmt.Sprintf("%s%d", apiKeySlotKeyPrefix, apiKeyID)
 }
@@ -738,28 +727,6 @@ func (c *concurrencyCache) ReleaseUserSlot(ctx context.Context, userID int64, re
 	// 释放后按 Redis 中剩余负载修正索引状态。
 	c.refreshUserActiveIndex(ctx, userID)
 	return nil
-}
-
-// Group slot operations. Group slots intentionally use their own namespace;
-// account limits remain independent and can still sum to more than the group
-// ceiling without changing the per-account value.
-
-func (c *concurrencyCache) AcquireGroupSlot(ctx context.Context, groupID int64, maxConcurrency int, requestID string) (bool, error) {
-	key := groupSlotKey(groupID)
-	result, _, err := runScriptInt64Pair(ctx, c.rdb, acquireScript, []string{key, liveGroupSlotKey(groupID)}, maxConcurrency, c.slotTTLSeconds, requestID)
-	if err != nil {
-		return false, err
-	}
-	return result == 1, nil
-}
-
-func (c *concurrencyCache) ReleaseGroupSlot(ctx context.Context, groupID int64, requestID string) error {
-	return c.rdb.ZRem(ctx, groupSlotKey(groupID), requestID).Err()
-}
-
-func (c *concurrencyCache) GetGroupConcurrency(ctx context.Context, groupID int64) (int, error) {
-	key := groupSlotKey(groupID)
-	return getCountScript.Run(ctx, c.rdb, []string{key, liveGroupSlotKey(groupID)}, c.slotTTLSeconds).Int()
 }
 
 func (c *concurrencyCache) GetUserConcurrency(ctx context.Context, userID int64) (int, error) {

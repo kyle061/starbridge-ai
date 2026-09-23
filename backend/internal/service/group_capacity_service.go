@@ -32,10 +32,6 @@ type groupCapacityActiveGroupIDLister interface {
 	ListActiveIDs(ctx context.Context) ([]int64, error)
 }
 
-type groupCapacityLimitGetter interface {
-	GetConcurrencyLimits(ctx context.Context, groupIDs []int64) (map[int64]int, error)
-}
-
 type groupCapacityAccountLister interface {
 	ListSchedulableCapacityByGroupIDs(ctx context.Context, groupIDs []int64) ([]GroupAccountCapacityRow, error)
 }
@@ -133,11 +129,6 @@ func (s *GroupCapacityService) getGroupCapacitiesBatch(ctx context.Context, grou
 	if len(rows) == 0 {
 		return results, nil
 	}
-	var configuredLimits map[int64]int
-	if getter, ok := s.groupRepo.(groupCapacityLimitGetter); ok {
-		configuredLimits, _ = getter.GetConcurrencyLimits(ctx, groupIDs)
-	}
-
 	refs := make([]groupCapacityAccountRef, 0, len(rows))
 	seenGroupAccount := make(map[groupCapacityAccountRef]struct{}, len(rows))
 	accountIDSet := make(map[int64]struct{}, len(rows))
@@ -186,15 +177,6 @@ func (s *GroupCapacityService) getGroupCapacitiesBatch(ctx context.Context, grou
 			results[idx].RPMMax += rpm
 		}
 	}
-	for groupID, limit := range configuredLimits {
-		if limit > 0 {
-			idx, ok := groupIndex[groupID]
-			if ok && (results[idx].ConcurrencyMax == 0 || limit < results[idx].ConcurrencyMax) {
-				results[idx].ConcurrencyMax = limit
-			}
-		}
-	}
-
 	if len(accountIDs) == 0 {
 		return results, nil
 	}
@@ -282,14 +264,6 @@ func (s *GroupCapacityService) getGroupCapacity(ctx context.Context, groupID int
 			rpmMax += rpm
 		}
 	}
-	if getter, ok := s.groupRepo.(groupCapacityLimitGetter); ok {
-		if limits, err := getter.GetConcurrencyLimits(ctx, []int64{groupID}); err == nil {
-			if limit := limits[groupID]; limit > 0 && (concurrencyMax == 0 || limit < concurrencyMax) {
-				concurrencyMax = limit
-			}
-		}
-	}
-
 	// Batch query runtime data from Redis
 	concurrencyMap, _ := s.concurrencyService.GetAccountConcurrencyBatch(ctx, accountIDs)
 

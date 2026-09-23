@@ -276,10 +276,10 @@ func (Group) Fields() []ent.Field {
 			Default(0).
 			Comment("分组 RPM 上限，0 表示不限制；设置后接管该分组用户的限流"),
 
-		// 分组总并发上限（0 表示不启用独立分组上限，沿用账号并发容量之和）。
+		// 保留旧字段以兼容已有数据库；分组容量始终按可调度账号并发总和计算。
 		field.Int("concurrency_limit").
-			Default(1000).
-			Comment("分组总并发上限；实际容量取该值与可调度账号并发总和的较小值"),
+			Default(0).
+			Comment("已废弃，分组容量按可调度账号并发总和计算"),
 
 		// OpenAI/Codex 请求的推理强度上限（空字符串表示不限制）。
 		field.String("max_reasoning_effort").

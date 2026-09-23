@@ -444,33 +444,6 @@ func (r *groupRepository) Update(ctx context.Context, groupIn *service.Group) er
 	return nil
 }
 
-// GetConcurrencyLimits returns configured group ceilings without coupling the
-// capacity view to generated Ent code. A value <= 0 means legacy account-sum
-// behavior.
-func (r *groupRepository) GetConcurrencyLimits(ctx context.Context, groupIDs []int64) (map[int64]int, error) {
-	limits := make(map[int64]int, len(groupIDs))
-	if len(groupIDs) == 0 || r.sql == nil {
-		return limits, nil
-	}
-	rows, err := r.sql.QueryContext(ctx, `SELECT id, concurrency_limit FROM groups WHERE id = ANY($1) AND deleted_at IS NULL`, pq.Array(groupIDs))
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = rows.Close() }()
-	for rows.Next() {
-		var id int64
-		var limit int
-		if err := rows.Scan(&id, &limit); err != nil {
-			return nil, err
-		}
-		limits[id] = limit
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return limits, nil
-}
-
 func (r *groupRepository) Delete(ctx context.Context, id int64) error {
 	_, err := r.client.Group.Delete().Where(group.IDEQ(id)).Exec(ctx)
 	if err != nil {
