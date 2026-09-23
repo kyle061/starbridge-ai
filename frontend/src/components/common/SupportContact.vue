@@ -4,10 +4,20 @@
       <span class="shrink-0">{{ t('common.contactSupport') }}</span>
       <span v-if="showValue" class="[overflow-wrap:anywhere]">{{ value }}</span>
     </a>
+    <template v-else-if="isWeChat">
+      <span class="shrink-0">{{ t('common.contactSupport') }}</span>
+      <span data-testid="wechat-contact-detail" class="inline-flex min-w-0 max-w-full items-center gap-1 text-xs text-gray-500 dark:text-dark-400">
+        <span class="shrink-0">{{ t('common.contactWeChat') }}</span>
+        <span class="min-w-0 [overflow-wrap:anywhere]">{{ copyValue }}</span>
+        <button type="button" class="inline-flex min-h-8 shrink-0 items-center justify-center rounded px-1.5 text-xs text-primary-600 hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 dark:text-primary-400 dark:hover:bg-primary-900/30" :aria-label="t('common.copyWeChat')" @click="copyToClipboard(copyValue, t('common.copiedToClipboard'))">
+          <span aria-live="polite">{{ t(copied ? 'common.copied' : 'common.copy') }}</span>
+        </button>
+      </span>
+    </template>
     <template v-else>
-      <span>{{ t(isWeChat ? 'common.contactWeChat' : 'common.contactSupport') }}</span>
+      <span>{{ t('common.contactSupport') }}</span>
       <span class="min-w-0 font-medium [overflow-wrap:anywhere]">{{ value }}</span>
-      <button type="button" class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg px-2 text-primary-600 hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 dark:text-primary-400 dark:hover:bg-primary-900/30" :aria-label="t(isWeChat ? 'common.copyWeChat' : 'common.copy')" @click="copyToClipboard(copyValue, t('common.copiedToClipboard'))">
+      <button type="button" class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg px-2 text-primary-600 hover:bg-primary-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 dark:text-primary-400 dark:hover:bg-primary-900/30" :aria-label="t('common.copy')" @click="copyToClipboard(copyValue, t('common.copiedToClipboard'))">
         <span aria-live="polite">{{ t(copied ? 'common.copied' : 'common.copy') }}</span>
       </button>
     </template>

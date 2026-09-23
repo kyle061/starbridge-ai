@@ -13,7 +13,10 @@ describe('SupportContact', () => {
 
   it('copies only the WeChat ID from a prefixed value', async () => {
     const wrapper = mount(SupportContact, { props: { contact: ' 微信： starbridge_support ' } })
+    expect(wrapper.text()).toContain('common.contactSupport')
     expect(wrapper.text()).toContain('common.contactWeChat')
+    expect(wrapper.get('[data-testid="wechat-contact-detail"]').classes()).toContain('text-xs')
+    expect(wrapper.get('[data-testid="wechat-contact-detail"]').text()).not.toContain('微信：')
     expect(wrapper.find('a').exists()).toBe(false)
     await wrapper.get('button').trigger('click')
     expect(copyToClipboard).toHaveBeenCalledWith('starbridge_support', 'common.copiedToClipboard')
