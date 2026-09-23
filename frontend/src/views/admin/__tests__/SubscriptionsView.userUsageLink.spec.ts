@@ -188,7 +188,7 @@ describe('admin subscription users', () => {
 
       expect(assignSubscription).toHaveBeenCalledTimes(1)
       expect(assignSubscription).toHaveBeenCalledWith({
-        user_id: 84, group_id: 3, validity_days: 30, quota_usd: 50, usage_multiplier: 12
+        user_id: 84, group_id: 3, validity_days: 30, quota_usd: 50, usage_multiplier: 6
       })
     } finally {
       wrapper.unmount()
