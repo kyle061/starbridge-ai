@@ -1790,6 +1790,11 @@ async function loadStatus(silent = true) {
 async function saveConfig() {
   saving.value = true
   try {
+    const validationError = validateConfigForm()
+    if (validationError) {
+      appStore.showError(validationError)
+      return
+    }
     const modelFilterPayload = buildModelFilterPayload()
     if (modelFilterPayload.type !== 'all' && modelFilterPayload.models.length === 0) {
       appStore.showError(t('admin.riskControl.modelFilterModelsRequired'))
@@ -1850,6 +1855,66 @@ async function saveConfig() {
   } finally {
     saving.value = false
   }
+}
+
+function validateConfigForm(): string | null {
+  const range = (value: unknown, min: number, max: number, label: string): string | null => {
+    const numeric = Number(value)
+    if (!Number.isFinite(numeric) || numeric < min || numeric > max) {
+      return t('admin.riskControl.invalidRange', { field: label, min, max })
+    }
+    return null
+  }
+
+  if (!configForm.base_url.trim()) return t('admin.riskControl.baseUrlRequired')
+  try {
+    const url = new URL(configForm.base_url.trim())
+    if (!['http:', 'https:'].includes(url.protocol) || !url.hostname) {
+      return t('admin.riskControl.baseUrlInvalid')
+    }
+  } catch {
+    return t('admin.riskControl.baseUrlInvalid')
+  }
+  if (!configForm.model.trim()) return t('admin.riskControl.modelRequired')
+
+  const numericRanges: Array<[unknown, number, number, string]> = [
+    [configForm.timeout_ms, 500, 30000, t('admin.riskControl.timeoutMs')],
+    [configForm.retry_count, 0, 5, t('admin.riskControl.retryCount')],
+    [configForm.sample_rate, 0, 100, t('admin.riskControl.sampleRate')],
+    [configForm.worker_count, 1, 32, t('admin.riskControl.workerCount')],
+    [configForm.queue_size, 100, 100000, t('admin.riskControl.queueSize')],
+    [configForm.block_status, 400, 599, t('admin.riskControl.blockStatus')],
+    [configForm.ban_threshold, 1, 1000, t('admin.riskControl.banThreshold')],
+    [configForm.violation_window_hours, 1, 8760, t('admin.riskControl.violationWindowHours')],
+    [configForm.hit_retention_days, 1, 3650, t('admin.riskControl.hitRetentionDays')],
+    [configForm.non_hit_retention_days, 1, 3, t('admin.riskControl.nonHitRetentionDays')],
+  ]
+  for (const [value, min, max, label] of numericRanges) {
+    const error = range(value, min, max, label)
+    if (error) return error
+  }
+
+  for (const category of riskThresholdCategories) {
+    const value = Number(configForm.thresholds[category])
+    if (!Number.isFinite(value) || value < 0 || value > 100) {
+      return t('admin.riskControl.invalidThreshold')
+    }
+  }
+
+  if (!configForm.all_groups && configForm.group_ids.length === 0) {
+    return t('admin.riskControl.groupScopeRequired')
+  }
+
+  const pendingKeys = configForm.clear_api_key
+    ? 0
+    : configForm.api_keys_mode === 'replace'
+      ? inputApiKeyCount.value
+      : effectiveStoredApiKeyCount.value + inputApiKeyCount.value
+  if (configForm.enabled && configForm.mode !== 'off' && configForm.keyword_blocking_mode !== 'keyword_only' && pendingKeys === 0) {
+    return t('admin.riskControl.preBlockApiKeyRequired')
+  }
+
+  return null
 }
 
 async function loadLogs() {

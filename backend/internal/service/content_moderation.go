@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
 	"net/url"
 	"sort"
@@ -724,6 +725,18 @@ func (s *ContentModerationService) UpdateConfig(ctx context.Context, input Updat
 			cfg.APIKey = ""
 		}
 	}
+	if err := validateContentModerationUpdateInput(input); err != nil {
+		return nil, err
+	}
+	if input.AllGroups != nil && !*input.AllGroups && input.GroupIDs != nil && len(normalizeInt64IDs(cfg.GroupIDs)) == 0 {
+		return nil, infraerrors.BadRequest("INVALID_CONTENT_MODERATION_GROUP_SCOPE", "关闭全部分组后至少需要选择一个审计分组")
+	}
+	// The admin form sends enabled + mode together.  Reject that explicit
+	// activation when the selected strategy needs the upstream moderation API
+	// but no key is configured; keyword-only mode remains self-contained.
+	if input.Enabled != nil && *input.Enabled && input.Mode != nil && strings.TrimSpace(*input.Mode) != ContentModerationModeOff && len(cfg.apiKeys()) == 0 && cfg.KeywordBlockingMode != ContentModerationKeywordModeKeywordOnly {
+		return nil, infraerrors.BadRequest("INVALID_CONTENT_MODERATION_API_KEY", "启用内容审计前至少需要配置一个审核 API Key")
+	}
 	if err := s.validateConfig(ctx, cfg); err != nil {
 		return nil, err
 	}
@@ -739,6 +752,85 @@ func (s *ContentModerationService) UpdateConfig(ctx context.Context, input Updat
 	// 代理选择可能已变化，丢弃已解析的代理 URL 缓存，下次调用即时生效。
 	s.moderationProxyCache.Store(nil)
 	return s.configView(cfg), nil
+}
+
+// validateContentModerationUpdateInput validates values supplied by the admin
+// API before normalize() applies defaults.  Previously an invalid value such
+// as a negative worker count was silently replaced by a default, making a
+// configuration look saved while the runtime used a different rule.
+func validateContentModerationUpdateInput(input UpdateContentModerationConfigInput) error {
+	if input.Mode != nil {
+		switch strings.TrimSpace(*input.Mode) {
+		case ContentModerationModeOff, ContentModerationModeObserve, ContentModerationModePreBlock:
+		default:
+			return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_MODE", "内容审计模式无效")
+		}
+	}
+	if input.KeywordBlockingMode != nil {
+		switch strings.TrimSpace(*input.KeywordBlockingMode) {
+		case ContentModerationKeywordModeKeywordOnly, ContentModerationKeywordModeKeywordAndAPI, ContentModerationKeywordModeAPIOnly:
+		default:
+			return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_KEYWORD_MODE", "关键词审计策略无效")
+		}
+	}
+	if input.Model != nil && strings.TrimSpace(*input.Model) == "" {
+		return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_MODEL", "审核模型不能为空")
+	}
+	if input.BaseURL != nil {
+		raw := strings.TrimSpace(*input.BaseURL)
+		u, err := url.ParseRequestURI(raw)
+		if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
+			return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_BASE_URL", "OpenAI Base URL 必须是有效的 HTTP/HTTPS 地址")
+		}
+	}
+	if input.TimeoutMS != nil && (*input.TimeoutMS < 500 || *input.TimeoutMS > maxContentModerationTimeoutMS) {
+		return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_TIMEOUT", "内容审计超时时间必须在 500-30000 毫秒之间")
+	}
+	if input.SampleRate != nil && (*input.SampleRate < 0 || *input.SampleRate > 100) {
+		return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_SAMPLE_RATE", "内容审计采样率必须在 0-100 之间")
+	}
+	if input.WorkerCount != nil && (*input.WorkerCount < 1 || *input.WorkerCount > maxContentModerationWorkerCount) {
+		return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_WORKER_COUNT", "内容审计 Worker 数必须在 1-32 之间")
+	}
+	if input.QueueSize != nil && (*input.QueueSize < 100 || *input.QueueSize > maxContentModerationQueueSize) {
+		return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_QUEUE_SIZE", "内容审计队列大小必须在 100-100000 之间")
+	}
+	if input.BlockStatus != nil && (*input.BlockStatus < 400 || *input.BlockStatus > 599) {
+		return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_BLOCK_STATUS", "拦截 HTTP 状态码必须在 400-599 之间")
+	}
+	if input.RetryCount != nil && (*input.RetryCount < 0 || *input.RetryCount > maxContentModerationRetryCount) {
+		return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_RETRY_COUNT", "内容审计重试次数必须在 0-5 之间")
+	}
+	if input.BanThreshold != nil && (*input.BanThreshold < 1 || *input.BanThreshold > 1000) {
+		return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_BAN_THRESHOLD", "自动封禁阈值必须在 1-1000 之间")
+	}
+	if input.ViolationWindowHours != nil && (*input.ViolationWindowHours < 1 || *input.ViolationWindowHours > 8760) {
+		return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_VIOLATION_WINDOW", "违规累计窗口必须在 1-8760 小时之间")
+	}
+	if input.HitRetentionDays != nil && (*input.HitRetentionDays < 1 || *input.HitRetentionDays > maxContentModerationRetentionDays) {
+		return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_HIT_RETENTION", "命中记录保留时间必须在 1-3650 天之间")
+	}
+	if input.NonHitRetentionDays != nil && (*input.NonHitRetentionDays < 1 || *input.NonHitRetentionDays > maxContentModerationNonHitRetentionDays) {
+		return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_NON_HIT_RETENTION", "未命中记录保留时间必须在 1-3 天之间")
+	}
+	if input.Thresholds != nil {
+		for category, value := range *input.Thresholds {
+			if math.IsNaN(value) || math.IsInf(value, 0) {
+				return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_THRESHOLD", fmt.Sprintf("风险阈值 %s 不是有效数字", category))
+			}
+		}
+	}
+	if input.ModelFilter != nil {
+		typeValue := normalizeContentModerationModelFilterType(input.ModelFilter.Type)
+		rawType := strings.ToLower(strings.TrimSpace(input.ModelFilter.Type))
+		if rawType != "" && typeValue == ContentModerationModelFilterAll && rawType != ContentModerationModelFilterAll {
+			return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_MODEL_FILTER", "模型范围类型无效")
+		}
+		if typeValue != ContentModerationModelFilterAll && len(normalizeContentModerationModelNames(input.ModelFilter.Models)) == 0 {
+			return infraerrors.BadRequest("INVALID_CONTENT_MODERATION_MODEL_FILTER", "指定或排除模型时至少需要配置 1 个模型")
+		}
+	}
+	return nil
 }
 
 func (s *ContentModerationService) TestAPIKeys(ctx context.Context, input TestContentModerationAPIKeysInput) (*TestContentModerationAPIKeysResult, error) {

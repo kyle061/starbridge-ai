@@ -246,6 +246,7 @@ function getRequestErrorRateThresholdLevel(errorRatePercent: number | null): Thr
   if (errorRatePercent == null) return 'normal'
   const threshold = props.thresholds?.request_error_rate_percent_max
   if (threshold == null) return 'normal'
+  if (threshold <= 0) return errorRatePercent > 0 ? 'critical' : 'normal'
   if (errorRatePercent >= threshold) return 'critical'
   if (errorRatePercent >= threshold * 0.8) return 'warning'
   return 'normal'
@@ -255,6 +256,7 @@ function getUpstreamErrorRateThresholdLevel(upstreamErrorRatePercent: number | n
   if (upstreamErrorRatePercent == null) return 'normal'
   const threshold = props.thresholds?.upstream_error_rate_percent_max
   if (threshold == null) return 'normal'
+  if (threshold <= 0) return upstreamErrorRatePercent > 0 ? 'critical' : 'normal'
   if (upstreamErrorRatePercent >= threshold) return 'critical'
   if (upstreamErrorRatePercent >= threshold * 0.8) return 'warning'
   return 'normal'
@@ -426,9 +428,11 @@ const ttftMaxMs = computed(() => overview.value?.ttft?.max_ms ?? null)
 const isSystemIdle = computed(() => {
   const ov = overview.value
   if (!ov) return true
-  const qps = ov.qps?.current
-  const errorRate = ov.error_rate ?? 0
-  return (qps ?? 0) === 0 && errorRate === 0
+  // The dashboard can be showing a historical window while the current QPS is
+  // already zero.  Using QPS here made the diagnosis panel report "idle" and
+  // hide real errors from that window.  RequestCountTotal is the authoritative
+  // sample count for all rate metrics.
+  return (ov.request_count_total ?? 0) <= 0
 })
 
 const healthScoreValue = computed<number | null>(() => {
@@ -543,7 +547,7 @@ const diagnosisReport = computed<DiagnosisItem[]>(() => {
   }
 
   const ttftP99 = ov.ttft?.p99_ms ?? 0
-  if (ttftP99 > 500) {
+  if (getTTFTThresholdLevel(ttftP99) !== 'normal') {
     report.push({
       type: 'warning',
       message: t('admin.ops.diagnosis.ttftHigh', { ttft: ttftP99.toFixed(0) }),
@@ -552,51 +556,59 @@ const diagnosisReport = computed<DiagnosisItem[]>(() => {
     })
   }
 
-  // Error rate diagnostics (adjusted thresholds)
-  const upstreamRatePct = (ov.upstream_error_rate ?? 0) * 100
-  if (upstreamRatePct > 5) {
-    report.push({
-      type: 'critical',
-      message: t('admin.ops.diagnosis.upstreamCritical', { rate: upstreamRatePct.toFixed(2) }),
-      impact: t('admin.ops.diagnosis.upstreamCriticalImpact'),
-      action: t('admin.ops.diagnosis.upstreamCriticalAction')
-    })
-  } else if (upstreamRatePct > 2) {
-    report.push({
-      type: 'warning',
-      message: t('admin.ops.diagnosis.upstreamHigh', { rate: upstreamRatePct.toFixed(2) }),
-      impact: t('admin.ops.diagnosis.upstreamHighImpact'),
-      action: t('admin.ops.diagnosis.upstreamHighAction')
-    })
-  }
+  // Error-rate diagnostics use the same thresholds as the metric cards.  Do
+  // not evaluate a rate when the denominator is empty: a zero-value response
+  // from an empty window must not produce a false "high error rate" warning.
+  const requestSamples = ov.request_count_sla ?? 0
+  if (requestSamples > 0) {
+    const upstreamRatePct = (ov.upstream_error_rate ?? 0) * 100
+    const upstreamLevel = getUpstreamErrorRateThresholdLevel(upstreamRatePct)
+    if (upstreamLevel === 'critical') {
+      report.push({
+        type: 'critical',
+        message: t('admin.ops.diagnosis.upstreamCritical', { rate: upstreamRatePct.toFixed(2) }),
+        impact: t('admin.ops.diagnosis.upstreamCriticalImpact'),
+        action: t('admin.ops.diagnosis.upstreamCriticalAction')
+      })
+    } else if (upstreamLevel === 'warning') {
+      report.push({
+        type: 'warning',
+        message: t('admin.ops.diagnosis.upstreamHigh', { rate: upstreamRatePct.toFixed(2) }),
+        impact: t('admin.ops.diagnosis.upstreamHighImpact'),
+        action: t('admin.ops.diagnosis.upstreamHighAction')
+      })
+    }
 
-  const errorPct = (ov.error_rate ?? 0) * 100
-  if (errorPct > 3) {
-    report.push({
-      type: 'critical',
-      message: t('admin.ops.diagnosis.errorHigh', { rate: errorPct.toFixed(2) }),
-      impact: t('admin.ops.diagnosis.errorHighImpact'),
-      action: t('admin.ops.diagnosis.errorHighAction')
-    })
-  } else if (errorPct > 0.5) {
-    report.push({
-      type: 'warning',
-      message: t('admin.ops.diagnosis.errorElevated', { rate: errorPct.toFixed(2) }),
-      impact: t('admin.ops.diagnosis.errorElevatedImpact'),
-      action: t('admin.ops.diagnosis.errorElevatedAction')
-    })
+    const errorPct = (ov.error_rate ?? 0) * 100
+    const errorLevel = getRequestErrorRateThresholdLevel(errorPct)
+    if (errorLevel === 'critical') {
+      report.push({
+        type: 'critical',
+        message: t('admin.ops.diagnosis.errorHigh', { rate: errorPct.toFixed(2) }),
+        impact: t('admin.ops.diagnosis.errorHighImpact'),
+        action: t('admin.ops.diagnosis.errorHighAction')
+      })
+    } else if (errorLevel === 'warning') {
+      report.push({
+        type: 'warning',
+        message: t('admin.ops.diagnosis.errorElevated', { rate: errorPct.toFixed(2) }),
+        impact: t('admin.ops.diagnosis.errorElevatedImpact'),
+        action: t('admin.ops.diagnosis.errorElevatedAction')
+      })
+    }
   }
 
   // SLA diagnostics
   const slaPct = (ov.sla ?? 0) * 100
-  if (slaPct < 90) {
+  const slaLevel = requestSamples > 0 ? getSLAThresholdLevel(slaPct) : 'normal'
+  if (slaLevel === 'critical') {
     report.push({
       type: 'critical',
       message: t('admin.ops.diagnosis.slaCritical', { sla: slaPct.toFixed(2) }),
       impact: t('admin.ops.diagnosis.slaCriticalImpact'),
       action: t('admin.ops.diagnosis.slaCriticalAction')
     })
-  } else if (slaPct < 98) {
+  } else if (slaLevel === 'warning') {
     report.push({
       type: 'warning',
       message: t('admin.ops.diagnosis.slaLow', { sla: slaPct.toFixed(2) }),
