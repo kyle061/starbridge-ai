@@ -10,7 +10,7 @@ const openaiModels = [
 	// GPT-5.6 系列
   'gpt-5.6', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna',
   // GPT-6 系列
-  'gpt-6', 'gpt-6-astra',
+  'gpt-6', 'gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna',
   // GPT-5.5 系列
   'gpt-5.5',
   // GPT-5.4 系列
@@ -542,10 +542,8 @@ export function buildModelMappingObject(
     for (const model of allowedModels) {
       const normalizedModel = model.trim()
       if (!normalizedModel) continue
-      // whitelist 模式的本意是"精确模型列表"，如果用户输入了通配符（如 claude-*），
-      // 写入 model_mapping 会导致 GetMappedModel() 把真实模型映射成 "claude-*"，从而转发失败。
-      // 因此这里跳过包含通配符的条目。
-      if (!normalizedModel.includes('*')) {
+      // Identity wildcard mappings preserve the concrete model ID upstream.
+      if (isValidWildcardPattern(normalizedModel)) {
         mapping[normalizedModel] = normalizedModel
       }
     }

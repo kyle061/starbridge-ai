@@ -1495,6 +1495,57 @@ func TestMergeGroupConfiguredCodexModelsKeepsExplicitAutoReviewSelection(t *test
 	require.Equal(t, []string{"codex-auto-review"}, codexManifestModelSlugs(t, manifest.Body))
 }
 
+func TestWildcardGroupUsesLiveCodexManifest(t *testing.T) {
+	t.Parallel()
+	const groupID int64 = 79
+	account := Account{Platform: PlatformOpenAI, Credentials: map[string]any{
+		"model_mapping": map[string]any{"gpt-6-astra": "gpt-6-astra", "gpt-*": "gpt-*"},
+	}}
+	require.True(t, account.IsModelSupported("gpt-6-sol"))
+	mapped, matched := account.ResolveMappedModel("gpt-6-sol")
+	require.True(t, matched)
+	require.Equal(t, "gpt-6-sol", mapped)
+	require.False(t, account.IsModelSupported("deepseek-v4-pro"))
+	svc := &OpenAIGatewayService{accountRepo: codexModelsVisibilityAccountRepo{
+		byGroup: map[int64][]Account{groupID: {account}},
+	}}
+	group := &Group{ID: groupID, Platform: PlatformOpenAI, ModelAllowlist: GroupModelAllowlist{
+		Enabled: true, Models: []string{"gpt-*"},
+	}}
+
+	manifest, configured, err := svc.BuildGroupConfiguredCodexModelsManifest(context.Background(), group, "")
+	require.NoError(t, err)
+	require.False(t, configured)
+	require.Nil(t, manifest)
+
+	body, err := projectAccountModelsBody([]byte(`{"models":[{"slug":"gpt-6-astra"},{"slug":"gpt-6-sol"},{"slug":"deepseek-v4-pro"}]}`), &account, group, true)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"models":[{"slug":"gpt-6-astra"},{"slug":"gpt-6-sol"}]}`, string(body))
+}
+
+func TestAutoAllowedOpenAIModelRequiresKnownPricing(t *testing.T) {
+	svc := &OpenAIGatewayService{billingService: NewBillingService(&config.Config{}, nil)}
+	apiKey := &APIKey{Group: &Group{Platform: PlatformOpenAI, ModelAllowlist: GroupModelAllowlist{
+		Enabled: true, Models: []string{"gpt-6-astra", "gpt-*"},
+	}}}
+	require.True(t, svc.CanBillAutoAllowedModel(context.Background(), apiKey, "gpt-6-astra"))
+	require.True(t, svc.CanBillAutoAllowedModel(context.Background(), apiKey, "gpt-6-sol"))
+	require.True(t, svc.CanBillAutoAllowedModel(context.Background(), apiKey, "gpt-6-luna"))
+	require.False(t, svc.CanBillAutoAllowedModel(context.Background(), apiKey, "gpt-7-future"))
+	require.False(t, svc.CanBillAutoAllowedModel(context.Background(), apiKey, "models/gpt-7-future"))
+}
+
+func TestConfiguredCodexGPT6SolAndLunaCapabilities(t *testing.T) {
+	t.Parallel()
+	for _, id := range []string{"gpt-6-sol", "gpt-6-luna"} {
+		descriptor := newConfiguredCodexModelDescriptor(id)
+		require.Equal(t, int64(1_050_000), descriptor.ContextWindow)
+		require.Equal(t, []string{"none", "low", "medium", "high", "xhigh", "max"}, effortsFromConfiguredCodexLevels(descriptor.SupportedReasoningLevels))
+		require.True(t, configuredCodexSupportsPriorityServiceTier(id))
+		require.True(t, isOpenAICodexImageInputModel(id))
+	}
+}
+
 func TestMergeGroupConfiguredCodexModelsHonorsCustomListAndFinalETag(t *testing.T) {
 	t.Parallel()
 

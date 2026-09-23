@@ -125,6 +125,33 @@ func (a GroupModelAllowlist) Allows(model string) bool {
 	return false
 }
 
+// AllowsByWildcardOnly identifies models admitted by a family rule rather
+// than an explicit model entry. Callers can require a known price before
+// forwarding a newly discovered model.
+func (a GroupModelAllowlist) AllowsByWildcardOnly(model string) bool {
+	if !a.Enabled || strings.TrimSpace(model) == "" {
+		return false
+	}
+	candidates := groupModelAllowlistCandidates(model)
+	wildcardMatched := false
+	for _, entry := range a.Models {
+		entry = strings.ToLower(strings.TrimSpace(entry))
+		if strings.HasSuffix(entry, "*") {
+			prefix := strings.TrimSuffix(entry, "*")
+			for _, candidate := range candidates {
+				wildcardMatched = wildcardMatched || strings.HasPrefix(candidate, prefix)
+			}
+			continue
+		}
+		for _, candidate := range candidates {
+			if candidate == entry {
+				return false
+			}
+		}
+	}
+	return wildcardMatched
+}
+
 // groupModelAllowlistCandidates 返回客户端模型名在白名单匹配中的候选形式（均已小写）。
 func groupModelAllowlistCandidates(model string) []string {
 	candidates := make([]string, 0, 4)

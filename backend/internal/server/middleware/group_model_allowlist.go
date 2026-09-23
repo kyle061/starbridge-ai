@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -29,7 +30,7 @@ import (
 //     `model`/`session.model` 或 multipart `model`/`session` 后回填请求体。
 //   - 拒绝：按入口协议格式返回 404，并标记运维业务限流原因
 //     local_model_configuration 与 ingress 拒绝原因 model_not_allowed。
-func GroupModelAllowlist() gin.HandlerFunc {
+func GroupModelAllowlist(pricingChecks ...func(context.Context, *service.APIKey, string) bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		apiKey, ok := GetAPIKeyFromContext(c)
 		if !ok || apiKey == nil || apiKey.Group == nil || !apiKey.Group.ModelAllowlistEnabled() {
@@ -78,6 +79,16 @@ func GroupModelAllowlist() gin.HandlerFunc {
 			}
 		}
 		if blocked == "" {
+			if len(pricingChecks) > 0 && c.Request.Method != http.MethodGet {
+				for _, candidate := range models {
+					if !pricingChecks[0](c.Request.Context(), apiKey, candidate) {
+						service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalModelConfiguration)
+						groupModelAllowlistErrorWriter(c)(c, http.StatusServiceUnavailable, fmt.Sprintf("Model %q is awaiting pricing before it can be used", candidate))
+						c.Abort()
+						return
+					}
+				}
+			}
 			c.Next()
 			return
 		}

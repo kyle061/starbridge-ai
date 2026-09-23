@@ -374,6 +374,13 @@ func NewOpenAIGatewayHandler(
 	}
 }
 
+func (h *OpenAIGatewayHandler) CanBillAutoAllowedModel(ctx context.Context, apiKey *service.APIKey, model string) bool {
+	if h == nil || h.gatewayService == nil {
+		return true
+	}
+	return h.gatewayService.CanBillAutoAllowedModel(ctx, apiKey, model)
+}
+
 // Responses handles OpenAI Responses API endpoint
 // POST /openai/v1/responses
 func (h *OpenAIGatewayHandler) Responses(c *gin.Context) {
@@ -2407,6 +2414,10 @@ func (h *OpenAIGatewayHandler) ResponsesWebSocket(c *gin.Context) {
 		closeOpenAIClientWS(wsConn, coderws.StatusPolicyViolation, fmt.Sprintf("Model %q is not available for this group", blocked))
 		return
 	}
+	if !h.CanBillAutoAllowedModel(ctx, apiKey, reqModel) {
+		closeOpenAIClientWS(wsConn, coderws.StatusTryAgainLater, fmt.Sprintf("Model %q is awaiting pricing before it can be used", reqModel))
+		return
+	}
 	ensureCompositeTargetPlatform(c, apiKey, reqModel)
 	ctx = c.Request.Context()
 	if apiKey.Group != nil && apiKey.Group.Platform == service.PlatformComposite {
@@ -2846,6 +2857,11 @@ func (h *OpenAIGatewayHandler) ResponsesWebSocket(c *gin.Context) {
 					service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalModelConfiguration)
 					middleware2.MarkIngressRejected(c, middleware2.IngressRejectModelNotAllowed)
 					return service.NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, fmt.Sprintf("Model %q is not available for this group", blocked), nil)
+				}
+				for _, candidate := range candidates {
+					if !h.CanBillAutoAllowedModel(ctx, apiKey, candidate) {
+						return service.NewOpenAIWSClientCloseError(coderws.StatusTryAgainLater, fmt.Sprintf("Model %q is awaiting pricing before it can be used", candidate), nil)
+					}
 				}
 				if decision := h.checkSecurityAuditStage(c, reqLog, apiKey, subject, service.ContentModerationProtocolOpenAIResponses, model, payload, "subsequent_turn"); decision != nil && !decision.AllowNextStage {
 					writeSecurityAuditWSError(ctx, wsConn, decision)

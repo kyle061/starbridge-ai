@@ -111,6 +111,24 @@ func TestMatchWildcardMappingResult(t *testing.T) {
 			expected:       "claude-mapped",
 			matched:        true,
 		},
+		{
+			name: "identity wildcard keeps a new upstream model",
+			mapping: map[string]string{
+				"gpt-*": "*",
+			},
+			requestedModel: "gpt-6-sol",
+			expected:       "gpt-6-sol",
+			matched:        true,
+		},
+		{
+			name: "whitelist wildcard keeps a new upstream model",
+			mapping: map[string]string{
+				"gpt-*": "gpt-*",
+			},
+			requestedModel: "gpt-6-luna",
+			expected:       "gpt-6-luna",
+			matched:        true,
+		},
 
 		// 无匹配返回原始模型
 		{

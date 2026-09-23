@@ -570,6 +570,25 @@ func (s *OpenAIGatewayService) hasIdentifiedOpenAIResponsePricing(ctx context.Co
 	return s.billingService.HasIdentifiedTokenPricing(model), false
 }
 
+// CanBillAutoAllowedModel keeps wildcard model authorization from forwarding
+// an unpriced new GPT model. Exact allowlist entries retain their existing
+// administrator-controlled billing behavior.
+func (s *OpenAIGatewayService) CanBillAutoAllowedModel(ctx context.Context, apiKey *APIKey, model string) bool {
+	bareModel := lastOpenAIModelSegment(model)
+	if apiKey == nil || apiKey.Group == nil || apiKey.Group.Platform != PlatformOpenAI ||
+		!apiKey.Group.ModelAllowlist.AllowsByWildcardOnly(model) || !strings.HasPrefix(strings.ToLower(bareModel), "gpt-") {
+		return true
+	}
+	if s == nil || s.billingService == nil {
+		return false
+	}
+	identified, _ := s.hasIdentifiedOpenAIResponsePricing(ctx, model, apiKey)
+	if !identified && bareModel != model {
+		identified, _ = s.hasIdentifiedOpenAIResponsePricing(ctx, bareModel, apiKey)
+	}
+	return identified
+}
+
 // openAILongContextBillingGate returns the per-account long-context opt-in.
 // The flag is an OpenAI-only account setting, so other platforms (Grok) return
 // nil — "no per-account gate" — and are governed by the group toggle alone.

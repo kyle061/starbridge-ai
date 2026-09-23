@@ -154,6 +154,19 @@ func TestGroupModelAllowlistEnabled(t *testing.T) {
 	}
 }
 
+func TestGroupModelAllowlistAllowsByWildcardOnly(t *testing.T) {
+	allowlist := GroupModelAllowlist{Enabled: true, Models: []string{"gpt-6-astra", "gpt-*"}}
+	if allowlist.AllowsByWildcardOnly("gpt-6-astra") {
+		t.Fatal("explicit model should keep its configured billing behavior")
+	}
+	if !allowlist.AllowsByWildcardOnly("gpt-6-sol") {
+		t.Fatal("new GPT model should be identified as auto-authorized")
+	}
+	if allowlist.AllowsByWildcardOnly("deepseek-v4-pro") {
+		t.Fatal("unmatched model must not be auto-authorized")
+	}
+}
+
 func TestGroupModelAllowlistFilterForListing(t *testing.T) {
 	source := []string{"claude-opus-4.6", "claude-sonnet-4.5", "gpt-5.4", "gpt-5.5-codex", "gpt-5.5-mini", "grok-4.6"}
 

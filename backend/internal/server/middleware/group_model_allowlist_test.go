@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -14,6 +15,36 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+func TestGroupModelAllowlistPricingGate(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	apiKey := &service.APIKey{Group: &service.Group{Platform: service.PlatformOpenAI,
+		ModelAllowlist: service.GroupModelAllowlist{Enabled: true, Models: []string{"gpt-6-astra", "gpt-*"}},
+	}}
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		c.Set(string(ContextKeyAPIKey), apiKey)
+		c.Next()
+	})
+	router.Use(GroupModelAllowlist(func(_ context.Context, _ *service.APIKey, model string) bool {
+		return model != "gpt-7-future"
+	}))
+	router.POST("/v1/responses", func(c *gin.Context) { c.Status(http.StatusOK) })
+
+	for _, tc := range []struct {
+		model string
+		want  int
+	}{
+		{model: "gpt-6-astra", want: http.StatusOK},
+		{model: "gpt-6-sol", want: http.StatusOK},
+		{model: "gpt-7-future", want: http.StatusServiceUnavailable},
+	} {
+		w := doJSON(t, router, http.MethodPost, "/v1/responses", `{"model":"`+tc.model+`"}`)
+		if w.Code != tc.want {
+			t.Fatalf("model %s: got %d, want %d: %s", tc.model, w.Code, tc.want, w.Body.String())
+		}
+	}
+}
 
 func newGroupModelAllowlistTestRouter(apiKey *service.APIKey, pathPrefix string) (*gin.Engine, *[]string) {
 	gin.SetMode(gin.TestMode)

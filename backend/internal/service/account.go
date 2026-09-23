@@ -1077,6 +1077,12 @@ func matchWildcardMappingResult(mapping map[string]string, requestedModel string
 		return matches[i].pattern < matches[j].pattern
 	})
 
+	// A wildcard mapped to itself (as the whitelist UI generates), or to "*",
+	// keeps the concrete requested ID instead of sending a literal wildcard.
+	if strings.HasSuffix(matches[0].pattern, "*") &&
+		(matches[0].target == "*" || matches[0].target == matches[0].pattern) {
+		return requestedModel, true
+	}
 	return matches[0].target, true
 }
 

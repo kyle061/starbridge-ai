@@ -96,6 +96,30 @@ const gpt6AstraCatalogJSON = `{
 	}
 }`
 
+func TestBillingServiceGPT6SolAndLunaOfficialFallbackPricing(t *testing.T) {
+	svc := NewBillingService(&config.Config{}, nil)
+	for _, tc := range []struct {
+		model                string
+		input, output, write float64
+		read                 float64
+	}{
+		{model: "gpt-6-sol", input: 2e-6, output: 10e-6, write: 2.5e-6, read: 0.2e-6},
+		{model: "gpt-6-luna", input: 0.1e-6, output: 0.5e-6, write: 0.125e-6, read: 0.01e-6},
+	} {
+		t.Run(tc.model, func(t *testing.T) {
+			pricing, err := svc.GetModelPricing(tc.model)
+			require.NoError(t, err)
+			require.InDelta(t, tc.input, pricing.InputPricePerToken, 1e-12)
+			require.InDelta(t, tc.output, pricing.OutputPricePerToken, 1e-12)
+			require.InDelta(t, tc.write, pricing.CacheCreationPricePerToken, 1e-12)
+			require.InDelta(t, tc.read, pricing.CacheReadPricePerToken, 1e-12)
+			require.InDelta(t, tc.input*2, pricing.InputPricePerTokenPriority, 1e-12)
+			require.InDelta(t, tc.output*2, pricing.OutputPricePerTokenPriority, 1e-12)
+			require.Equal(t, 272_000, pricing.LongContextInputThreshold)
+		})
+	}
+}
+
 func TestBillingServiceGPT6AstraUsesOfficialPricingAcrossTiersAndLongContext(t *testing.T) {
 	svc := NewBillingService(&config.Config{}, newStubPricingServiceFromJSON(t, gpt6AstraCatalogJSON))
 	boundaryTokens := UsageTokens{InputTokens: 100_000, CacheCreationTokens: 100_000, CacheReadTokens: 72_000, OutputTokens: 10}
