@@ -286,6 +286,14 @@
               <button @click="loadDashboardStats" :disabled="chartsLoading" class="btn btn-secondary">
                 {{ t('common.refresh') }}
               </button>
+              <AutoRefreshButton
+                :enabled="autoRefresh.enabled.value"
+                :interval-seconds="autoRefresh.intervalSeconds.value"
+                :countdown="autoRefresh.countdown.value"
+                :intervals="autoRefresh.intervals"
+                @update:enabled="autoRefresh.setEnabled"
+                @update:interval="autoRefresh.setInterval"
+              />
               <div class="ml-auto flex items-center gap-2">
                 <span class="text-sm font-medium text-gray-700 dark:text-gray-300"
                   >{{ t('admin.dashboard.granularity') }}:</span
@@ -371,12 +379,14 @@ import type {
 import AppLayout from '@/components/layout/AppLayout.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import Icon from '@/components/icons/Icon.vue'
+import AutoRefreshButton from '@/components/common/AutoRefreshButton.vue'
 import DateRangePicker from '@/components/common/DateRangePicker.vue'
 import Select from '@/components/common/Select.vue'
 import ModelDistributionChart from '@/components/charts/ModelDistributionChart.vue'
 import TokenUsageTrend from '@/components/charts/TokenUsageTrend.vue'
 import Toggle from '@/components/common/Toggle.vue'
 import { useBatchImageAccess } from '@/composables/useBatchImageAccess'
+import { useAdminListAutoRefresh } from '@/composables/useAdminListAutoRefresh'
 
 import {
   Chart as ChartJS,
@@ -407,6 +417,13 @@ const { canUseBatchImage, refreshBatchImageAccess } = useBatchImageAccess()
 const stats = ref<DashboardStats | null>(null)
 const loading = ref(false)
 const chartsLoading = ref(false)
+const autoRefresh = useAdminListAutoRefresh({
+  storageKey: 'dashboard',
+  onRefresh: () => loadDashboardStats(),
+  shouldPause: () => loading.value || chartsLoading.value || userTrendLoading.value || rankingLoading.value,
+  intervalSeconds: [120, 300, 600],
+  defaultInterval: 300,
+})
 const userTrendLoading = ref(false)
 const rankingLoading = ref(false)
 const rankingError = ref(false)

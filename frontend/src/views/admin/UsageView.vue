@@ -95,6 +95,14 @@
 
         <UsageFilters v-model="filters" ref="usageFiltersRef" flat :mode="activeTab" class="border-b border-gray-100 dark:border-dark-700/50" :start-date="startDate" :end-date="endDate" :exporting="exporting" :model-options="modelNameOptions" @change="applyFilters" @refresh="refreshData" @reset="resetFilters" @cleanup="openCleanupDialog" @export="exportToExcel">
           <template #after-reset>
+            <AutoRefreshButton
+              :enabled="autoRefresh.enabled.value"
+              :interval-seconds="autoRefresh.intervalSeconds.value"
+              :countdown="autoRefresh.countdown.value"
+              :intervals="autoRefresh.intervals"
+              @update:enabled="autoRefresh.setEnabled"
+              @update:interval="autoRefresh.setInterval"
+            />
             <div v-if="activeTab !== 'ranking'" class="relative" ref="columnDropdownRef">
               <button
                 data-testid="usage-column-settings"
@@ -218,6 +226,8 @@ import type { OpsErrorLog } from '@/api/admin/ops'
 import ModelDistributionChart from '@/components/charts/ModelDistributionChart.vue'; import GroupDistributionChart from '@/components/charts/GroupDistributionChart.vue'; import TokenUsageTrend from '@/components/charts/TokenUsageTrend.vue'
 import EndpointDistributionChart from '@/components/charts/EndpointDistributionChart.vue'
 import Icon from '@/components/icons/Icon.vue'
+import AutoRefreshButton from '@/components/common/AutoRefreshButton.vue'
+import { useAdminListAutoRefresh } from '@/composables/useAdminListAutoRefresh'
 import Toggle from '@/components/common/Toggle.vue'
 import type { AdminUsageLog, TrendDataPoint, ModelStat, GroupStat, EndpointStat, AdminUser } from '@/types'; import type { AdminUsageStatsResponse, AdminUsageQueryParams } from '@/api/admin/usage'
 
@@ -228,6 +238,13 @@ type EndpointSource = 'inbound' | 'upstream' | 'path'
 type ModelDistributionSource = 'requested' | 'upstream' | 'mapping'
 const route = useRoute()
 const usageStats = ref<AdminUsageStatsResponse | null>(null); const usageLogs = ref<AdminUsageLog[]>([]); const loading = ref(false); const exporting = ref(false)
+const autoRefresh = useAdminListAutoRefresh({
+  storageKey: 'usage',
+  onRefresh: () => refreshData(),
+  shouldPause: () => loading.value || chartsLoading.value || exporting.value || errLoading.value,
+  intervalSeconds: [120, 300, 600],
+  defaultInterval: 300,
+})
 const customerView = ref(
   (typeof route.query.billing_view === 'string' && route.query.billing_view.toLowerCase() === 'customer')
   || (Array.isArray(route.query.billing_view) && route.query.billing_view.includes('customer'))

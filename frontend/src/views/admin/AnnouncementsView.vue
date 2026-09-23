@@ -30,6 +30,14 @@
             >
               <Icon name="refresh" size="md" :class="loading ? 'animate-spin' : ''" />
             </button>
+            <AutoRefreshButton
+              :enabled="autoRefresh.enabled.value"
+              :interval-seconds="autoRefresh.intervalSeconds.value"
+              :countdown="autoRefresh.countdown.value"
+              :intervals="autoRefresh.intervals"
+              @update:enabled="autoRefresh.setEnabled"
+              @update:interval="autoRefresh.setInterval"
+            />
             <button @click="openCreateDialog" class="btn btn-primary">
               <Icon name="plus" size="md" class="mr-1" />
               {{ t('admin.announcements.createAnnouncement') }}
@@ -275,6 +283,8 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Select from '@/components/common/Select.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import Icon from '@/components/icons/Icon.vue'
+import AutoRefreshButton from '@/components/common/AutoRefreshButton.vue'
+import { useAdminListAutoRefresh } from '@/composables/useAdminListAutoRefresh'
 
 import AnnouncementTargetingEditor from '@/components/admin/announcements/AnnouncementTargetingEditor.vue'
 import AnnouncementReadStatusDialog from '@/components/admin/announcements/AnnouncementReadStatusDialog.vue'
@@ -285,6 +295,11 @@ const appStore = useAppStore()
 
 const announcements = ref<Announcement[]>([])
 const loading = ref(false)
+const autoRefresh = useAdminListAutoRefresh({
+  storageKey: 'announcements',
+  onRefresh: () => loadAnnouncements(),
+  shouldPause: () => loading.value,
+})
 
 const filters = reactive({
   status: '',

@@ -1,9 +1,10 @@
-import { ref, onBeforeUnmount, type Ref } from 'vue'
+import { ref, onBeforeUnmount, onMounted, type Ref } from 'vue'
 
 export interface UseAutoRefreshOptions {
   storageKey: string
   intervals?: readonly number[]
   defaultInterval?: number
+  defaultEnabled?: boolean
   onRefresh: () => Promise<void> | void
   /** Skip tick when this returns true (e.g. modal open, document hidden). */
   shouldPause?: () => boolean
@@ -14,16 +15,17 @@ export function useAutoRefresh(options: UseAutoRefreshOptions) {
     storageKey,
     intervals = [5, 10, 15, 30] as const,
     defaultInterval,
+    defaultEnabled = false,
     onRefresh,
     shouldPause,
   } = options
 
-  const enabled = ref(false)
+  const enabled = ref(defaultEnabled)
   const intervalSeconds = ref(defaultInterval ?? intervals[intervals.length - 1])
   const countdown = ref(0)
   const fetching = ref(false)
 
-  let timerId: number | undefined
+  let timerId: ReturnType<typeof setInterval> | undefined
 
   function loadFromStorage() {
     try {
@@ -61,7 +63,7 @@ export function useAutoRefresh(options: UseAutoRefreshOptions) {
 
   function start() {
     if (timerId !== undefined) return
-    timerId = setInterval(tick, 1000) as unknown as number
+    timerId = setInterval(tick, 1000)
   }
 
   function stop() {
@@ -94,8 +96,25 @@ export function useAutoRefresh(options: UseAutoRefreshOptions) {
   }
 
   loadFromStorage()
+  if (enabled.value) countdown.value = intervalSeconds.value
 
-  onBeforeUnmount(stop)
+  function handleVisibilityChange() {
+    if (document.hidden) {
+      stop()
+    } else if (enabled.value) {
+      start()
+    }
+  }
+
+  onMounted(() => {
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    if (enabled.value && !document.hidden) start()
+  })
+
+  onBeforeUnmount(() => {
+    stop()
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
+  })
 
   return {
     enabled: enabled as Ref<boolean>,

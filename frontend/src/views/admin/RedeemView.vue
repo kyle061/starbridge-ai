@@ -36,6 +36,14 @@
             >
               <Icon name="refresh" size="md" :class="loading ? 'animate-spin' : ''" />
             </button>
+            <AutoRefreshButton
+              :enabled="autoRefresh.enabled.value"
+              :interval-seconds="autoRefresh.intervalSeconds.value"
+              :countdown="autoRefresh.countdown.value"
+              :intervals="autoRefresh.intervals"
+              @update:enabled="autoRefresh.setEnabled"
+              @update:interval="autoRefresh.setInterval"
+            />
             <button @click="handleExportCodes" class="btn btn-secondary">
               {{ t('admin.redeem.exportCsv') }}
             </button>
@@ -641,6 +649,8 @@ import Select from '@/components/common/Select.vue'
 import GroupBadge from '@/components/common/GroupBadge.vue'
 import GroupOptionItem from '@/components/common/GroupOptionItem.vue'
 import Icon from '@/components/icons/Icon.vue'
+import AutoRefreshButton from '@/components/common/AutoRefreshButton.vue'
+import { useAdminListAutoRefresh } from '@/composables/useAdminListAutoRefresh'
 
 const { t } = useI18n()
 const appStore = useAppStore()
@@ -774,6 +784,11 @@ const batchExpiryModeOptions = computed(() => [
 
 const codes = ref<RedeemCode[]>([])
 const loading = ref(false)
+const autoRefresh = useAdminListAutoRefresh({
+  storageKey: 'redeem-codes',
+  onRefresh: () => loadCodes(),
+  shouldPause: () => loading.value,
+})
 const generating = ref(false)
 const batchUpdating = ref(false)
 const searchQuery = ref('')

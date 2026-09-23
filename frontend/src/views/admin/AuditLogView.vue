@@ -70,6 +70,14 @@
               <button type="button" class="btn btn-primary" :disabled="loading" @click="search">
                 {{ t('common.search') }}
               </button>
+              <AutoRefreshButton
+                :enabled="autoRefresh.enabled.value"
+                :interval-seconds="autoRefresh.intervalSeconds.value"
+                :countdown="autoRefresh.countdown.value"
+                :intervals="autoRefresh.intervals"
+                @update:enabled="autoRefresh.setEnabled"
+                @update:interval="autoRefresh.setInterval"
+              />
               <button type="button" class="btn btn-secondary" :disabled="loading" @click="resetFilters">
                 {{ t('common.reset') }}
               </button>
@@ -365,12 +373,21 @@ import Select from '@/components/common/Select.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import Icon from '@/components/icons/Icon.vue'
+import AutoRefreshButton from '@/components/common/AutoRefreshButton.vue'
+import { useAdminListAutoRefresh } from '@/composables/useAdminListAutoRefresh'
 import { useAppStore } from '@/stores'
 
 const { t } = useI18n()
 const appStore = useAppStore()
 
 const loading = ref(false)
+const autoRefresh = useAdminListAutoRefresh({
+  storageKey: 'audit-log',
+  onRefresh: () => fetchLogs(),
+  shouldPause: () => loading.value,
+  intervalSeconds: [120, 300, 600],
+  defaultInterval: 300,
+})
 const logs = ref<AuditLog[]>([])
 const total = ref(0)
 const page = ref(1)

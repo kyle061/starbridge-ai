@@ -136,6 +136,14 @@
               >
                 <Icon name="refresh" size="md" :class="loading ? 'animate-spin' : ''" />
               </button>
+              <AutoRefreshButton
+                :enabled="autoRefresh.enabled.value"
+                :interval-seconds="autoRefresh.intervalSeconds.value"
+                :countdown="autoRefresh.countdown.value"
+                :intervals="autoRefresh.intervals"
+                @update:enabled="autoRefresh.setEnabled"
+                @update:interval="autoRefresh.setInterval"
+              />
               <!-- Filter Settings Dropdown -->
               <div class="relative" ref="filterDropdownRef">
                 <button
@@ -799,6 +807,8 @@ import { getPersistedPageSize } from '@/composables/usePersistedPageSize'
 import { useTableSelection } from '@/composables/useTableSelection'
 import { formatDateTime } from '@/utils/format'
 import Icon from '@/components/icons/Icon.vue'
+import AutoRefreshButton from '@/components/common/AutoRefreshButton.vue'
+import { useAdminListAutoRefresh } from '@/composables/useAdminListAutoRefresh'
 
 const { t } = useI18n()
 import { adminAPI } from '@/api/admin'
@@ -1041,6 +1051,13 @@ const columns = computed<Column[]>(() =>
 
 const users = ref<AdminUser[]>([])
 const loading = ref(false)
+const autoRefresh = useAdminListAutoRefresh({
+  storageKey: 'users',
+  onRefresh: () => loadUsers(),
+  shouldPause: () => loading.value,
+  intervalSeconds: [120, 300, 600],
+  defaultInterval: 300,
+})
 const searchQuery = ref('')
 const USER_SORT_STORAGE_KEY = 'admin-users-table-sort'
 const loadInitialSortState = (): { sort_by: string; sort_order: 'asc' | 'desc' } => {

@@ -39,6 +39,14 @@
             >
               <Icon name="refresh" size="md" :class="loading ? 'animate-spin' : ''" />
             </button>
+            <AutoRefreshButton
+              :enabled="autoRefresh.enabled.value"
+              :interval-seconds="autoRefresh.intervalSeconds.value"
+              :countdown="autoRefresh.countdown.value"
+              :intervals="autoRefresh.intervals"
+              @update:enabled="autoRefresh.setEnabled"
+              @update:interval="autoRefresh.setInterval"
+            />
             <button @click="openCreateDialog" class="btn btn-primary">
               <Icon name="plus" size="md" class="mr-2" />
               {{ t('admin.channels.createChannel', 'Create Channel') }}
@@ -652,11 +660,13 @@ import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import Select from '@/components/common/Select.vue'
 import Icon from '@/components/icons/Icon.vue'
+import AutoRefreshButton from '@/components/common/AutoRefreshButton.vue'
 import PlatformIcon from '@/components/common/PlatformIcon.vue'
 import Toggle from '@/components/common/Toggle.vue'
 import PricingEntryCard from '@/components/admin/channel/PricingEntryCard.vue'
 import { getPersistedPageSize } from '@/composables/usePersistedPageSize'
 import { useKeyedDebouncedSearch } from '@/composables/useKeyedDebouncedSearch'
+import { useAdminListAutoRefresh } from '@/composables/useAdminListAutoRefresh'
 
 const { t } = useI18n()
 const appStore = useAppStore()
@@ -727,6 +737,11 @@ const billingModelSourceOptions = computed(() => [
 // ── State ──
 const channels = ref<Channel[]>([])
 const loading = ref(false)
+const autoRefresh = useAdminListAutoRefresh({
+  storageKey: 'channels',
+  onRefresh: () => loadChannels(),
+  shouldPause: () => loading.value,
+})
 const searchQuery = ref('')
 const filters = reactive({ status: '' })
 const pagination = reactive({

@@ -237,10 +237,20 @@
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t('admin.riskControl.records') }}</h2>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t('admin.riskControl.recordsHint') }}</p>
               </div>
-              <button type="button" class="btn btn-secondary inline-flex items-center gap-2" :disabled="logsLoading" @click="loadLogs">
-                <Icon name="refresh" size="sm" :class="logsLoading ? 'animate-spin' : ''" />
-                {{ t('admin.riskControl.refresh') }}
-              </button>
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" class="btn btn-secondary inline-flex items-center gap-2" :disabled="logsLoading" @click="loadLogs">
+                  <Icon name="refresh" size="sm" :class="logsLoading ? 'animate-spin' : ''" />
+                  {{ t('admin.riskControl.refresh') }}
+                </button>
+                <AutoRefreshButton
+                  :enabled="autoRefresh.enabled.value"
+                  :interval-seconds="autoRefresh.intervalSeconds.value"
+                  :countdown="autoRefresh.countdown.value"
+                  :intervals="autoRefresh.intervals"
+                  @update:enabled="autoRefresh.setEnabled"
+                  @update:interval="autoRefresh.setInterval"
+                />
+              </div>
             </div>
 
             <div class="flex flex-col gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 dark:border-dark-700 dark:bg-dark-900/30 sm:flex-row sm:items-center sm:justify-between">
@@ -1125,6 +1135,8 @@ import { useDialog } from '@/composables/useDialog'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/icons/Icon.vue'
+import AutoRefreshButton from '@/components/common/AutoRefreshButton.vue'
+import { useAdminListAutoRefresh } from '@/composables/useAdminListAutoRefresh'
 import Select from '@/components/common/Select.vue'
 import Toggle from '@/components/common/Toggle.vue'
 import Pagination from '@/components/common/Pagination.vue'
@@ -1204,6 +1216,13 @@ const defaultBlockMessage = () => t('admin.riskControl.defaultBlockMessage')
 const loading = ref(true)
 const saving = ref(false)
 const logsLoading = ref(false)
+const autoRefresh = useAdminListAutoRefresh({
+  storageKey: 'risk-control-logs',
+  onRefresh: () => loadLogs(),
+  shouldPause: () => loading.value || logsLoading.value || settingsOpen.value,
+  intervalSeconds: [120, 300, 600],
+  defaultInterval: 300,
+})
 const statusLoading = ref(false)
 const apiKeyTesting = ref(false)
 const hashActionLoading = ref(false)
