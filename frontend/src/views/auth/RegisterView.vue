@@ -28,6 +28,10 @@
 
       <!-- Registration Form -->
       <form v-else @submit.prevent="handleRegister" class="space-y-5">
+        <div v-if="errorMessage" class="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-300" role="alert">
+          <Icon name="exclamationCircle" size="sm" class="mt-0.5 shrink-0" />
+          <span>{{ errorMessage }}</span>
+        </div>
         <!-- Email Input -->
         <div>
           <label for="email" class="input-label">
@@ -47,9 +51,12 @@
               :disabled="registrationActionDisabled"
               class="input pl-11"
               :class="{ 'input-error': errors.email }"
+              :aria-invalid="Boolean(errors.email)"
+              :aria-describedby="errors.email ? 'register-email-error' : undefined"
               :placeholder="t('auth.emailPlaceholder')"
             />
           </div>
+          <p v-if="errors.email" id="register-email-error" class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">{{ errors.email }}</p>
         </div>
 
         <!-- Password Input -->
@@ -70,6 +77,8 @@
               :disabled="registrationActionDisabled"
               class="input pl-11 pr-11"
               :class="{ 'input-error': errors.password }"
+              :aria-invalid="Boolean(errors.password)"
+              :aria-describedby="errors.password ? 'register-password-error' : undefined"
               :placeholder="t('auth.createPasswordPlaceholder')"
             />
             <button
@@ -82,6 +91,7 @@
               <Icon v-else name="eye" size="md" />
             </button>
           </div>
+          <p v-if="errors.password" id="register-password-error" class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">{{ errors.password }}</p>
           <p class="input-hint">
             {{ t('auth.passwordHint') }}
           </p>
@@ -105,6 +115,8 @@
               :disabled="registrationActionDisabled"
               class="input pl-11 pr-11"
               :class="{ 'input-error': errors.confirmPassword }"
+              :aria-invalid="Boolean(errors.confirmPassword)"
+              :aria-describedby="errors.confirmPassword ? 'register-confirm-password-error' : undefined"
               :placeholder="t('auth.confirmPasswordPlaceholder')"
             />
             <button
@@ -117,6 +129,7 @@
               <Icon v-else name="eye" size="md" />
             </button>
           </div>
+          <p v-if="errors.confirmPassword" id="register-confirm-password-error" class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">{{ errors.confirmPassword }}</p>
         </div>
 
         <!-- Invitation Code Input (Required when enabled) -->
@@ -164,6 +177,7 @@
               </span>
             </div>
           </transition>
+          <p v-if="errors.invitation_code" class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">{{ errors.invitation_code }}</p>
         </div>
 
         <!-- Affiliate Invitation Code Input (Optional) -->
@@ -252,6 +266,7 @@
             @expire="onTurnstileExpire"
             @error="onTurnstileError"
           />
+          <p v-if="errors.turnstile" class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">{{ errors.turnstile }}</p>
         </div>
 
         <LoginAgreementPrompt

@@ -142,6 +142,8 @@ export default {
     noActiveSubscriptionsDesc:
       "You don't have any active subscriptions. Contact administrator to get one.",
     failedToLoad: 'Failed to load subscriptions',
+    loadFailed: 'Subscription information is temporarily unavailable',
+    retry: 'Retry',
     status: {
       active: 'Active',
       expired: 'Expired',

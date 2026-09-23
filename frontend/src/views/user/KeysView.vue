@@ -76,14 +76,19 @@
             @click="loadApiKeys"
             :disabled="loading"
             class="btn btn-secondary"
+            :aria-label="t('common.refresh')"
+            :aria-busy="loading"
             :title="t('common.refresh')"
           >
             <Icon name="refresh" size="md" :class="loading ? 'animate-spin' : ''" />
+            <span class="hidden sm:inline">{{ t('common.refresh') }}</span>
           </button>
           <div class="relative" ref="columnDropdownRef">
             <button
               @click="showColumnDropdown = !showColumnDropdown"
               class="btn btn-secondary px-2 md:px-3"
+              :aria-label="t('keys.columnSettings')"
+              :aria-expanded="showColumnDropdown"
               :title="t('keys.columnSettings')"
             >
               <svg class="h-4 w-4 md:mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
@@ -120,6 +125,12 @@
       </template>
 
       <template #table>
+        <div v-if="loadFailed" class="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-300" role="alert">
+          <span>{{ t('keys.failedToLoad') }}</span>
+          <button type="button" class="btn btn-secondary btn-sm min-h-10" :disabled="loading" @click="loadApiKeys">
+            {{ t('keys.retry') }}
+          </button>
+        </div>
         <DataTable
           :columns="columns"
           :data="apiKeys"
@@ -398,8 +409,11 @@
               <!-- Toggle Status Button -->
               <button
                 @click="toggleKeyStatus(row)"
+                :disabled="updatingKeyId === row.id"
+                :aria-busy="updatingKeyId === row.id"
                 :class="[
                   'flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-lg p-1.5 transition-colors',
+                  updatingKeyId === row.id ? 'cursor-wait opacity-60' : '',
                   row.status === 'active'
                     ? 'text-gray-500 hover:bg-yellow-50 hover:text-yellow-600 dark:hover:bg-yellow-900/20 dark:hover:text-yellow-400'
                     : 'text-gray-500 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/20 dark:hover:text-green-400'
@@ -910,6 +924,8 @@ const subscriptionForKey = (row: ApiKey) =>
 const usageStats = ref<Record<string, BatchApiKeyUsageStats>>({})
 const usageLoading = ref(false)
 const usageLoadFailed = ref(false)
+const loadFailed = ref(false)
+const updatingKeyId = ref<number | null>(null)
 
 const formatUsageCost = (amount: number): string => {
   if (amount > 0 && amount < 0.00000001) return '<$0.00000001'
@@ -1161,6 +1177,7 @@ const loadApiKeys = async () => {
   loading.value = true
   usageLoading.value = true
   usageLoadFailed.value = false
+  loadFailed.value = false
   usageStats.value = {}
   try {
     // Build filters
@@ -1208,6 +1225,7 @@ const loadApiKeys = async () => {
     if (isAbortError(error)) {
       return
     }
+    loadFailed.value = true
     appStore.showError(t('keys.failedToLoad'))
   } finally {
     if (abortController === controller) {
@@ -1282,7 +1300,9 @@ const editKey = (key: ApiKey) => {
 }
 
 const toggleKeyStatus = async (key: ApiKey) => {
+  if (updatingKeyId.value === key.id) return
   const newStatus = key.status === 'active' ? 'inactive' : 'active'
+  updatingKeyId.value = key.id
   try {
     await keysAPI.toggleStatus(key.id, newStatus)
     appStore.showSuccess(
@@ -1291,6 +1311,8 @@ const toggleKeyStatus = async (key: ApiKey) => {
     loadApiKeys()
   } catch (error) {
     appStore.showError(t('keys.failedToUpdateStatus'))
+  } finally {
+    updatingKeyId.value = null
   }
 }
 
@@ -1361,6 +1383,10 @@ const confirmDelete = (key: ApiKey) => {
 
 const handleSubmit = async () => {
   if (!showEditModal.value && !canCreateKey.value) return
+  if (!formData.value.name.trim()) {
+    appStore.showError(t('keys.nameRequired'))
+    return
+  }
   // Validate group_id is required
   if (formData.value.group_id === null) {
     appStore.showError(t('keys.groupRequired'))
@@ -1371,7 +1397,7 @@ const handleSubmit = async () => {
   try {
     if (showEditModal.value && selectedKey.value) {
       const updates: UpdateApiKeyRequest = {
-        name: formData.value.name,
+        name: formData.value.name.trim(),
         group_id: formData.value.group_id,
       }
       if (shouldSubmitEditStatus(selectedKey.value, formData.value.status)) {
@@ -1380,7 +1406,7 @@ const handleSubmit = async () => {
       await keysAPI.update(selectedKey.value.id, updates)
       appStore.showSuccess(t('keys.keyUpdatedSuccess'))
     } else {
-      await keysAPI.create(formData.value.name, formData.value.group_id)
+      await keysAPI.create(formData.value.name.trim(), formData.value.group_id)
       appStore.showSuccess(t('keys.keyCreatedSuccess'))
       // Only advance tour if active, on submit step, and creation succeeded
       if (onboardingStore.isCurrentStep('[data-tour="key-form-submit"]')) {

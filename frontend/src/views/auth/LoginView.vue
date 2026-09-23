@@ -12,6 +12,10 @@
       </div>
       <!-- Login Form -->
       <form @submit.prevent="handleLogin" class="space-y-5">
+        <div v-if="errorMessage" class="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-300" role="alert">
+          <Icon name="exclamationCircle" size="sm" class="mt-0.5 shrink-0" />
+          <span>{{ errorMessage }}</span>
+        </div>
         <!-- Email Input -->
         <div>
           <label for="email" class="input-label">
@@ -31,9 +35,12 @@
               :disabled="authActionDisabled"
               class="input pl-11"
               :class="{ 'input-error': errors.email }"
+              :aria-invalid="Boolean(errors.email)"
+              :aria-describedby="errors.email ? 'login-email-error' : undefined"
               :placeholder="t('auth.emailPlaceholder')"
             />
           </div>
+          <p v-if="errors.email" id="login-email-error" class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">{{ errors.email }}</p>
         </div>
 
         <!-- Password Input -->
@@ -54,6 +61,8 @@
               :disabled="authActionDisabled"
               class="input pl-11 pr-11"
               :class="{ 'input-error': errors.password }"
+              :aria-invalid="Boolean(errors.password)"
+              :aria-describedby="errors.password ? 'login-password-error' : undefined"
               :placeholder="t('auth.passwordPlaceholder')"
             />
             <button
@@ -66,6 +75,7 @@
               <Icon v-else name="eye" size="md" />
             </button>
           </div>
+          <p v-if="errors.password" id="login-password-error" class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">{{ errors.password }}</p>
           <div class="mt-1 flex items-center justify-between">
             <span></span>
             <router-link
@@ -109,6 +119,7 @@
             @expire="onTurnstileExpire"
             @error="onTurnstileError"
           />
+          <p v-if="errors.turnstile" class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">{{ errors.turnstile }}</p>
         </div>
 
         <!-- Submit Button -->

@@ -3,7 +3,7 @@
     <div class="space-y-6">
       <div class="flex flex-wrap items-center justify-end gap-2">
         <SubscriptionUsageGuide />
-        <button type="button" class="btn btn-secondary btn-sm min-h-11" :disabled="loading" @click="loadSubscriptions">
+        <button type="button" class="btn btn-secondary btn-sm min-h-11" :disabled="loading" :aria-busy="loading" @click="loadSubscriptions">
           <Icon name="refresh" size="sm" />
           {{ t('common.refresh') }}
         </button>
@@ -13,6 +13,12 @@
         <div
           class="h-8 w-8 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"
         ></div>
+      </div>
+
+      <div v-else-if="loadError" class="card border border-red-200 p-8 text-center dark:border-red-900/60">
+        <Icon name="exclamationCircle" size="xl" class="mx-auto mb-3 text-red-500" />
+        <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">{{ t('userSubscriptions.loadFailed') }}</h3>
+        <button type="button" class="btn btn-primary btn-sm min-h-11" @click="loadSubscriptions">{{ t('userSubscriptions.retry') }}</button>
       </div>
 
       <!-- Empty State -->
@@ -271,13 +277,16 @@ const appStore = useAppStore()
 
 const subscriptions = ref<UserSubscription[]>([])
 const loading = ref(true)
+const loadError = ref(false)
 
 async function loadSubscriptions() {
   try {
     loading.value = true
+    loadError.value = false
     subscriptions.value = await subscriptionsAPI.getMySubscriptions()
   } catch (error) {
     console.error('Failed to load subscriptions:', error)
+    loadError.value = true
     appStore.showError(t('userSubscriptions.failedToLoad'))
   } finally {
     loading.value = false
