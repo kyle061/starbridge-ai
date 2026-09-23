@@ -635,7 +635,7 @@ export default {
       quotaMultiplier: 'Subscription quota multiplier',
       usageMultiplier: 'Subscription usage multiplier',
       quotaMultiplierHint: 'Quota granted = price × this multiplier (default 10x)',
-      usageMultiplierHint: 'Default multiplier for newly assigned or purchased subscriptions; existing subscriptions are unchanged (default 12x)',
+      usageMultiplierHint: 'Default multiplier for newly assigned or purchased subscriptions; existing subscriptions are unchanged (default 6x)',
       quotaMultiplierShort: 'Quota',
       usageMultiplierShort: 'Usage',
       currency: 'Currency Label',

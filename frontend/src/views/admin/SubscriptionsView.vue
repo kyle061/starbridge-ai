@@ -1137,7 +1137,7 @@ const assignForm = reactive({
   group_id: null as number | null,
   validity_days: 30,
   quota_usd: 50,
-  usage_multiplier: 12,
+  usage_multiplier: 6,
   plan_name: ''
 })
 
@@ -1159,12 +1159,12 @@ watch(assignmentPlanId, id => {
   const unit = String(plan.validity_unit || 'days').replace(/s$/, '')
   assignForm.validity_days = plan.validity_days * (unit === 'month' ? 30 : unit === 'week' ? 7 : 1)
   assignForm.quota_usd = plan.price * (plan.quota_multiplier || 10)
-  assignForm.usage_multiplier = plan.usage_multiplier || 12
+  assignForm.usage_multiplier = plan.usage_multiplier || 6
   assignForm.plan_name = plan.name
 })
 const multiplierSubscription = ref<UserSubscription | null>(null)
 const multiplierSaving = ref(false)
-const multiplierForm = reactive({ usage_multiplier: 12 })
+const multiplierForm = reactive({ usage_multiplier: 6 })
 function openMultiplierDialog(subscription: UserSubscription) {
   multiplierSubscription.value = subscription
   multiplierForm.usage_multiplier = subscription.usage_multiplier || 1
@@ -1421,7 +1421,7 @@ const closeAssignModal = () => {
   assignForm.group_id = null
   assignForm.validity_days = 30
   assignForm.quota_usd = 50
-  assignForm.usage_multiplier = 12
+  assignForm.usage_multiplier = 6
   assignForm.plan_name = ''
   assignmentPlanId.value = null
   // Clear user search state

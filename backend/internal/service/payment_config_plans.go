@@ -163,7 +163,7 @@ func (s *PaymentConfigService) CreatePlan(ctx context.Context, req CreatePlanReq
 	if err != nil {
 		return nil, err
 	}
-	usageMultiplier, err := normalizePlanMultiplier(req.UsageMultiplier, 12)
+	usageMultiplier, err := normalizePlanMultiplier(req.UsageMultiplier, CustomerBillingMultiplierDefault)
 	if err != nil {
 		return nil, err
 	}

@@ -5000,7 +5000,7 @@ const createForm = reactive({
   name: "",
   description: "",
   platform: "anthropic" as GroupPlatform,
-  rate_multiplier: 1.0,
+  rate_multiplier: 6.0,
   is_exclusive: false,
   subscription_type: "standard" as SubscriptionType,
   daily_limit_usd: null as number | null,
@@ -5831,7 +5831,7 @@ const closeCreateModal = () => {
   createForm.name = "";
   createForm.description = "";
   createForm.platform = "anthropic";
-  createForm.rate_multiplier = 1.0;
+  createForm.rate_multiplier = 6.0;
   createForm.is_exclusive = false;
   createForm.subscription_type = "standard";
   createForm.daily_limit_usd = null;

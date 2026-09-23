@@ -34,7 +34,7 @@ const (
 	AffiliateRebateDurationDaysMax      = 3650  // ~10 年
 	AffiliateRebatePerInviteeCapDefault = 0.0   // 0 = 无上限
 	AdminRechargeRebateEnabledDefault   = false // 管理员充值默认不产生返利
-	CustomerBillingMultiplierDefault    = 12.0 // 普通用户统一客户计费倍率
+	CustomerBillingMultiplierDefault    = 6.0 // 普通用户统一客户计费倍率
 )
 
 // Platform constants

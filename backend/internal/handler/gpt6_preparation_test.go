@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/stretchr/testify/require"
 )
@@ -26,6 +27,20 @@ func TestRequiresGPT6PreparationOnlyForCompositeGroups(t *testing.T) {
 			require.Equal(t, tc.want, requiresGPT6Preparation(apiKey, tc.model))
 		})
 	}
+}
+
+func TestGPT6PreparationBillingMultiplierFollowsAdminPricing(t *testing.T) {
+	cfg := &config.Config{}
+	cfg.Billing.GPT6Preparation.PreparationMultiplier = 12
+	cfg.Billing.RetailPricing.Enabled = true
+	cfg.Billing.RetailPricing.LatestMultiplier = 6
+	require.Equal(t, 6.0, gpt6PreparationBillingMultiplier(cfg))
+
+	cfg.Billing.RetailPricing.LatestMultiplier = 8
+	require.Equal(t, 8.0, gpt6PreparationBillingMultiplier(cfg))
+
+	cfg.Billing.RetailPricing.Enabled = false
+	require.Equal(t, 12.0, gpt6PreparationBillingMultiplier(cfg))
 }
 
 func TestGPT6PreparationFailureKeepsOriginalRequest(t *testing.T) {

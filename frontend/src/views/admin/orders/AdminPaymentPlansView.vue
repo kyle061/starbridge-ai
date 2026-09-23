@@ -40,7 +40,7 @@
         <template #cell-quota_multiplier="{ value, row }">
           <div class="text-xs text-gray-600 dark:text-gray-300">
             <div>{{ t('payment.admin.quotaMultiplierShort') }} {{ Number(value || 10).toFixed(2) }}x</div>
-            <div>{{ t('payment.admin.usageMultiplierShort') }} {{ Number(row.usage_multiplier || 12).toFixed(2) }}x</div>
+            <div>{{ t('payment.admin.usageMultiplierShort') }} {{ Number(row.usage_multiplier || 6).toFixed(2) }}x</div>
           </div>
         </template>
         <template #cell-validity_days="{ value, row }">

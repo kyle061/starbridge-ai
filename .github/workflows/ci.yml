@@ -75,6 +75,10 @@ jobs:
       - run: go test ./internal/service ./internal/repository ./internal/handler/admin -run TestOpenAIDevice
         working-directory: backend
       - run: >-
+          go test -tags unit ./internal/config ./internal/handler ./internal/service
+          -run '^Test(StarbridgeRetailPricingDefaultsLatestGeneration|GPT6PreparationBillingMultiplierFollowsAdminPricing|SettingService_InitializeDefaultSettingsPreservesConfiguredCustomerBillingMultiplier|GPT6PreparationMultiplierChargesConfiguredRate)$'
+        working-directory: backend
+      - run: >-
           go test ./migrations ./internal/repository ./internal/service ./internal/handler ./internal/handler/dto ./internal/server/routes
           -run 'TestComposite|TestStandardRelay|TestStarbridgeDeepSeek|TestStarbridgeBalanceRecharge|TestClientRequestedGPT6|TestUsageLogFromService_ShowsGPT6|TestOpenAIAdvancedSchedulerFallsBackAcrossCompositePlatforms'
         working-directory: backend

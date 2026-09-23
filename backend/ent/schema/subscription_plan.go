@@ -45,10 +45,10 @@ func (SubscriptionPlan) Fields() []ent.Field {
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,4)"}).
 			Default(10),
 		// usage_multiplier is snapshotted onto a purchased subscription and
-		// controls the customer-facing consumption rate (default 12x).
+		// controls the customer-facing consumption rate (default 6x).
 		field.Float("usage_multiplier").
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,4)"}).
-			Default(12),
+			Default(6),
 		field.Float("original_price").
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,2)"}).
 			Optional().

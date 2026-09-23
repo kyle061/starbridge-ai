@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/apicompat"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
@@ -41,6 +42,13 @@ func gpt6PreparedBodyOrOriginal(original, prepared []byte, preparationErr error)
 		return original
 	}
 	return prepared
+}
+
+func gpt6PreparationBillingMultiplier(cfg *config.Config) float64 {
+	if cfg.Billing.RetailPricing.Enabled {
+		return cfg.Billing.RetailPricing.LatestMultiplier
+	}
+	return cfg.Billing.GPT6Preparation.PreparationMultiplier
 }
 
 func (h *OpenAIGatewayHandler) prepareGPT6Request(c *gin.Context, apiKey *service.APIKey, model string, body []byte, responses bool) ([]byte, error) {
@@ -123,7 +131,7 @@ func (h *OpenAIGatewayHandler) prepareGPT6Request(c *gin.Context, apiKey *servic
 	result.BillingModel = actualPrepModel
 	result.UpstreamModel = actualPrepModel
 	result.RequestID = gpt6PreparationRequestID(result.RequestID, body, model, actualPrepModel)
-	h.submitGPT6PreparationUsage(c, apiKey, prepAccount, result, model, prep.PreparationMultiplier, body)
+	h.submitGPT6PreparationUsage(c, apiKey, prepAccount, result, model, gpt6PreparationBillingMultiplier(h.cfg), body)
 
 	return appendGPT6Requirements(body, document), nil
 }
