@@ -18,7 +18,10 @@ const save = (wrapper: ReturnType<typeof createWrapper>) => wrapper.findAll('but
 
 beforeEach(() => {
   vi.resetAllMocks()
-  getById.mockResolvedValue({ model_allowlist: { enabled: true, models: ['deepseek-v4-pro'] } })
+  getById.mockResolvedValue({
+    platform: 'composite',
+    model_allowlist: { enabled: true, models: ['deepseek-v4-pro'] }
+  })
   getModelAllowlistCandidates.mockResolvedValue(['deepseek-v4-pro', 'gpt-5.6-sol'])
   update.mockResolvedValue({})
 })
