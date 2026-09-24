@@ -1213,8 +1213,8 @@ export default {
           step2OpenUrl: '在浏览器中打开链接并完成授权',
           openUrlDesc: '点击上方按钮，在新标签页登录需要绑定的 ChatGPT Plus / Pro 账号并同意授权。每次可绑定一个账号，完成后可继续添加其他账号。',
           importantNotice:
-            '授权后，浏览器会返回星桥的公开回调地址 {callbackUrl}。请复制地址栏里的完整链接，回到星桥粘贴到第 3 步。手机端请长按地址栏并选择复制。',
-          step3EnterCode: '粘贴 OpenAI 回调链接',
+            'Codex OAuth 客户端使用本地回调 {callbackUrl}。授权后即使页面提示无法连接，也请复制地址栏里的完整链接，回到星桥粘贴到第 3 步。手机端请长按地址栏并选择复制。',
+          step3EnterCode: '粘贴 OpenAI 本地回调链接',
           authCodeDesc:
             '复制浏览器地址栏中以 {callbackUrl}?code=... 开头的完整链接并粘贴：',
           authCode: '完整回调链接或 Code',

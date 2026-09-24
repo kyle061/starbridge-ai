@@ -112,7 +112,7 @@ docker compose logs --tail=100 caddy
 
 星桥保留上游的 OAuth 刷新能力，普通调用者只使用星桥 API Key。不要把客户端 API Key 发布到前端、日志、代码仓库或公共聊天中。可用模型及用量上限由 OpenAI 账号决定；Pro 不等于全部 API 模型都可用，也不会转换为 OpenAI Platform 的 API 余额。官方说明见 [Codex 身份验证](https://learn.chatgpt.com/docs/auth)。
 
-设备码登录通过当前站点接收授权结果，页面显示的绑定地址使用当前域名、协议和端口。手动回调登录也会把当前站点的 `/auth/callback` 作为回调地址，例如 `https://starbridaeai.top/auth/callback`；授权完成后复制完整回调地址回到星桥粘贴即可。若 OpenAI OAuth 客户端拒绝自定义回调地址，请优先使用设备码登录，或在 OAuth 客户端配置中登记当前站点地址。设备码不可用时，也可导入自己通过 Codex 官方客户端获得的会话。参考 [OpenAI 设备码登录说明](https://learn.chatgpt.com/docs/auth#preferred-device-code-authentication-beta)。
+设备码登录通过当前站点接收授权结果。OpenAI Plus / Pro 手动授权使用 Codex OAuth 客户端登记的本机回调 `http://localhost:1455/auth/callback`，不要改成网站域名。授权后浏览器可能提示无法连接本机页面，但地址栏仍会带有 `code` 和 `state`；复制完整地址并粘贴回星桥绑定表单即可。其他 OAuth 服务商仍按各自配置使用当前站点回调。设备码不可用时，也可导入自己通过 Codex 官方客户端获得的会话。参考 [OpenAI 设备码登录说明](https://learn.chatgpt.com/docs/auth#preferred-device-code-authentication-beta)。
 
 授权回调包含敏感的一次性授权码，只粘贴到自己部署的星桥后台。真实登录、额度读取与模型调用需要部署后使用你的账号验收，本仓库测试使用模拟上游。
 

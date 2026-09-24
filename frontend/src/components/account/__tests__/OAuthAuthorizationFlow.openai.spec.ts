@@ -17,7 +17,7 @@ vi.mock('@/composables/useClipboard', () => ({
 import OAuthAuthorizationFlow from '../OAuthAuthorizationFlow.vue'
 
 describe('OAuthAuthorizationFlow OpenAI subscription sign-in', () => {
-  it('provides a direct ChatGPT authorization link and recognizes the public callback', async () => {
+  it('provides a direct ChatGPT authorization link and recognizes the localhost callback', async () => {
     const authUrl = 'https://auth.openai.com/oauth/authorize?state=generated-state'
     const wrapper = mount(OAuthAuthorizationFlow, {
       props: {
@@ -35,7 +35,7 @@ describe('OAuthAuthorizationFlow OpenAI subscription sign-in', () => {
     expect(authorizationLink.attributes('target')).toBe('_blank')
 
     await wrapper.get('textarea[placeholder]').setValue(
-      'https://starbridaeai.top/auth/callback?code=subscription-code&state=callback-state'
+      'http://localhost:1455/auth/callback?code=subscription-code&state=callback-state'
     )
     await nextTick()
 

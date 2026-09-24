@@ -1260,8 +1260,8 @@ const handleGenerateUrl = () => {
 const handleOpenAuthorizationPage = (event: MouseEvent) => {
   if (props.platform !== 'openai' || typeof window === 'undefined' || !props.authUrl) return
 
-  // Keep the same-origin opener so /auth/callback can return the code directly
-  // to this binding form. Other providers retain the normal safe anchor flow.
+  // Open authorization in a separate tab so this form stays available for
+  // manually pasting the localhost callback URL.
   event.preventDefault()
   const opened = window.open(props.authUrl, '_blank')
   if (!opened) window.location.assign(props.authUrl)

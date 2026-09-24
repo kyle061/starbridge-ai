@@ -37,11 +37,11 @@ func TestOpenAIOAuthService_GenerateAuthURL_OpenAIKeepsCodexFlow(t *testing.T) {
 	require.NoError(t, err)
 	q := parsed.Query()
 	require.Equal(t, openai.ClientID, q.Get("client_id"))
-	require.Equal(t, "https://starbridaeai.top/auth/callback", q.Get("redirect_uri"))
+	require.Equal(t, openai.DefaultRedirectURI, q.Get("redirect_uri"))
 	require.Equal(t, "true", q.Get("codex_cli_simplified_flow"))
 
 	session, ok := svc.sessionStore.Get(result.SessionID)
 	require.True(t, ok)
 	require.Equal(t, openai.ClientID, session.ClientID)
-	require.Equal(t, "https://starbridaeai.top/auth/callback", session.RedirectURI)
+	require.Equal(t, openai.DefaultRedirectURI, session.RedirectURI)
 }

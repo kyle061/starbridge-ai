@@ -78,9 +78,9 @@ func (s *OpenAIOAuthService) GenerateAuthURL(ctx context.Context, proxyID *int64
 		}
 	}
 
-	// Use the public Starbridge callback configured for the OpenAI OAuth client.
-	// The callback supplied by the browser is intentionally not trusted here so
-	// authorization codes are never sent to an arbitrary redirect URI.
+	// Use the Codex OAuth client's registered localhost callback. Ignore the
+	// callback supplied by the browser so authorization codes cannot be sent
+	// to an arbitrary redirect URI.
 	redirectURI = openai.DefaultRedirectURI
 	normalizedPlatform := normalizeOpenAIOAuthPlatform(platform)
 	clientID, _ := openai.OAuthClientConfigByPlatform(normalizedPlatform)
