@@ -21,7 +21,8 @@ const {
     current: {
       href: 'http://localhost/auth/callback',
       hash: '',
-    } as { href: string; hash: string },
+      origin: 'http://localhost',
+    } as { href: string; hash: string; origin: string },
   },
   routerReplaceMock: vi.fn(),
   showErrorMock: vi.fn(),
@@ -83,10 +84,15 @@ describe('OAuthCallbackView', () => {
     locationState.current = {
       href: 'http://localhost/auth/callback',
       hash: '',
+      origin: 'http://localhost',
     }
     Object.defineProperty(window, 'location', {
       configurable: true,
       value: locationState.current,
+    })
+    Object.defineProperty(window, 'opener', {
+      configurable: true,
+      value: null,
     })
     routerReplaceMock.mockReset()
     showErrorMock.mockReset()
@@ -111,6 +117,29 @@ describe('OAuthCallbackView', () => {
     expect(wrapper.text()).toContain('common.copy')
     expect(wrapper.find('input[value="oauth-code"]').exists()).toBe(true)
     expect(wrapper.find('input[value="oauth-state"]').exists()).toBe(true)
+  })
+
+  it('returns callback parameters to the account binding window', () => {
+    routeState.query = {
+      code: 'oauth-code',
+      state: 'oauth-state',
+    }
+    const postMessageMock = vi.fn()
+    Object.defineProperty(window, 'opener', {
+      configurable: true,
+      value: { postMessage: postMessageMock },
+    })
+
+    mount(OAuthCallbackView)
+
+    expect(postMessageMock).toHaveBeenCalledWith(
+      {
+        type: 'starbridge.oauth.callback',
+        code: 'oauth-code',
+        state: 'oauth-state',
+      },
+      'http://localhost'
+    )
   })
 
   it('sends callback errors to toast instead of rendering inline red text', () => {

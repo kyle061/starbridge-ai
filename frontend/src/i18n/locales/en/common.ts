@@ -420,6 +420,8 @@ export default {
     oauth: {
       callbackTitle: 'OAuth Callback',
       callbackHint: 'Copy the code and state back to the admin authorization flow when needed.',
+      callbackReturnedTitle: 'Authorization complete',
+      callbackReturnedHint: 'The authorization result was sent back to the account binding page. You can close this tab.',
       invalidCallbackTitle: 'Invalid sign-in callback',
       invalidCallbackHint: 'This page does not contain a valid authorization result. Return to the login page and start quick sign-in again.',
       code: 'Code',

@@ -783,9 +783,10 @@
                   <a
                     :href="authUrl"
                     target="_blank"
-                    rel="noopener noreferrer"
+                    :rel="platform === 'openai' ? undefined : 'noopener noreferrer'"
                     class="btn btn-primary w-full justify-center sm:w-auto"
                     data-testid="oauth-open-authorization-page"
+                    @click="handleOpenAuthorizationPage"
                   >
                     <Icon name="externalLink" size="sm" class="mr-2" />
                     {{ openAuthorizationPageLabel }}
@@ -925,7 +926,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useClipboard } from '@/composables/useClipboard'
 import Icon from '@/components/icons/Icon.vue'
@@ -936,6 +937,8 @@ import OpenAIDeviceAuthorization from './OpenAIDeviceAuthorization.vue'
 import type { OpenAITokenInfo } from '@/composables/useOpenAIOAuth'
 import {
   getPublicOAuthCallbackUrl,
+  OAUTH_CALLBACK_MESSAGE_TYPE,
+  type OAuthCallbackMessage,
   OPENAI_OAUTH_CALLBACK_URL,
   parseOAuthCallbackInput
 } from '@/utils/oauthCallback'
@@ -1025,6 +1028,14 @@ const showCallbackNotice = computed(() => props.platform === 'openai' || props.p
 const publicCallbackUrl = computed(() =>
   props.platform === 'openai' ? OPENAI_OAUTH_CALLBACK_URL : getPublicOAuthCallbackUrl()
 )
+const expectedOAuthState = computed(() => {
+  if (!props.authUrl) return ''
+  try {
+    return new URL(props.authUrl).searchParams.get('state')?.trim() || ''
+  } catch {
+    return ''
+  }
+})
 
 // Get translation key based on platform
 const getOAuthKey = (key: string) => {
@@ -1193,6 +1204,35 @@ watch(inputMethod, (newVal) => {
   emit('update:inputMethod', newVal)
 })
 
+function applyOAuthCallback(code: string, state: string): boolean {
+  const normalizedCode = code.trim()
+  const normalizedState = state.trim()
+  if (!normalizedCode || !normalizedState) return false
+
+  const expectedState = expectedOAuthState.value
+  if (expectedState && normalizedState !== expectedState) return false
+
+  authCodeInput.value = normalizedCode
+  oauthState.value = normalizedState
+  callbackInputRecognized.value = true
+  return true
+}
+
+function handleOAuthCallbackMessage(event: MessageEvent<unknown>): void {
+  if (typeof window === 'undefined' || event.origin !== window.location.origin) return
+  const message = event.data as Partial<OAuthCallbackMessage> | null
+  if (!message || message.type !== OAUTH_CALLBACK_MESSAGE_TYPE) return
+  applyOAuthCallback(message.code || '', message.state || '')
+}
+
+onMounted(() => {
+  window.addEventListener('message', handleOAuthCallbackMessage)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('message', handleOAuthCallbackMessage)
+})
+
 // Auto-extract code from callback URL (OpenAI/Gemini/Antigravity/Grok).
 // The parser accepts the current site's callback URL as well as provider-specific URLs.
 watch(authCodeInput, (newVal) => {
@@ -1215,6 +1255,16 @@ watch(authCodeInput, (newVal) => {
 // Methods
 const handleGenerateUrl = () => {
   emit('generate-url')
+}
+
+const handleOpenAuthorizationPage = (event: MouseEvent) => {
+  if (props.platform !== 'openai' || typeof window === 'undefined' || !props.authUrl) return
+
+  // Keep the same-origin opener so /auth/callback can return the code directly
+  // to this binding form. Other providers retain the normal safe anchor flow.
+  event.preventDefault()
+  const opened = window.open(props.authUrl, '_blank')
+  if (!opened) window.location.assign(props.authUrl)
 }
 
 const handleCopyUrl = () => {

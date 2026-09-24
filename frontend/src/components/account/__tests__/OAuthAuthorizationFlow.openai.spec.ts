@@ -43,4 +43,31 @@ describe('OAuthAuthorizationFlow OpenAI subscription sign-in', () => {
     expect((wrapper.vm as unknown as { authCode: string }).authCode).toBe('subscription-code')
     expect((wrapper.vm as unknown as { oauthState: string }).oauthState).toBe('callback-state')
   })
+
+  it('fills the callback from the same-site callback window', async () => {
+    const wrapper = mount(OAuthAuthorizationFlow, {
+      props: {
+        addMethod: 'oauth',
+        platform: 'openai',
+        authUrl: 'https://auth.openai.com/oauth/authorize?state=callback-state',
+        showCookieOption: false,
+        showRefreshTokenOption: true
+      },
+      global: { stubs: { Icon: true } }
+    })
+
+    window.dispatchEvent(new MessageEvent('message', {
+      origin: window.location.origin,
+      data: {
+        type: 'starbridge.oauth.callback',
+        code: 'auto-code',
+        state: 'callback-state'
+      }
+    }))
+    await nextTick()
+
+    expect((wrapper.vm as unknown as { authCode: string }).authCode).toBe('auto-code')
+    expect((wrapper.vm as unknown as { oauthState: string }).oauthState).toBe('callback-state')
+    expect(wrapper.get('[data-testid="oauth-callback-recognized"]').exists()).toBe(true)
+  })
 })

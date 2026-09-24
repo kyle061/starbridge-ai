@@ -418,6 +418,8 @@ export default {
     oauth: {
       callbackTitle: 'OAuth 回调',
       callbackHint: '按需将授权码和状态值复制回后台授权流程。',
+      callbackReturnedTitle: '授权完成',
+      callbackReturnedHint: '授权结果已自动返回账号绑定页面，可以关闭此页面。',
       invalidCallbackTitle: '无效的登录回调',
       invalidCallbackHint: '当前页面缺少有效的授权结果，请返回登录页重新发起快捷登录。',
       code: '授权码',

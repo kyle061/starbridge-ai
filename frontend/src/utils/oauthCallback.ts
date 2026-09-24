@@ -6,6 +6,13 @@ export interface ParsedOAuthCallbackInput {
 
 export const DEFAULT_PUBLIC_OAUTH_CALLBACK_URL = 'https://starbridaeai.top/auth/callback'
 export const OPENAI_OAUTH_CALLBACK_URL = DEFAULT_PUBLIC_OAUTH_CALLBACK_URL
+export const OAUTH_CALLBACK_MESSAGE_TYPE = 'starbridge.oauth.callback'
+
+export interface OAuthCallbackMessage {
+  type: typeof OAUTH_CALLBACK_MESSAGE_TYPE
+  code: string
+  state: string
+}
 
 /**
  * Build the callback address that the browser is currently using for Starbridge.

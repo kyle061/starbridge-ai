@@ -11,6 +11,15 @@
         </p>
       </div>
 
+      <div v-else-if="callbackRelayed" class="card p-6 text-center">
+        <h1 class="text-lg font-semibold text-gray-900 dark:text-white">
+          {{ t('auth.oauth.callbackReturnedTitle') }}
+        </h1>
+        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          {{ t('auth.oauth.callbackReturnedHint') }}
+        </p>
+      </div>
+
       <div v-else-if="needsRegistrationCompletion" class="card p-6">
         <h1 class="text-lg font-semibold text-gray-900 dark:text-white">
           {{ t('auth.oidc.callbackTitle', { providerName }) }}
@@ -163,6 +172,10 @@ import {
   loadOAuthAffiliateCode,
   oauthAffiliatePayload
 } from '@/utils/oauthAffiliate'
+import {
+  OAUTH_CALLBACK_MESSAGE_TYPE,
+  type OAuthCallbackMessage
+} from '@/utils/oauthCallback'
 
 const route = useRoute()
 const router = useRouter()
@@ -182,6 +195,7 @@ const registrationError = ref('')
 const pendingProvider = ref<'github' | 'google'>('github')
 const redirectTo = ref('/dashboard')
 const invalidCallback = ref(false)
+const callbackRelayed = ref(false)
 const EMAIL_OAUTH_PENDING_PROVIDER_KEY = 'email_oauth_pending_provider'
 
 type EmailOAuthPendingCompletion = Partial<OAuthTokenResponse> & {
@@ -237,6 +251,27 @@ function readTokenResponse(params: URLSearchParams): OAuthTokenResponse | null {
   const tokenType = params.get('token_type')?.trim() || ''
   if (tokenType) response.token_type = tokenType
   return response
+}
+
+function relayCallbackToBindingPage(): boolean {
+  if (typeof window === 'undefined' || !window.opener || !code.value || !state.value) {
+    return false
+  }
+
+  const message: OAuthCallbackMessage = {
+    type: OAUTH_CALLBACK_MESSAGE_TYPE,
+    code: code.value,
+    state: state.value
+  }
+
+  try {
+    window.opener.postMessage(message, window.location.origin)
+    callbackRelayed.value = true
+    window.setTimeout(() => window.close(), 150)
+    return true
+  } catch {
+    return false
+  }
 }
 
 function sanitizeRedirectPath(path: string | null | undefined): string {
@@ -375,6 +410,7 @@ onMounted(async () => {
     return
   }
   if (!tokenResponse) {
+    if (relayCallbackToBindingPage()) return
     if (route.path === '/auth/oauth/callback') {
       const pendingEmailOAuthProvider = readPendingEmailOAuthProvider()
       if (pendingEmailOAuthProvider && code.value && state.value) {
