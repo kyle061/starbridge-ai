@@ -33,7 +33,7 @@ import { useOpenAIOAuth } from '@/composables/useOpenAIOAuth'
 import { adminAPI } from '@/api/admin'
 
 describe('useOpenAIOAuth.generateAuthUrl', () => {
-  it('sends the callback registered for the Codex OAuth client', async () => {
+  it('sends the public Starbridge callback for the OpenAI OAuth client', async () => {
     vi.mocked(adminAPI.accounts.generateAuthUrl).mockResolvedValueOnce({
       auth_url: 'https://auth.openai.com/oauth/authorize?state=test-state',
       session_id: 'session-id'
@@ -44,7 +44,7 @@ describe('useOpenAIOAuth.generateAuthUrl', () => {
 
     expect(adminAPI.accounts.generateAuthUrl).toHaveBeenCalledWith(
       '/admin/openai/generate-auth-url',
-      { redirect_uri: 'http://localhost:1455/auth/callback' }
+      { redirect_uri: 'https://starbridaeai.top/auth/callback' }
     )
   })
 })

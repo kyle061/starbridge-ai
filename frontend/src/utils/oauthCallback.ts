@@ -5,7 +5,7 @@ export interface ParsedOAuthCallbackInput {
 }
 
 export const DEFAULT_PUBLIC_OAUTH_CALLBACK_URL = 'https://starbridaeai.top/auth/callback'
-export const OPENAI_OAUTH_CALLBACK_URL = 'http://localhost:1455/auth/callback'
+export const OPENAI_OAUTH_CALLBACK_URL = DEFAULT_PUBLIC_OAUTH_CALLBACK_URL
 
 /**
  * Build the callback address that the browser is currently using for Starbridge.
