@@ -589,6 +589,34 @@ func TestOpenAIGatewayService_BindHTTPResponseAccount(t *testing.T) {
 	require.False(t, owned)
 }
 
+type cancelSensitiveGatewayCache struct{ *stubGatewayCache }
+
+func (c *cancelSensitiveGatewayCache) SetSessionAccountID(ctx context.Context, groupID int64, sessionHash string, accountID int64, ttl time.Duration) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return c.stubGatewayCache.SetSessionAccountID(ctx, groupID, sessionHash, accountID, ttl)
+}
+
+func TestOpenAIGatewayService_BindHTTPResponseAccountAfterClientDisconnect(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	groupID := int64(4202)
+	c.Set("api_key", &APIKey{ID: 502, GroupID: &groupID})
+	SetOpenAIHTTPResponseOwner(c, 602, 502)
+	cache := &cancelSensitiveGatewayCache{stubGatewayCache: &stubGatewayCache{}}
+	svc := &OpenAIGatewayService{cache: cache}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	svc.bindHTTPResponseAccount(ctx, c, &Account{ID: 37002}, "resp_disconnected")
+
+	require.Len(t, cache.sessionBindings, 3)
+	accountID, err := svc.getOpenAIWSStateStore().GetResponseAccount(context.Background(), groupID, "resp_disconnected")
+	require.NoError(t, err)
+	require.Equal(t, int64(37002), accountID)
+}
+
 func TestOpenAIGatewayService_GenerateExplicitSessionHash_SkipsContentFallback(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &OpenAIGatewayService{}

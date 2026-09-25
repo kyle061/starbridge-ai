@@ -65,24 +65,117 @@ func (h *OpenAIGatewayHandler) prepareGPT6Request(c *gin.Context, apiKey *servic
 		maxOutput = 1200
 	}
 
-	prepBody, err := buildGPT6PreparationBody(body, prepModel, maxOutput, responses)
+	attempt, err := firstSuccessfulGPT6Preparation(c.Request.Context(), gpt6PreparationCandidates(prepModel, responses), func(candidate gpt6PreparationCandidate) (*gpt6PreparationResult, error) {
+		return h.runGPT6PreparationCandidate(c, apiKey, body, maxOutput, responses, candidate)
+	})
 	if err != nil {
-		return nil, fmt.Errorf("build GPT6 requirements request: %w", err)
+		return nil, fmt.Errorf("GPT6 requirements request failed: %w", err)
 	}
-	selection, err := h.selectGPT6PreparationAccount(c.Request.Context(), apiKey, prepModel, responses)
-	if err != nil {
-		return nil, fmt.Errorf("select GPT6 preparation account: %w", err)
-	}
-	prepAccount := selection.Account
-	if selection.UseChatCompletions && responses {
-		prepBody, err = responsesPreparationBodyToChat(prepBody)
-		if err != nil {
-			return nil, fmt.Errorf("convert GPT6 requirements request to chat completions: %w", err)
-		}
+	document := attempt.Document
+	if len(document) > gpt6PreparationMaxDocumentBytes {
+		document = document[:gpt6PreparationMaxDocumentBytes]
 	}
 
-	// Forward against an isolated recorder. Forward mutates the Gin context and
-	// writes the upstream response, so it must never receive the client writer.
+	// The preparation row keeps the public alias while its BillingModel and
+	// UpstreamModel identify the real cheap model for admin accounting.
+	result := attempt.Result
+	actualPrepModel := strings.TrimSpace(result.UpstreamModel)
+	if actualPrepModel == "" {
+		actualPrepModel = attempt.Model
+	}
+	result.Model = model
+	result.BillingModel = actualPrepModel
+	result.UpstreamModel = actualPrepModel
+	result.RequestID = gpt6PreparationRequestID(result.RequestID, body, model, actualPrepModel)
+	h.submitGPT6PreparationUsage(c, apiKey, attempt.Account, result, model, gpt6PreparationBillingMultiplier(h.cfg), body)
+
+	return appendGPT6Requirements(body, document), nil
+}
+
+type gpt6PreparationCandidate struct {
+	Model              string
+	Platform           string
+	Capability         service.OpenAIEndpointCapability
+	UseChatCompletions bool
+}
+
+type gpt6PreparationResult struct {
+	Account  *service.Account
+	Result   *service.OpenAIForwardResult
+	Model    string
+	Document string
+}
+
+func gpt6PreparationCandidates(prepModel string, responses bool) []gpt6PreparationCandidate {
+	candidates := []gpt6PreparationCandidate{
+		// DeepSeek accounts are OpenAI-compatible; selecting Chat Completions
+		// keeps fixed-chat accounts eligible while their account protocol still
+		// controls whether the actual upstream request is native Responses.
+		{Model: prepModel, Platform: service.PlatformDeepseek, Capability: service.OpenAIEndpointCapabilityChatCompletions, UseChatCompletions: true},
+		{Model: "gpt-5.4-mini", Platform: service.PlatformOpenAI, Capability: service.OpenAIEndpointCapabilityResponses},
+		{Model: "gpt-5-mini", Platform: service.PlatformOpenAI, Capability: service.OpenAIEndpointCapabilityResponses},
+	}
+	if !responses {
+		for i := 1; i < len(candidates); i++ {
+			candidates[i].Capability = service.OpenAIEndpointCapabilityChatCompletions
+		}
+	}
+	return candidates
+}
+
+func firstSuccessfulGPT6Preparation(ctx context.Context, candidates []gpt6PreparationCandidate, attempt func(gpt6PreparationCandidate) (*gpt6PreparationResult, error)) (*gpt6PreparationResult, error) {
+	var failures []error
+	for _, candidate := range candidates {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		result, err := attempt(candidate)
+		if err == nil && result != nil {
+			return result, nil
+		}
+		if err == nil {
+			err = errors.New("preparation returned no result")
+		}
+		failures = append(failures, fmt.Errorf("%s: %w", candidate.Model, err))
+	}
+	if len(failures) == 0 {
+		return nil, errors.New("no GPT6 preparation candidates")
+	}
+	return nil, errors.Join(failures...)
+}
+
+func (h *OpenAIGatewayHandler) runGPT6PreparationCandidate(c *gin.Context, apiKey *service.APIKey, body []byte, maxOutput int, responses bool, candidate gpt6PreparationCandidate) (*gpt6PreparationResult, error) {
+	if apiKey == nil || apiKey.GroupID == nil {
+		return nil, errors.New("GPT6 preparation requires a group")
+	}
+	prepBody, err := buildGPT6PreparationBody(body, candidate.Model, maxOutput, responses)
+	if err != nil {
+		return nil, fmt.Errorf("build requirements request: %w", err)
+	}
+	if candidate.UseChatCompletions && responses {
+		prepBody, err = responsesPreparationBodyToChat(prepBody)
+		if err != nil {
+			return nil, fmt.Errorf("convert requirements request to chat completions: %w", err)
+		}
+	}
+	// Suppress composite execution candidates; this pass selects the candidate platform.
+	prepCtx := service.WithoutCompositeRouteCandidates(c.Request.Context())
+	selection, _, err := h.gatewayService.SelectAccountWithSchedulerForCapability(
+		prepCtx, apiKey.GroupID, "", "", candidate.Model, nil,
+		service.OpenAIUpstreamTransportHTTPSSE, candidate.Capability, false, false, true, candidate.Platform,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("select preparation account: %w", err)
+	}
+	if selection == nil || selection.Account == nil {
+		return nil, errors.New("no eligible preparation account")
+	}
+	if selection.ReleaseFunc != nil {
+		defer selection.ReleaseFunc()
+	}
+
+	// Forward mutates the Gin context and writes the response, so each attempt
+	// needs its own recorder and must never receive the client writer.
 	recorder := httptest.NewRecorder()
 	prepContext, _ := gin.CreateTestContext(recorder)
 	prepContext.Request = c.Request.Clone(c.Request.Context())
@@ -92,98 +185,26 @@ func (h *OpenAIGatewayHandler) prepareGPT6Request(c *gin.Context, apiKey *servic
 	for key, value := range c.Keys {
 		prepContext.Set(key, value)
 	}
-	// The preparation pass always uses an HTTP upstream request. A copied
-	// WebSocket marker would otherwise make Forward select a WS transport for
-	// this isolated internal call.
 	service.SetOpenAIClientTransport(prepContext, service.OpenAIClientTransportHTTP)
 	prepContext.Set("gpt6_preparation", true)
 
 	var result *service.OpenAIForwardResult
-	var forwardErr error
-	if selection.UseChatCompletions {
-		result, forwardErr = h.gatewayService.ForwardAsChatCompletions(c.Request.Context(), prepContext, prepAccount, prepBody, "", "")
-	} else if responses {
-		result, forwardErr = h.gatewayService.Forward(c.Request.Context(), prepContext, prepAccount, prepBody)
+	if candidate.UseChatCompletions || !responses {
+		result, err = h.gatewayService.ForwardAsChatCompletions(c.Request.Context(), prepContext, selection.Account, prepBody, "", "")
 	} else {
-		result, forwardErr = h.gatewayService.ForwardAsChatCompletions(c.Request.Context(), prepContext, prepAccount, prepBody, "", "")
+		result, err = h.gatewayService.Forward(c.Request.Context(), prepContext, selection.Account, prepBody)
 	}
-	if forwardErr != nil {
-		return nil, fmt.Errorf("GPT6 requirements request failed: %w", forwardErr)
+	if err != nil {
+		return nil, err
 	}
 	if result == nil {
-		return nil, errors.New("GPT6 preparation returned no forwarding result")
+		return nil, errors.New("preparation returned no forwarding result")
 	}
 	document := extractGPT6PreparationDocument(recorder.Body.Bytes())
 	if document == "" {
-		return nil, errors.New("GPT6 preparation returned an empty requirements document")
+		return nil, errors.New("preparation returned an empty requirements document")
 	}
-	if len(document) > gpt6PreparationMaxDocumentBytes {
-		document = document[:gpt6PreparationMaxDocumentBytes]
-	}
-
-	// The preparation row keeps the public alias while its BillingModel and
-	// UpstreamModel identify the real cheap model for admin accounting.
-	actualPrepModel := strings.TrimSpace(result.UpstreamModel)
-	if actualPrepModel == "" {
-		actualPrepModel = prepModel
-	}
-	result.Model = model
-	result.BillingModel = actualPrepModel
-	result.UpstreamModel = actualPrepModel
-	result.RequestID = gpt6PreparationRequestID(result.RequestID, body, model, actualPrepModel)
-	h.submitGPT6PreparationUsage(c, apiKey, prepAccount, result, model, gpt6PreparationBillingMultiplier(h.cfg), body)
-
-	return appendGPT6Requirements(body, document), nil
-}
-
-type gpt6PreparationSelection struct {
-	Account            *service.Account
-	UseChatCompletions bool
-}
-
-func (h *OpenAIGatewayHandler) selectGPT6PreparationAccount(ctx context.Context, apiKey *service.APIKey, prepModel string, responses bool) (gpt6PreparationSelection, error) {
-	if apiKey == nil || apiKey.GroupID == nil {
-		return gpt6PreparationSelection{}, errors.New("GPT6 preparation requires a group")
-	}
-	// Suppress the composite execution candidates: they intentionally prefer
-	// OpenAI for the final task, while this pass explicitly prefers DeepSeek.
-	prepCtx := service.WithoutCompositeRouteCandidates(ctx)
-	candidates := []struct {
-		model              string
-		platform           string
-		capability         service.OpenAIEndpointCapability
-		useChatCompletions bool
-	}{
-		// DeepSeek accounts are OpenAI-compatible; selecting Chat Completions
-		// keeps fixed-chat accounts eligible while their account protocol still
-		// controls whether the actual upstream request is native Responses.
-		{model: prepModel, platform: service.PlatformDeepseek, capability: service.OpenAIEndpointCapabilityChatCompletions, useChatCompletions: true},
-		{model: "gpt-5.4-mini", platform: service.PlatformOpenAI, capability: service.OpenAIEndpointCapabilityResponses, useChatCompletions: false},
-		{model: "gpt-5-mini", platform: service.PlatformOpenAI, capability: service.OpenAIEndpointCapabilityResponses, useChatCompletions: false},
-	}
-	if !responses {
-		for i := 1; i < len(candidates); i++ {
-			candidates[i].capability = service.OpenAIEndpointCapabilityChatCompletions
-		}
-	}
-	var lastErr error
-	for _, candidate := range candidates {
-		selection, _, err := h.gatewayService.SelectAccountWithSchedulerForCapability(
-			prepCtx, apiKey.GroupID, "", "", candidate.model, nil,
-			service.OpenAIUpstreamTransportHTTPSSE, candidate.capability, false, false, true, candidate.platform,
-		)
-		if err == nil && selection != nil && selection.Account != nil {
-			if selection.ReleaseFunc != nil {
-				selection.ReleaseFunc()
-			}
-			return gpt6PreparationSelection{Account: selection.Account, UseChatCompletions: candidate.useChatCompletions}, nil
-		}
-		lastErr = err
-	}
-	if lastErr == nil {
-		lastErr = errors.New("no eligible preparation account")
-	}
-	return gpt6PreparationSelection{}, lastErr
+	return &gpt6PreparationResult{Account: selection.Account, Result: result, Model: candidate.Model, Document: document}, nil
 }
 
 func responsesPreparationBodyToChat(body []byte) ([]byte, error) {
@@ -195,6 +216,11 @@ func responsesPreparationBodyToChat(body []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	chatReq.Tools = nil
+	chatReq.ToolChoice = nil
+	chatReq.ParallelToolCalls = nil
+	chatReq.MaxTokens = chatReq.MaxCompletionTokens
+	chatReq.MaxCompletionTokens = nil
 	return json.Marshal(chatReq)
 }
 
@@ -237,31 +263,59 @@ func (h *OpenAIGatewayHandler) submitGPT6PreparationUsage(c *gin.Context, apiKey
 }
 
 func buildGPT6PreparationBody(body []byte, model string, maxOutput int, responses bool) ([]byte, error) {
-	var payload map[string]any
-	if err := json.Unmarshal(body, &payload); err != nil {
+	var original map[string]any
+	if err := json.Unmarshal(body, &original); err != nil {
 		return nil, err
 	}
-	payload["model"] = model
-	payload["stream"] = false
+	payload := map[string]any{"model": model, "stream": false}
 	if responses {
 		instructions := gpt6PreparationInstruction
-		if original, ok := payload["instructions"].(string); ok && strings.TrimSpace(original) != "" {
-			instructions += "\n\nOriginal request instructions:\n" + original
+		if originalInstructions, ok := original["instructions"].(string); ok && strings.TrimSpace(originalInstructions) != "" {
+			instructions += "\n\nOriginal request instructions:\n" + originalInstructions
 		}
 		payload["instructions"] = instructions
+		payload["input"] = gpt6PreparationInputWithoutTools(original["input"])
 		payload["max_output_tokens"] = maxOutput
-		delete(payload, "max_tokens")
 	} else {
 		payload["max_tokens"] = maxOutput
-		delete(payload, "max_completion_tokens")
-		messages, _ := payload["messages"].([]any)
+		messages, _ := original["messages"].([]any)
 		payload["messages"] = append([]any{map[string]any{"role": "system", "content": gpt6PreparationInstruction}}, messages...)
 	}
-	delete(payload, "tools")
-	delete(payload, "tool_choice")
-	delete(payload, "parallel_tool_calls")
-	delete(payload, "previous_response_id")
 	return json.Marshal(payload)
+}
+
+func gpt6PreparationInputWithoutTools(input any) any {
+	items, ok := input.([]any)
+	if !ok {
+		return input
+	}
+	filtered := make([]any, 0, len(items))
+	for _, item := range items {
+		object, ok := item.(map[string]any)
+		if !ok {
+			filtered = append(filtered, item)
+			continue
+		}
+		switch object["type"] {
+		case "additional_tools":
+			continue
+		case "tool_search_output":
+			if _, hasTools := object["tools"]; hasTools {
+				if _, hasOutput := object["output"]; !hasOutput {
+					continue
+				}
+				copy := make(map[string]any, len(object)-1)
+				for key, value := range object {
+					if key != "tools" {
+						copy[key] = value
+					}
+				}
+				item = copy
+			}
+		}
+		filtered = append(filtered, item)
+	}
+	return filtered
 }
 
 func appendGPT6Requirements(body []byte, document string) []byte {

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"testing"
@@ -52,7 +53,7 @@ func TestGPT6PreparationFailureKeepsOriginalRequest(t *testing.T) {
 }
 
 func TestBuildGPT6PreparationBodyKeepsTaskButDisablesTools(t *testing.T) {
-	body := []byte(`{"model":"gpt-6","input":"ship it","tools":[{"type":"function"}],"stream":true}`)
+	body := []byte(`{"model":"gpt-6","input":"ship it","tools":[{"type":"function"}],"reasoning":{"effort":"high"},"service_tier":"priority","prompt_cache_key":"private","previous_response_id":"resp_1","stream":true}`)
 	prepared, err := buildGPT6PreparationBody(body, "deepseek-v4-pro", 1200, true)
 	require.NoError(t, err)
 	var payload map[string]any
@@ -60,6 +61,10 @@ func TestBuildGPT6PreparationBodyKeepsTaskButDisablesTools(t *testing.T) {
 	require.Equal(t, "deepseek-v4-pro", payload["model"])
 	require.Equal(t, false, payload["stream"])
 	require.Nil(t, payload["tools"])
+	require.Nil(t, payload["reasoning"])
+	require.Nil(t, payload["service_tier"])
+	require.Nil(t, payload["prompt_cache_key"])
+	require.Nil(t, payload["previous_response_id"])
 	require.Equal(t, "ship it", payload["input"])
 
 	finalBody := appendGPT6Requirements(body, "objective: ship it")
@@ -76,8 +81,25 @@ func TestBuildGPT6PreparationBodyPreservesResponseInstructions(t *testing.T) {
 	require.Equal(t, "ship it", payload["input"])
 }
 
+func TestBuildGPT6PreparationBodyRemovesEmbeddedToolDeclarations(t *testing.T) {
+	body := []byte(`{"model":"gpt-6","input":[{"role":"user","content":"ship it"},{"type":"additional_tools","tools":[{"type":"function","name":"exec"}]},{"type":"tool_search_output","call_id":"search_1","tools":[{"type":"function","name":"inspect"}]},{"type":"tool_search_output","call_id":"search_2","output":"found docs","tools":[{"type":"function","name":"read"}]}]}`)
+	prepared, err := buildGPT6PreparationBody(body, "deepseek-v4-pro", 1200, true)
+	require.NoError(t, err)
+	var payload map[string]any
+	require.NoError(t, json.Unmarshal(prepared, &payload))
+	items := payload["input"].([]any)
+	require.Len(t, items, 2)
+	require.Equal(t, "ship it", items[0].(map[string]any)["content"])
+	require.Equal(t, "found docs", items[1].(map[string]any)["output"])
+	require.Nil(t, items[1].(map[string]any)["tools"])
+
+	converted, err := responsesPreparationBodyToChat(prepared)
+	require.NoError(t, err)
+	require.NotContains(t, string(converted), `"tools"`)
+}
+
 func TestBuildGPT6PreparationChatBodyPrependsAnalystInstruction(t *testing.T) {
-	prepared, err := buildGPT6PreparationBody([]byte(`{"model":"gpt-6","messages":[{"role":"user","content":"hello"}]}`), "gpt-5.4-mini", 10, false)
+	prepared, err := buildGPT6PreparationBody([]byte(`{"model":"gpt-6","messages":[{"role":"user","content":"hello"}],"tools":[{"type":"function"}],"reasoning_effort":"high","service_tier":"priority"}`), "gpt-5.4-mini", 10, false)
 	require.NoError(t, err)
 	var payload map[string]any
 	require.NoError(t, json.Unmarshal(prepared, &payload))
@@ -85,6 +107,9 @@ func TestBuildGPT6PreparationChatBodyPrependsAnalystInstruction(t *testing.T) {
 	require.Len(t, messages, 2)
 	require.Equal(t, "system", messages[0].(map[string]any)["role"])
 	require.Equal(t, "hello", messages[1].(map[string]any)["content"])
+	require.Nil(t, payload["tools"])
+	require.Nil(t, payload["reasoning_effort"])
+	require.Nil(t, payload["service_tier"])
 }
 
 func TestResponsesPreparationBodyToChatPreservesPreparedInput(t *testing.T) {
@@ -96,7 +121,8 @@ func TestResponsesPreparationBodyToChatPreservesPreparedInput(t *testing.T) {
 	require.NoError(t, json.Unmarshal(converted, &payload))
 	require.Equal(t, "deepseek-v4-pro", payload["model"])
 	require.NotEqual(t, true, payload["stream"])
-	require.Equal(t, float64(1200), payload["max_completion_tokens"])
+	require.Equal(t, float64(1200), payload["max_tokens"])
+	require.Nil(t, payload["max_completion_tokens"])
 	require.Nil(t, payload["max_output_tokens"])
 	messages := payload["messages"].([]any)
 	require.Len(t, messages, 2)
@@ -104,6 +130,34 @@ func TestResponsesPreparationBodyToChatPreservesPreparedInput(t *testing.T) {
 	require.Equal(t, "analyze", messages[0].(map[string]any)["content"])
 	require.Equal(t, "user", messages[1].(map[string]any)["role"])
 	require.Equal(t, "ship it", messages[1].(map[string]any)["content"])
+}
+
+func TestGPT6PreparationFallsBackAfterCandidateFailure(t *testing.T) {
+	candidates := gpt6PreparationCandidates("deepseek-v4-pro", true)
+	var attempted []string
+	result, err := firstSuccessfulGPT6Preparation(context.Background(), candidates, func(candidate gpt6PreparationCandidate) (*gpt6PreparationResult, error) {
+		attempted = append(attempted, candidate.Model)
+		if candidate.Platform == service.PlatformDeepseek {
+			return nil, errors.New("upstream error: 400")
+		}
+		return &gpt6PreparationResult{Model: candidate.Model, Document: "requirements"}, nil
+	})
+	require.NoError(t, err)
+	require.Equal(t, []string{"deepseek-v4-pro", "gpt-5.4-mini"}, attempted)
+	require.Equal(t, "gpt-5.4-mini", result.Model)
+}
+
+func TestGPT6PreparationStopsFallbackAfterCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var attempts int
+	_, err := firstSuccessfulGPT6Preparation(ctx, gpt6PreparationCandidates("deepseek-v4-pro", true), func(gpt6PreparationCandidate) (*gpt6PreparationResult, error) {
+		attempts++
+		cancel()
+		return nil, context.Canceled
+	})
+	require.ErrorIs(t, err, context.Canceled)
+	require.Equal(t, 1, attempts)
 }
 
 func TestGPT6PreparationRequestIDAlwaysUsesPrivatePrefix(t *testing.T) {

@@ -29,9 +29,6 @@ func CORS(cfg config.CORSConfig) gin.HandlerFunc {
 	allowCredentials := cfg.AllowCredentials
 
 	corsWarningOnce.Do(func() {
-		if len(allowedOrigins) == 0 {
-			log.Println("Warning: CORS allowed_origins not configured; cross-origin requests will be rejected.")
-		}
 		if wildcardWithSpecific {
 			log.Println("Warning: CORS allowed_origins includes '*'; wildcard will take precedence over explicit origins.")
 		}
