@@ -39,7 +39,7 @@
       <!-- Subscriptions Grid -->
       <div v-else class="grid gap-6 lg:grid-cols-2">
         <div
-          v-for="subscription in subscriptions"
+          v-for="subscription in displayedSubscriptions"
           :key="subscription.id"
           class="overflow-hidden rounded-2xl border bg-white dark:bg-dark-800"
           :class="platformBorderClass(subscription.group?.platform || '')"
@@ -250,7 +250,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
@@ -284,6 +284,10 @@ const router = useRouter()
 const appStore = useAppStore()
 
 const subscriptions = ref<UserSubscription[]>([])
+const displayedSubscriptions = computed(() => [
+  ...subscriptions.value.filter(subscription => subscription.status !== 'expired'),
+  ...subscriptions.value.filter(subscription => subscription.status === 'expired')
+])
 const loading = ref(true)
 const loadError = ref(false)
 
