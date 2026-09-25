@@ -162,7 +162,7 @@ func (h *OpenAIGatewayHandler) ChatCompletions(c *gin.Context) {
 	c.Request = c.Request.WithContext(ccPricingCtx)
 	preparedBody, preparationErr := h.prepareGPT6Request(c, apiKey, reqModel, body, false)
 	if preparationErr != nil {
-		reqLog.Warn("openai_chat_completions.gpt6_preparation_failed", zap.Error(preparationErr))
+		logGPT6PreparationFallback(reqLog, "openai_chat_completions.gpt6_preparation_failed", reqModel, 0, preparationErr)
 	}
 	preparedBody = gpt6PreparedBodyOrOriginal(body, preparedBody, preparationErr)
 	body = preparedBody

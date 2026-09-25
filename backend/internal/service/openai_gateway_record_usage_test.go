@@ -1054,6 +1054,51 @@ func TestOpenAIGatewayServiceRecordUsage_WSModePrefersTurnIDOverServerAndClientR
 	require.Equal(t, "resp_openai_ws_turn_456", usageRepo.lastLog.RequestID)
 }
 
+func TestOpenAIGatewayServiceRecordUsage_GPT6PreparationIDBeatsWSAndContextIDs(t *testing.T) {
+	usageRepo := &openAIRecordUsageLogRepoStub{}
+	billingRepo := &openAIRecordUsageBillingRepoStub{result: &UsageBillingApplyResult{Applied: true}}
+	svc := newOpenAIRecordUsageServiceWithBillingRepoForTest(
+		usageRepo, billingRepo, &openAIRecordUsageUserRepoStub{}, &openAIRecordUsageSubRepoStub{}, nil,
+	)
+	ctx := context.WithValue(context.Background(), ctxkey.ClientRequestID, "openai-ws-connection-123")
+	ctx = context.WithValue(ctx, ctxkey.RequestID, "openai-ws-handshake-request-456")
+
+	err := svc.RecordUsage(ctx, &OpenAIRecordUsageInput{
+		Result: &OpenAIForwardResult{
+			RequestID:    "gpt6-prep:resp_preparation_456",
+			OpenAIWSMode: true,
+			Usage:        OpenAIUsage{InputTokens: 8, OutputTokens: 4},
+			Model:        "gpt-5.1",
+			Duration:     time.Second,
+		},
+		APIKey:  &APIKey{ID: 10051},
+		User:    &User{ID: 20051},
+		Account: &Account{ID: 30051},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, billingRepo.lastCmd)
+	require.Equal(t, "gpt6-prep:resp_preparation_456", billingRepo.lastCmd.RequestID)
+	require.NotNil(t, usageRepo.lastLog)
+	require.Equal(t, "gpt6-prep:resp_preparation_456", usageRepo.lastLog.RequestID)
+
+	prepRequestID := billingRepo.lastCmd.RequestID
+	err = svc.RecordUsage(ctx, &OpenAIRecordUsageInput{
+		Result: &OpenAIForwardResult{
+			RequestID: "resp_final_456",
+			Usage:     OpenAIUsage{InputTokens: 16, OutputTokens: 8},
+			Model:     "gpt-5.1",
+			Duration:  time.Second,
+		},
+		APIKey:  &APIKey{ID: 10051},
+		User:    &User{ID: 20051},
+		Account: &Account{ID: 30052},
+	})
+	require.NoError(t, err)
+	require.Equal(t, "local:openai-ws-handshake-request-456", billingRepo.lastCmd.RequestID)
+	require.NotEqual(t, prepRequestID, billingRepo.lastCmd.RequestID)
+}
+
 func TestOpenAIGatewayServiceRecordUsage_GeneratesRequestIDWhenAllSourcesMissing(t *testing.T) {
 	usageRepo := &openAIRecordUsageLogRepoStub{}
 	billingRepo := &openAIRecordUsageBillingRepoStub{result: &UsageBillingApplyResult{Applied: true}}

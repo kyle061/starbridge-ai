@@ -9,6 +9,9 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestRequiresGPT6PreparationOnlyForCompositeGroups(t *testing.T) {
@@ -161,6 +164,28 @@ func TestGPT6PreparationCandidatesIncludeAffordableOpenAIFallbacks(t *testing.T)
 		require.Equal(t, service.PlatformOpenAI, candidate.Platform)
 		require.Equal(t, service.OpenAIEndpointCapabilityResponses, candidate.Capability)
 	}
+	for _, candidate := range candidates {
+		require.False(t, service.IsGPT6Model(candidate.Model), "preparation must never use a GPT-6 model")
+	}
+}
+
+func TestGPT6PreparationSkipsConfiguredGPT6ModelAndUsesGPT5Fallback(t *testing.T) {
+	candidates := gpt6PreparationCandidates("gpt-6-luna", true)
+	require.NotEmpty(t, candidates)
+	require.Equal(t, "gpt-5.6-luna", candidates[0].Model)
+	for _, candidate := range candidates {
+		require.False(t, service.IsGPT6Model(candidate.Model))
+	}
+}
+
+func TestGPT6PreparationFailureLogDoesNotReportFinalModelDowngrade(t *testing.T) {
+	core, observed := observer.New(zapcore.WarnLevel)
+	logGPT6PreparationFallback(zap.New(core), "openai.gpt6_preparation_failed", "gpt-6-luna", 0, errors.New("no preparation account"))
+	require.Len(t, observed.All(), 1)
+	fields := observed.All()[0].ContextMap()
+	require.Equal(t, "continue_original_request", fields["preparation_fallback"])
+	require.Equal(t, false, fields["formal_model_downgraded"])
+	require.Equal(t, "gpt-6-luna", fields["requested_model"])
 }
 
 func TestGPT6PreparationStopsFallbackAfterCancellation(t *testing.T) {

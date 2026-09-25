@@ -649,7 +649,7 @@ func (h *OpenAIGatewayHandler) Responses(c *gin.Context) {
 	c.Request = c.Request.WithContext(pricingCtx)
 	preparedBody, preparationErr := h.prepareGPT6Request(c, apiKey, reqModel, body, true)
 	if preparationErr != nil {
-		reqLog.Warn("openai.gpt6_preparation_failed", zap.Error(preparationErr))
+		logGPT6PreparationFallback(reqLog, "openai.gpt6_preparation_failed", reqModel, 0, preparationErr)
 	}
 	preparedBody = gpt6PreparedBodyOrOriginal(body, preparedBody, preparationErr)
 	body = preparedBody
@@ -2559,7 +2559,7 @@ func (h *OpenAIGatewayHandler) ResponsesWebSocket(c *gin.Context) {
 	var oauth429FailoverState service.OpenAIOAuth429FailoverState
 	wsAttemptMessage, preparationErr := h.prepareGPT6Request(c, apiKey, reqModel, firstMessage, true)
 	if preparationErr != nil {
-		reqLog.Warn("openai.websocket_gpt6_preparation_failed", zap.Error(preparationErr))
+		logGPT6PreparationFallback(reqLog, "openai.websocket_gpt6_preparation_failed", reqModel, 1, preparationErr)
 	}
 	wsAttemptMessage = gpt6PreparedBodyOrOriginal(firstMessage, wsAttemptMessage, preparationErr)
 	waitForWSSameAccountRetry := func(account *service.Account, failoverErr *service.UpstreamFailoverError) bool {
@@ -2819,7 +2819,7 @@ func (h *OpenAIGatewayHandler) ResponsesWebSocket(c *gin.Context) {
 				}
 				prepared, preparationErr := h.prepareGPT6Request(c, apiKey, originalModel, payload, true)
 				if preparationErr != nil {
-					reqLog.Warn("openai.websocket_gpt6_preparation_failed", zap.Int("turn", turn), zap.Error(preparationErr))
+					logGPT6PreparationFallback(reqLog, "openai.websocket_gpt6_preparation_failed", originalModel, turn, preparationErr)
 				}
 				return gpt6PreparedBodyOrOriginal(payload, prepared, preparationErr), nil
 			},

@@ -18,6 +18,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/tidwall/gjson"
+	"go.uber.org/zap"
 )
 
 const (
@@ -107,27 +108,62 @@ type gpt6PreparationResult struct {
 }
 
 func gpt6PreparationCandidates(prepModel string, responses bool) []gpt6PreparationCandidate {
-	candidates := []gpt6PreparationCandidate{
-		// DeepSeek accounts are OpenAI-compatible; selecting Chat Completions
-		// keeps fixed-chat accounts eligible while their account protocol still
-		// controls whether the actual upstream request is native Responses.
-		{Model: prepModel, Platform: service.PlatformDeepseek, Capability: service.OpenAIEndpointCapabilityChatCompletions, UseChatCompletions: true},
-		// Composite groups may not have DeepSeek accounts, and model-level
-		// cooldowns can temporarily remove mini models. Try the other supported
-		// low-cost GPT models before falling back to standard-priced models.
-		{Model: "gpt-5.6-luna", Platform: service.PlatformOpenAI, Capability: service.OpenAIEndpointCapabilityResponses},
-		{Model: "gpt-5.4-nano", Platform: service.PlatformOpenAI, Capability: service.OpenAIEndpointCapabilityResponses},
-		{Model: "gpt-5.4-mini", Platform: service.PlatformOpenAI, Capability: service.OpenAIEndpointCapabilityResponses},
-		{Model: "gpt-5-mini", Platform: service.PlatformOpenAI, Capability: service.OpenAIEndpointCapabilityResponses},
-		{Model: "gpt-5.2", Platform: service.PlatformOpenAI, Capability: service.OpenAIEndpointCapabilityResponses},
-		{Model: "gpt-5.4", Platform: service.PlatformOpenAI, Capability: service.OpenAIEndpointCapabilityResponses},
-	}
-	if !responses {
-		for i := 1; i < len(candidates); i++ {
-			candidates[i].Capability = service.OpenAIEndpointCapabilityChatCompletions
+	var candidates []gpt6PreparationCandidate
+	seen := make(map[string]struct{})
+	appendCandidate := func(model, platform string) {
+		model = strings.TrimSpace(model)
+		if model == "" || service.IsGPT6Model(model) {
+			return
 		}
+		key := strings.ToLower(model)
+		if _, ok := seen[key]; ok {
+			return
+		}
+		seen[key] = struct{}{}
+
+		capability := service.OpenAIEndpointCapabilityChatCompletions
+		if responses && platform == service.PlatformOpenAI {
+			capability = service.OpenAIEndpointCapabilityResponses
+		}
+		candidates = append(candidates, gpt6PreparationCandidate{
+			Model:              model,
+			Platform:           platform,
+			Capability:         capability,
+			UseChatCompletions: platform == service.PlatformDeepseek,
+		})
+	}
+
+	// Never send an internal preparation request to GPT-6, including when the
+	// configured preparation model itself is a GPT-6 alias.
+	if platform, ok := service.DetectModelPlatform(prepModel); ok {
+		appendCandidate(prepModel, platform)
+	} else {
+		// Preserve support for provider-specific DeepSeek aliases not recognized
+		// by the built-in model ownership detector.
+		appendCandidate(prepModel, service.PlatformDeepseek)
+	}
+	// Try older-generation, low-cost preparation models if the configured
+	// candidate is unavailable. GPT-6 models are intentionally never fallbacks.
+	for _, model := range []string{
+		"gpt-5.6-luna", "gpt-5.4-nano", "gpt-5.4-mini", "gpt-5-mini", "gpt-5.2", "gpt-5.4",
+	} {
+		appendCandidate(model, service.PlatformOpenAI)
 	}
 	return candidates
+}
+
+func logGPT6PreparationFallback(reqLog *zap.Logger, event, model string, turn int, err error) {
+	fields := []zap.Field{
+		zap.String("requested_model", strings.TrimSpace(model)),
+		zap.String("preparation_outcome", "failed"),
+		zap.String("preparation_fallback", "continue_original_request"),
+		zap.Bool("formal_model_downgraded", false),
+		zap.Error(err),
+	}
+	if turn > 0 {
+		fields = append(fields, zap.Int("turn", turn))
+	}
+	reqLog.Warn(event, fields...)
 }
 
 func firstSuccessfulGPT6Preparation(ctx context.Context, candidates []gpt6PreparationCandidate, attempt func(gpt6PreparationCandidate) (*gpt6PreparationResult, error)) (*gpt6PreparationResult, error) {
