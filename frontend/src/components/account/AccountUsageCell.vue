@@ -875,7 +875,12 @@ const antigravity3FlashUsageFromAPI = computed(() => getAntigravityUsageFromAPI(
 
 // Gemini Image from API
 const antigravity3ImageUsageFromAPI = computed(() =>
-  getAntigravityUsageFromAPI(['gemini-2.5-flash-image', 'gemini-3.1-flash-image'])
+  getAntigravityUsageFromAPI([
+    'gemini-2.5-flash-image',
+    'gemini-3-pro-image',
+    'gemini-3-pro-image-preview',
+    'gemini-3.1-flash-image',
+  ])
 )
 
 // Claude from API (all Claude model variants)

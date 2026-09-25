@@ -279,6 +279,7 @@ const antigravityPresetMappings = [
   { label: '3-Pro-Low→3.1-Pro-Low', from: 'gemini-3-pro-low', to: 'gemini-3.1-pro-low', color: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400' },
   { label: '3.1-Pro-High透传', from: 'gemini-3.1-pro-high', to: 'gemini-3.1-pro-high', color: 'bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400' },
   { label: '3.1-Pro-Low透传', from: 'gemini-3.1-pro-low', to: 'gemini-3.1-pro-low', color: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400' },
+  { label: '3-Pro-Image→3.1', from: 'gemini-3-pro-image', to: 'gemini-3.1-flash-image', color: 'bg-sky-100 text-sky-700 hover:bg-sky-200 dark:bg-sky-900/30 dark:text-sky-400' },
   // Gemini 通配符映射
   { label: 'Gemini 3→Flash', from: 'gemini-3*', to: 'gemini-3-flash', color: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400' },
   { label: 'Gemini 2.5→Flash', from: 'gemini-2.5*', to: 'gemini-2.5-flash', color: 'bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400' },
@@ -408,6 +409,7 @@ export function filterSupportedModelMappings<T extends { from: string; to: strin
 ): T[] {
   const normalizedPlatform = platform.trim().toLowerCase()
   const supported = new Set(getModelsByPlatform(normalizedPlatform).map(normalizeModelId))
+  const antigravityMappingAliases = new Set(['gemini-3-pro-image', 'gemini-3-pro-image-preview'])
   const targetIsSupported = (target: string) => {
     if (supported.has(target)) return true
     // Bedrock uses provider-qualified IDs such as
@@ -418,7 +420,8 @@ export function filterSupportedModelMappings<T extends { from: string; to: strin
   return mappings.filter(({ from, to }) => {
     const source = normalizeModelId(from)
     const target = normalizeModelId(to)
-    return (source.endsWith('*') || supported.has(source)) && targetIsSupported(target)
+    const isAntigravityImageAlias = normalizedPlatform === 'antigravity' && antigravityMappingAliases.has(source)
+    return (source.endsWith('*') || supported.has(source) || isAntigravityImageAlias) && targetIsSupported(target)
   })
 }
 

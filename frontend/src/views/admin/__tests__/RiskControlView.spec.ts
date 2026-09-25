@@ -218,6 +218,7 @@ describe('admin RiskControlView', () => {
   })
 
   it('saves the selected model filter mode and models', async () => {
+    getConfig.mockResolvedValue({ ...baseConfig(), api_key_configured: true, api_key_count: 1 })
     const wrapper = mount(RiskControlView, {
       global: {
         stubs: {
@@ -252,6 +253,7 @@ describe('admin RiskControlView', () => {
   })
 
   it('submits edited risk control thresholds when saving moderation config', async () => {
+    getConfig.mockResolvedValue({ ...baseConfig(), api_key_configured: true, api_key_count: 1 })
     const wrapper = mount(RiskControlView, {
       global: {
         stubs: {

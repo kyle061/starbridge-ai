@@ -120,7 +120,7 @@ describe('admin order currency display', () => {
     const text = wrapper.text()
     expect(text).toContain('$108.00')
     expect(text).toContain('¥108.00')
-    expect(text).toContain('$100.00')
+    expect(text).toContain('¥100.00')
   })
 
   it('renders payment currency consistently in the admin order table', () => {

@@ -60,6 +60,15 @@ describe('useModelWhitelist', () => {
     expect(models).not.toContain('gemini-3-pro-image')
   })
 
+  it('antigravity 映射预设保留旧版 Gemini 3 Pro Image 别名', () => {
+    expect(getPresetMappingsByPlatform('antigravity')).toContainEqual(
+      expect.objectContaining({
+        from: 'gemini-3-pro-image',
+        to: 'gemini-3.1-flash-image',
+      })
+    )
+  })
+
   it('Claude 模型列表包含新发布的 Claude 模型', () => {
     expect(getModelsByPlatform('claude')).toContain('claude-fable-5-1')
     expect(getModelsByPlatform('antigravity')).toContain('claude-fable-5-1')
