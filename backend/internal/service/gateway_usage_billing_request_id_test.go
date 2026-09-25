@@ -14,15 +14,44 @@ import (
 func TestResolveUsageBillingRequestID_ForcedWebSearchBeatsClientID(t *testing.T) {
 	t.Parallel()
 	ctx := context.WithValue(context.Background(), ctxkey.ClientRequestID, "client-shared-id")
+	ctx = context.WithValue(ctx, ctxkey.RequestID, "server-request-id")
 	got := resolveUsageBillingRequestID(ctx, "web_search:uuid-1")
 	require.Equal(t, "web_search:uuid-1", got)
 }
 
-func TestResolveUsageBillingRequestID_ClientWinsOverPlainUpstream(t *testing.T) {
+func TestResolveUsageBillingRequestID_ServerRequestIDWinsOverClientAndUpstream(t *testing.T) {
+	t.Parallel()
+	ctx := context.WithValue(context.Background(), ctxkey.ClientRequestID, "client-shared-id")
+	ctx = context.WithValue(ctx, ctxkey.RequestID, "server-request-1")
+	got := resolveUsageBillingRequestID(ctx, "resp_abc")
+	require.Equal(t, "local:server-request-1", got)
+}
+
+func TestResolveUsageBillingRequestID_UpstreamWinsWhenServerRequestIDMissing(t *testing.T) {
 	t.Parallel()
 	ctx := context.WithValue(context.Background(), ctxkey.ClientRequestID, "client-shared-id")
 	got := resolveUsageBillingRequestID(ctx, "resp_abc")
+	require.Equal(t, "resp_abc", got)
+}
+
+func TestResolveUsageBillingRequestID_ClientIsLastFallback(t *testing.T) {
+	t.Parallel()
+	ctx := context.WithValue(context.Background(), ctxkey.ClientRequestID, "client-shared-id")
+	got := resolveUsageBillingRequestID(ctx, "")
 	require.Equal(t, "client:client-shared-id", got)
+}
+
+func TestResolveUsageBillingRequestID_ReusedClientIDDoesNotReuseBillingID(t *testing.T) {
+	t.Parallel()
+	newContext := func(serverRequestID string) context.Context {
+		ctx := context.WithValue(context.Background(), ctxkey.ClientRequestID, "client-shared-id")
+		return context.WithValue(ctx, ctxkey.RequestID, serverRequestID)
+	}
+	first := resolveUsageBillingRequestID(newContext("server-request-1"), "upstream-1")
+	second := resolveUsageBillingRequestID(newContext("server-request-2"), "upstream-2")
+	require.Equal(t, "local:server-request-1", first)
+	require.Equal(t, "local:server-request-2", second)
+	require.NotEqual(t, first, second)
 }
 
 func TestIsForcedUsageBillingRequestID(t *testing.T) {
@@ -54,6 +83,7 @@ func TestStableGrokRealtimeBillingRequestID(t *testing.T) {
 func TestResolveUsageBillingRequestID_ForcedGrokAudioBeatsClientID(t *testing.T) {
 	t.Parallel()
 	ctx := context.WithValue(context.Background(), ctxkey.ClientRequestID, "client-shared-id")
+	ctx = context.WithValue(ctx, ctxkey.RequestID, "server-request-id")
 	got := resolveUsageBillingRequestID(ctx, StableGrokAudioBillingRequestID("up-9"))
 	require.Equal(t, "grok_audio:up-9", got)
 }
