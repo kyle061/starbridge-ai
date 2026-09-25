@@ -118,12 +118,13 @@ jobs:
       - run: bash -n deploy/starbridge/deploy-server.sh
       - run: |
           python3 - <<'PY'
-          import pathlib, subprocess, tempfile
+          import os, pathlib, subprocess, tempfile
           root = pathlib.Path('deploy/starbridge')
           with tempfile.TemporaryDirectory() as d:
               p = pathlib.Path(d)
               for name in ('.env.example', 'init-env.py'):
                   (p/name).write_bytes((root/name).read_bytes())
               subprocess.run(['python3', str(p/'init-env.py'), '--admin-email', 'ci@example.com'], check=True)
-              subprocess.run(['docker', 'compose', '-f', str(root/'compose.yaml'), '--env-file', str(p/'.env'), 'config', '--quiet'], check=True)
+              env = dict(os.environ, STARBRIDGE_ENV_FILE=str(p/'.env'))
+              subprocess.run(['docker', 'compose', '-f', str(root/'compose.yaml'), '--env-file', str(p/'.env'), 'config', '--quiet'], check=True, env=env)
           PY
