@@ -40,7 +40,7 @@ func TestFetchOpenAIModelsListUsesStandardRequestAndIsolatesCodexCache(t *testin
 	account.Credentials["header_override_enabled"] = true
 	response, err := s.FetchOpenAIModelsList(context.Background(), account)
 	require.NoError(t, err)
-	require.Contains(t, string(response.Body), `"id":"gpt-image-1"`)
+	require.NotContains(t, string(response.Body), `"id":"gpt-image-1"`)
 	require.Contains(t, string(response.Body), `"id":"text-embedding-3-large"`)
 	require.Contains(t, string(response.Body), `"created":1234`)
 	require.Contains(t, string(response.Body), `"custom":true`)
@@ -63,7 +63,7 @@ func TestFetchOpenAIModelsListOAuthSharesManifestCache(t *testing.T) {
 	account := newCodexModelsTestAccount()
 	response, err := s.FetchOpenAIModelsList(context.Background(), account)
 	require.NoError(t, err)
-	require.JSONEq(t, `{"object":"list","data":[{"id":"special-oauth-model","object":"model","owned_by":"openai","created":0,"display_name":"Special OAuth Model"},{"id":"gpt-image-1","object":"model","owned_by":"openai","created":0}]}`, string(response.Body))
+	require.JSONEq(t, `{"object":"list","data":[{"id":"special-oauth-model","object":"model","owned_by":"openai","created":0,"display_name":"Special OAuth Model"}]}`, string(response.Body))
 	manifest, err := s.FetchCodexModelsManifest(context.Background(), account, CodexCanonicalClientVersion(), "")
 	require.NoError(t, err)
 	require.Contains(t, string(manifest.Body), `"slug":"special-oauth-model"`)

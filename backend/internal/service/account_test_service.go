@@ -29,6 +29,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/geminicli"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/modelcatalog"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai_compat"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
@@ -207,6 +208,13 @@ func (s *AccountTestService) FetchOpenAIAccountModels(ctx context.Context, accou
 			model.Type = "model"
 		}
 	}
+	visible := payload.Data[:0]
+	for _, model := range payload.Data {
+		if modelcatalog.IsVisibleOpenAIModel(model.ID) {
+			visible = append(visible, model)
+		}
+	}
+	payload.Data = visible
 	// Codex discovery lists Responses drivers, not image_generation tool models.
 	// Add locally supported image choices only to the OAuth test picker; keep the
 	// shared upstream catalog and API-key discovery authoritative.
@@ -216,13 +224,13 @@ func (s *AccountTestService) FetchOpenAIAccountModels(ctx context.Context, accou
 			seen[model.ID] = true
 		}
 		for _, model := range openai.SelectableModels() {
-			if IsGPTImageGenerationModel(model.ID) && account.IsModelSupported(model.ID) && !seen[model.ID] {
+			if IsGPTImageGenerationModel(model.ID) && modelcatalog.IsVisibleOpenAIModel(model.ID) && account.IsModelSupported(model.ID) && !seen[model.ID] {
 				payload.Data = append(payload.Data, model)
 				seen[model.ID] = true
 			}
 		}
 		for model := range account.GetModelMapping() {
-			if IsGPTImageGenerationModel(model) && !strings.Contains(model, "*") && !seen[model] {
+			if IsGPTImageGenerationModel(model) && modelcatalog.IsVisibleOpenAIModel(model) && !strings.Contains(model, "*") && !seen[model] {
 				payload.Data = append(payload.Data, openai.Model{ID: model, Object: "model", Type: "model", OwnedBy: "openai", DisplayName: openaiCodexDisplayName(model)})
 			}
 		}

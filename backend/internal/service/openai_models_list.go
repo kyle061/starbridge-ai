@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/modelcatalog"
 )
 
 // FetchOpenAIModelsList discovers a single account's raw public model catalog.
@@ -121,7 +122,7 @@ func standardOpenAIModelsBody(body []byte, fromManifest bool) ([]byte, error) {
 			return nil, fmt.Errorf("model entry has no valid %s", idField)
 		}
 		id = strings.TrimSpace(id)
-		if _, ok := seen[id]; ok || strings.Contains(id, "*") {
+		if _, ok := seen[id]; ok || strings.Contains(id, "*") || !modelcatalog.IsVisibleOpenAIModel(id) {
 			continue
 		}
 		seen[id] = struct{}{}
@@ -187,7 +188,7 @@ func projectAccountModelsBody(body []byte, account *Account, group *Group, codex
 			continue
 		}
 		id = strings.TrimSpace(id)
-		if id == "" || strings.Contains(id, "*") {
+		if id == "" || strings.Contains(id, "*") || !modelcatalog.IsVisibleOpenAIModel(id) {
 			continue
 		}
 		// Apply the allowlist to public names after mapping, not upstream targets.
@@ -217,7 +218,7 @@ func projectAccountModelsBody(body []byte, account *Account, group *Group, codex
 	seen := make(map[string]struct{}, len(candidates))
 	for _, id := range candidates {
 		id = strings.TrimSpace(id)
-		if id == "" || strings.Contains(id, "*") {
+		if id == "" || strings.Contains(id, "*") || !modelcatalog.IsVisibleOpenAIModel(id) {
 			continue
 		}
 		if _, ok := seen[id]; ok {
@@ -297,6 +298,9 @@ func (s *OpenAIGatewayService) FetchPinnedOpenAIModelsList(ctx context.Context, 
 			}
 			if err := json.Unmarshal(raw, &model); err != nil {
 				return nil, nil, err
+			}
+			if !modelcatalog.IsVisibleOpenAIModel(model.ID) {
+				continue
 			}
 			if _, exists := byID[model.ID]; !exists {
 				byID[model.ID] = raw

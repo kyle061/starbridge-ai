@@ -49,7 +49,7 @@ func TestOrdinaryPinnedModelsUsesSelectedAccountsAndFinalETag(t *testing.T) {
 		CodexModelsManifestConfig: service.GroupCodexModelsManifestConfig{Enabled: true, AccountIDs: []int64{2, 3}}}
 	first := performOrdinaryPinnedModelsRequest(t, h, group, "/v1/models", "")
 	require.Equal(t, http.StatusOK, first.Code, first.Body.String())
-	require.Equal(t, []string{"special-model", "gpt-image-1", "text-embedding-3-large"}, ordinaryPinnedModelIDs(t, first))
+	require.Equal(t, []string{"special-model", "text-embedding-3-large"}, ordinaryPinnedModelIDs(t, first))
 	var response gatewayModelsResponseForTest
 	require.NoError(t, json.Unmarshal(first.Body.Bytes(), &response))
 	require.Equal(t, "model", response.Data[0].Object)

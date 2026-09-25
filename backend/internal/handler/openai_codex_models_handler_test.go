@@ -151,7 +151,7 @@ func TestCodexModelsAppliesLocalFiltersBeforeClientETag(t *testing.T) {
 		},
 	}}
 	upstream := &codexModelsFailoverHTTPUpstream{
-		firstBody: `{"object":"list","data":[{"id":"codex-auto-review"},{"id":"gpt-5.6"}]}`,
+		firstBody: `{"object":"list","data":[{"id":"codex-auto-review"},{"id":"gpt-5.5"},{"id":"gpt-5.6"}]}`,
 	}
 	gatewayService := service.NewOpenAIGatewayService(
 		repo,
@@ -173,8 +173,8 @@ func TestCodexModelsAppliesLocalFiltersBeforeClientETag(t *testing.T) {
 	if first.Code != http.StatusOK {
 		t.Fatalf("first status: got %d, want %d; body=%s", first.Code, http.StatusOK, first.Body.String())
 	}
-	if body := first.Body.String(); !strings.Contains(body, "codex-auto-review") || !strings.Contains(body, "gpt-5.6") {
-		t.Fatalf("first body did not include the explicitly selected models: %s", body)
+	if body := first.Body.String(); strings.Contains(body, "codex-auto-review") || strings.Contains(body, "gpt-5.5") || !strings.Contains(body, "gpt-5.6") {
+		t.Fatalf("first body did not contain only visible selected models: %s", body)
 	}
 	oldETag := first.Header().Get("ETag")
 	if oldETag == "" {
@@ -186,7 +186,7 @@ func TestCodexModelsAppliesLocalFiltersBeforeClientETag(t *testing.T) {
 	if second.Code != http.StatusOK {
 		t.Fatalf("second status: got %d, want %d; body=%s", second.Code, http.StatusOK, second.Body.String())
 	}
-	if body := second.Body.String(); strings.Contains(body, "codex-auto-review") || !strings.Contains(body, "gpt-5.6") {
+	if body := second.Body.String(); strings.Contains(body, "codex-auto-review") || !strings.Contains(body, "gpt-5.5") || !strings.Contains(body, "gpt-5.6") {
 		t.Fatalf("second body was not the filtered manifest: %s", body)
 	}
 	if newETag := second.Header().Get("ETag"); newETag == "" || newETag == oldETag {
@@ -200,6 +200,30 @@ func TestCodexModelsAppliesLocalFiltersBeforeClientETag(t *testing.T) {
 	if third.Body.Len() != 0 {
 		t.Fatalf("third body: got %q, want empty", third.Body.String())
 	}
+}
+
+func TestCodexModelsHidesRetiredUpstreamModels(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	groupID := int64(44)
+	repo := &codexModelsFailoverAccountRepo{accounts: []service.Account{{
+		ID: 1, Platform: service.PlatformOpenAI, Type: service.AccountTypeAPIKey,
+		Status: service.StatusActive, Schedulable: true, Concurrency: 1,
+		Credentials: map[string]any{"api_key": "sk-test", "base_url": "https://upstream.example/v1"},
+	}}}
+	upstream := &codexModelsFailoverHTTPUpstream{firstBody: `{"object":"list","data":[{"id":"gpt-4o-audio-preview"},{"id":"gpt-5.2-chat-latest"},{"id":"gpt-5.2-2025-12-11"},{"id":"gpt-5.3-codex-spark"},{"id":"gpt-5.4"},{"id":"gpt-image-1.5"},{"id":"gpt-5.5"},{"id":"gpt-5.6-sol"},{"id":"gpt-6-astra"}]}`}
+	gateway := service.NewOpenAIGatewayService(
+		repo, nil, nil, nil, nil, nil, nil, &config.Config{RunMode: config.RunModeSimple}, nil, nil, nil, nil, nil,
+		upstream, nil, nil, nil, nil, nil, nil, nil, nil,
+	)
+	handler := &OpenAIGatewayHandler{gatewayService: gateway}
+	group := &service.Group{ID: groupID, Platform: service.PlatformOpenAI}
+
+	first := performCodexModelsRequestForGroup(t, handler, group, "")
+	require.Equal(t, http.StatusOK, first.Code, first.Body.String())
+	require.Equal(t, []string{"gpt-5.5", "gpt-5.6-sol", "gpt-6-astra"}, codexHandlerManifestSlugs(t, first))
+	require.Equal(t, service.CodexModelsManifestETag(first.Body.Bytes()), first.Header().Get("ETag"))
+	second := performCodexModelsRequestForGroup(t, handler, group, first.Header().Get("ETag"))
+	require.Equal(t, http.StatusNotModified, second.Code)
 }
 
 func TestCodexModelsAPIKeyCacheDoesNotLeakGroupFilters(t *testing.T) {
@@ -360,7 +384,7 @@ func TestCodexModelsSupplementsConfiguredModelsWithUnmappedAccountDefaults(t *te
 	}
 }
 
-func TestCodexModelsUnmappedParentAndSparkShadowHonorCustomListAndETag(t *testing.T) {
+func TestCodexModelsUnmappedParentHidesRetiredSparkShadowAndHonorsETag(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	const sparkModel = "gpt-5.3-codex-spark"
 	parentID := int64(1)
@@ -389,7 +413,7 @@ func TestCodexModelsUnmappedParentAndSparkShadowHonorCustomListAndETag(t *testin
 	require.Equal(t, http.StatusOK, first.Code, first.Body.String())
 	slugs := codexHandlerManifestSlugs(t, first)
 	require.Contains(t, slugs, "gpt-5.6-sol")
-	require.Contains(t, slugs, sparkModel)
+	require.NotContains(t, slugs, sparkModel)
 	require.NotContains(t, slugs, "gpt-image-2")
 	require.NotContains(t, slugs, "codex-auto-review")
 	firstETag := first.Header().Get("ETag")
@@ -400,7 +424,7 @@ func TestCodexModelsUnmappedParentAndSparkShadowHonorCustomListAndETag(t *testin
 	}
 	second := performCodexModelsRequestForGroup(t, handler, group, firstETag)
 	require.Equal(t, http.StatusOK, second.Code, second.Body.String())
-	require.ElementsMatch(t, []string{"gpt-5.6-sol", sparkModel}, codexHandlerManifestSlugs(t, second))
+	require.Equal(t, []string{"gpt-5.6-sol"}, codexHandlerManifestSlugs(t, second))
 	require.NotEqual(t, firstETag, second.Header().Get("ETag"))
 	third := performCodexModelsRequestForGroup(t, handler, group, second.Header().Get("ETag"))
 	require.Equal(t, http.StatusNotModified, third.Code)

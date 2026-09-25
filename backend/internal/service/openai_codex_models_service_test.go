@@ -1473,8 +1473,8 @@ func TestMergeGroupConfiguredCodexModelsFiltersAccountMappedAutoReviewByDefault(
 	require.Equal(t, []string{"gpt-5.6"}, codexManifestModelSlugs(t, manifest.Body))
 }
 
-// Scenario: 启用的分组自定义列表允许 Auto Review。
-func TestMergeGroupConfiguredCodexModelsKeepsExplicitAutoReviewSelection(t *testing.T) {
+// An explicit group selection must not re-advertise an internal probe model.
+func TestMergeGroupConfiguredCodexModelsHidesExplicitAutoReviewSelection(t *testing.T) {
 	t.Parallel()
 
 	const groupID int64 = 76
@@ -1492,7 +1492,16 @@ func TestMergeGroupConfiguredCodexModelsKeepsExplicitAutoReviewSelection(t *test
 	}
 
 	require.NoError(t, svc.MergeGroupConfiguredCodexModels(context.Background(), group, manifest, ""))
-	require.Equal(t, []string{"codex-auto-review"}, codexManifestModelSlugs(t, manifest.Body))
+	require.Empty(t, codexManifestModelSlugs(t, manifest.Body))
+}
+
+func TestMergeConfiguredCodexModelsManifestFiltersRetiredOpenAIModels(t *testing.T) {
+	upstream := []byte(`{"models":[{"slug":"gpt-4o-audio-preview"},{"slug":"gpt-5.2-2025-12-11"},{"slug":"gpt-5.3-codex-spark"},{"slug":"gpt-5.4"},{"slug":"gpt-image-1.5"},{"slug":"gpt-5.6-sol","priority":1},{"slug":"gpt-6-luna"},{"slug":"custom-coder"}]}`)
+	body, changed, err := mergeConfiguredCodexModelsManifest(upstream, []string{"gpt-5.2", "gpt-5.5"}, nil, false)
+	require.NoError(t, err)
+	require.True(t, changed)
+	require.Equal(t, []string{"gpt-5.6-sol", "gpt-6-luna", "custom-coder", "gpt-5.5"}, codexManifestModelSlugs(t, body))
+	require.Contains(t, string(body), `"priority":1`, "live metadata of supported models must be preserved")
 }
 
 func TestWildcardGroupUsesLiveCodexManifest(t *testing.T) {

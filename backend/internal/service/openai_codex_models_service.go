@@ -19,6 +19,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/httpclient"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/modelcatalog"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
 	"golang.org/x/net/http2"
@@ -1348,6 +1349,10 @@ func mergeConfiguredCodexModelsManifest(
 			changed = true
 			continue
 		}
+		if !modelcatalog.IsVisibleOpenAIModel(descriptor.Slug) {
+			changed = true
+			continue
+		}
 		if filterBySelection && !allowlist.Allows(descriptor.Slug) {
 			changed = true
 			continue
@@ -1371,7 +1376,7 @@ func mergeConfiguredCodexModelsManifest(
 	}
 
 	for _, modelID := range configuredModels {
-		if isCodexDedicatedMediaModel(modelID) {
+		if isCodexDedicatedMediaModel(modelID) || !modelcatalog.IsVisibleOpenAIModel(modelID) {
 			continue
 		}
 		if filterBySelection && !allowlist.Allows(modelID) {

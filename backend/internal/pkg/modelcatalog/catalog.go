@@ -56,9 +56,9 @@ var catalogs = map[string][]string{
 		"mistral-small-latest", "mistral-medium-latest", "mistral-large-latest",
 		"codestral-latest", "pixtral-large-latest",
 	},
-	"meta": {"llama-3.3-70b-instruct"},
-	"cohere": {"command-a-03-2025", "command-r", "command-r-plus"},
-	"yi": {"yi-large", "yi-large-turbo", "yi-vision"},
+	"meta":     {"llama-3.3-70b-instruct"},
+	"cohere":   {"command-a-03-2025", "command-r", "command-r-plus"},
+	"yi":       {"yi-large", "yi-large-turbo", "yi-vision"},
 	"moonshot": {"kimi-latest", "kimi-for-coding", "kimi-k2"},
 	"doubao": {
 		"doubao-1.5-pro-256k", "doubao-1.5-pro-32k", "doubao-1.5-lite-32k",
@@ -72,8 +72,8 @@ var catalogs = map[string][]string{
 		"ernie-4.0-8k-latest", "ernie-4.0-turbo-8k", "ernie-speed-128k",
 		"ernie-speed-pro-128k", "ernie-lite-pro-128k",
 	},
-	"spark": {"spark-desk-v4.0", "spark-pro", "spark-max", "spark-ultra"},
-	"hunyuan": {"hunyuan-pro", "hunyuan-turbo", "hunyuan-large", "hunyuan-vision", "hunyuan-code"},
+	"spark":      {"spark-desk-v4.0", "spark-pro", "spark-max", "spark-ultra"},
+	"hunyuan":    {"hunyuan-pro", "hunyuan-turbo", "hunyuan-large", "hunyuan-vision", "hunyuan-code"},
 	"perplexity": {"sonar", "sonar-pro", "sonar-reasoning"},
 	"opencode_go": {
 		"grok-4.6", "gpt-5.6-luna", "glm-5.3-flash", "glm-5.3", "glm-5.2", "glm-5.1",
@@ -134,6 +134,37 @@ func IsSupported(platform, model string) bool {
 		}
 	}
 	return false
+}
+
+// IsVisibleOpenAIModel keeps the public OpenAI family on the curated list,
+// while leaving explicitly configured compatible-provider IDs alone. This is
+// a discovery policy only; legacy IDs can still be routed by existing keys.
+func IsVisibleOpenAIModel(model string) bool {
+	model = strings.TrimSpace(model)
+	if model == "" {
+		return false
+	}
+	for _, id := range catalogs["openai"] {
+		if model == id {
+			return true
+		}
+	}
+	model = strings.TrimPrefix(strings.ToLower(model), "models/")
+	model = strings.TrimPrefix(model, "openai/")
+	if strings.HasPrefix(model, "gpt") || strings.HasPrefix(model, "codex") || strings.HasPrefix(model, "chatgpt") {
+		return false
+	}
+	return !(len(model) > 1 && model[0] == 'o' && model[1] >= '0' && model[1] <= '9')
+}
+
+func FilterVisibleOpenAIModels(models []string) []string {
+	visible := make([]string, 0, len(models))
+	for _, model := range models {
+		if IsVisibleOpenAIModel(model) {
+			visible = append(visible, model)
+		}
+	}
+	return visible
 }
 
 // FilterSupportedModels removes IDs that are not in the curated public

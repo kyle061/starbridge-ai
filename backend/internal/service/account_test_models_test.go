@@ -101,7 +101,10 @@ func TestFetchOpenAIAccountModelsOAuthRespectsImageAllowlist(t *testing.T) {
 	newCodexModelsOAuthCacheServer(t, `{"models":[{"slug":"gpt-6-astra"}]}`)
 	svc := &AccountTestService{openaiGatewayService: &OpenAIGatewayService{}}
 	account := newCodexModelsTestAccount()
-	account.Credentials["model_mapping"] = map[string]any{"gpt-image-2.5-flare": "gpt-image-2.5-flare"}
+	account.Credentials["model_mapping"] = map[string]any{
+		"gpt-image-2.5-flare": "gpt-image-2.5-flare",
+		"gpt-image-1.5":       "gpt-image-1.5",
+	}
 	models, err := svc.FetchOpenAIAccountModels(context.Background(), account)
 	require.NoError(t, err)
 	ids := []string{}
@@ -110,4 +113,5 @@ func TestFetchOpenAIAccountModelsOAuthRespectsImageAllowlist(t *testing.T) {
 	}
 	require.Contains(t, ids, "gpt-image-2.5-flare")
 	require.NotContains(t, ids, "gpt-image-2.5-sunburst")
+	require.NotContains(t, ids, "gpt-image-1.5")
 }
