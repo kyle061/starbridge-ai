@@ -7,6 +7,10 @@ import { resolve } from 'node:path'
 import AnnouncementPopup from '../AnnouncementPopup.vue'
 import { useAnnouncementStore } from '@/stores/announcements'
 
+vi.mock('@/utils/format', () => ({
+  formatRelativeWithDateTime: () => '2026-07-24',
+}))
+
 const announcementMarkdownStyles = readFileSync(
   resolve(process.cwd(), 'src/styles/announcement-markdown.css'),
   'utf8',

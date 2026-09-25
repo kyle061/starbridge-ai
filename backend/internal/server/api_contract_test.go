@@ -315,7 +315,7 @@ func TestAPIContracts(t *testing.T) {
 			setup: func(t *testing.T, deps *contractDeps) {
 				t.Helper()
 				// 普通用户可见的分组列表不应包含内部字段（如 model_routing/account_count），
-				// 也不得包含利润控制配置——它与同响应的 rate_multiplier 相乘即可反推上游成本上限。
+				// 也不得包含利润控制配置和内部倍率。
 				deps.groupRepo.SetActive([]service.Group{
 					{
 						ID:                   10,
@@ -353,11 +353,6 @@ func TestAPIContracts(t *testing.T) {
 						"name": "Group One",
 						"description": "desc",
 						"platform": "anthropic",
-						"rate_multiplier": 1.5,
-						"peak_rate_enabled": false,
-						"peak_start": "",
-						"peak_end": "",
-						"peak_rate_multiplier": 1,
 						"is_exclusive": false,
 						"status": "active",
 						"subscription_type": "standard",
@@ -378,12 +373,6 @@ func TestAPIContracts(t *testing.T) {
 						"audio_realtime_price_per_min": null,
 						"allow_image_generation": false,
 						"allow_batch_image_generation": false,
-						"batch_image_discount_multiplier": 0,
-						"batch_image_hold_multiplier": 0,
-						"image_rate_independent": false,
-						"image_rate_multiplier": 0,
-						"video_rate_independent": false,
-						"video_rate_multiplier": 0,
 						"claude_code_only": false,
 						"allow_messages_dispatch": false,
 						"allow_live": false,
@@ -395,6 +384,7 @@ func TestAPIContracts(t *testing.T) {
 						"max_reasoning_effort_over_limit": "",
 						"reasoning_effort_mappings": null,
 						"rpm_limit": 0,
+						"concurrency_limit": 0,
 						"created_at": "2025-01-02T03:04:05Z",
 						"updated_at": "2025-01-02T03:04:05Z"
 					}
@@ -445,6 +435,9 @@ func TestAPIContracts(t *testing.T) {
 						"daily_usage_usd": 1.23,
 						"weekly_usage_usd": 2.34,
 						"monthly_usage_usd": 3.45,
+						"quota_usd": 0,
+						"quota_used_usd": 0,
+						"usage_multiplier": 0,
 						"created_at": "2025-01-02T03:04:05Z",
 						"updated_at": "2025-01-02T03:04:05Z"
 					}
@@ -607,7 +600,6 @@ func TestAPIContracts(t *testing.T) {
 							"cache_read_cost": 0,
 						"total_cost": 0.5,
 						"actual_cost": 0.5,
-						"rate_multiplier": 1,
 						"long_context_billing_applied": false,
 						"billing_type": 0,
 							"stream": true,
@@ -646,7 +638,7 @@ func TestAPIContracts(t *testing.T) {
 					service.SettingKeyRegistrationEmailSuffixWhitelist: "[]",
 					service.SettingKeyPromoCodeEnabled:                 "true",
 					service.SettingKeyLoginAgreementDocuments:          `[{"id":"terms","title":"Starbridge AI 服务条款","content_md":""},{"id":"usage-policy","title":"Starbridge AI 使用政策","content_md":""},{"id":"supported-regions","title":"Starbridge AI 支持的国家和地区","content_md":""},{"id":"service-specific-terms","title":"Starbridge AI 服务特定条款","content_md":""}]`,
-					service.SettingKeyLoginAgreementUpdatedAt:           "2026-03-31",
+					service.SettingKeyLoginAgreementUpdatedAt:          "2026-03-31",
 
 					service.SettingKeySMTPHost:     "smtp.example.com",
 					service.SettingKeySMTPPort:     "587",
@@ -716,6 +708,15 @@ func TestAPIContracts(t *testing.T) {
 				"code": 0,
 				"message": "success",
 				"data": {
+					"customer_billing_multiplier": 6,
+					"email_provider": "smtp",
+					"brevo_api_key_configured": false,
+					"brevo_from_email": "",
+					"brevo_from_name": "",
+					"resend_api_key_configured": false,
+					"resend_fallback_enabled": false,
+					"resend_from_email": "",
+					"resend_from_name": "",
 					"registration_enabled": true,
 					"email_verify_enabled": false,
 					"registration_email_suffix_whitelist": [],
@@ -1059,7 +1060,7 @@ func TestAPIContracts(t *testing.T) {
 					service.SettingKeyEmailVerifyEnabled:               "false",
 					service.SettingKeyRegistrationEmailSuffixWhitelist: "[]",
 					service.SettingKeyLoginAgreementDocuments:          `[{"id":"terms","title":"Starbridge AI 服务条款","content_md":""},{"id":"usage-policy","title":"Starbridge AI 使用政策","content_md":""},{"id":"supported-regions","title":"Starbridge AI 支持的国家和地区","content_md":""},{"id":"service-specific-terms","title":"Starbridge AI 服务特定条款","content_md":""}]`,
-					service.SettingKeyLoginAgreementUpdatedAt:           "2026-03-31",
+					service.SettingKeyLoginAgreementUpdatedAt:          "2026-03-31",
 				})
 			},
 			method:     http.MethodGet,
@@ -1069,6 +1070,15 @@ func TestAPIContracts(t *testing.T) {
 				"code": 0,
 				"message": "success",
 				"data": {
+					"customer_billing_multiplier": 6,
+					"email_provider": "smtp",
+					"brevo_api_key_configured": false,
+					"brevo_from_email": "",
+					"brevo_from_name": "",
+					"resend_api_key_configured": false,
+					"resend_fallback_enabled": false,
+					"resend_from_email": "",
+					"resend_from_name": "",
 					"registration_enabled": true,
 					"email_verify_enabled": false,
 					"registration_email_suffix_whitelist": [],
@@ -1169,9 +1179,9 @@ func TestAPIContracts(t *testing.T) {
 					"google_oauth_client_secret_configured": false,
 					"google_oauth_redirect_url": "",
 					"google_oauth_frontend_redirect_url": "/auth/oauth/callback",
-					"site_name": "Sub2API",
+					"site_name": "Starbridge AI",
 					"site_logo": "",
-					"site_subtitle": "Subscription to API Conversion Platform",
+					"site_subtitle": "Multi-model AI API Gateway",
 					"api_base_url": "",
 					"api_key_acl_trust_forwarded_ip": false,
 					"forwarded_client_ip_headers": [],

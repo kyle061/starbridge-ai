@@ -293,6 +293,7 @@ describe('OpsOpenAITokenStatsCard', () => {
   })
 
   it('接口异常时显示错误提示', async () => {
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {})
     mockGetOpenAITokenStats.mockRejectedValue(new Error('加载失败'))
 
     const wrapper = mount(OpsOpenAITokenStatsCard, {
@@ -307,5 +308,7 @@ describe('OpsOpenAITokenStatsCard', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('加载失败')
+    expect(errorLog).toHaveBeenCalled()
+    errorLog.mockRestore()
   })
 })

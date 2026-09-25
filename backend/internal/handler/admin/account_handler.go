@@ -231,7 +231,7 @@ type simpleModeAccountGroupReference struct {
 	Group     *simpleModeGroupReference `json:"group,omitempty"`
 }
 
-func simpleModeGroupReferenceFromDTO(group *dto.Group) *simpleModeGroupReference {
+func simpleModeGroupReferenceFromDTO(group *dto.AdminGroup) *simpleModeGroupReference {
 	if group == nil {
 		return nil
 	}

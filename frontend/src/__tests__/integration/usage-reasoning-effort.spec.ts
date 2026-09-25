@@ -120,6 +120,14 @@ vi.mock('@/api/admin/ops', () => ({
   listErrorLogs,
 }))
 
+vi.mock('@/api/user', () => ({
+  getMyPlatformQuotas: vi.fn().mockResolvedValue({ platform_quotas: [] }),
+}))
+
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: () => ({ user: null, refreshUser: vi.fn().mockResolvedValue({}) }),
+}))
+
 vi.mock('@/stores/app', () => ({
   useAppStore: () => ({
     showError: vi.fn(),

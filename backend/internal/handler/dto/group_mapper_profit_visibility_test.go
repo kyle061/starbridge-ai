@@ -7,9 +7,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/service"
 )
 
-// profitControlJSONFields 是分组利润控制的三个 JSON 字段。它们与同响应中的
-// rate_multiplier 相乘即可反推出运营方的上游采购成本上限，属于内部经营信息，
-// 只能出现在管理员 DTO 中。
+// profitControlJSONFields 是分组利润控制的三个 JSON 字段，只能出现在管理员 DTO 中。
 var profitControlJSONFields = []string{
 	"profit_control_enabled",
 	"profit_min_margin",
@@ -54,8 +52,8 @@ func TestGroupFromServiceOmitsProfitControl(t *testing.T) {
 				t.Errorf("%s: 普通用户 DTO 不得包含 %q", name, f)
 			}
 		}
-		if _, ok := fields["rate_multiplier"]; !ok {
-			t.Errorf("%s: 应仍返回 rate_multiplier", name)
+		if _, ok := fields["rate_multiplier"]; ok {
+			t.Errorf("%s: 普通用户 DTO 不得包含 rate_multiplier", name)
 		}
 	}
 }
@@ -72,4 +70,21 @@ func TestGroupFromServiceAdminIncludesProfitControl(t *testing.T) {
 			t.Errorf("管理员 DTO 应包含 %q", f)
 		}
 	}
+}
+
+func TestGroupFromServiceAdminKeepsNestedRateWithoutRecursiveGroups(t *testing.T) {
+	group := profitControlServiceGroup()
+	group.AccountGroups = []service.AccountGroup{{AccountID: 9, GroupID: group.ID, Group: group}}
+
+	admin := GroupFromServiceAdmin(group)
+	if len(admin.AccountGroups) != 1 || admin.AccountGroups[0].Group == nil {
+		t.Fatalf("expected one nested admin group reference: %+v", admin)
+	}
+	if admin.AccountGroups[0].Group.RateMultiplier != group.RateMultiplier {
+		t.Fatalf("nested group rate multiplier was lost: %+v", admin.AccountGroups[0].Group)
+	}
+	if len(admin.AccountGroups[0].Group.AccountGroups) != 0 {
+		t.Fatal("nested group references must not recursively expand account groups")
+	}
+	marshalToMap(t, admin)
 }

@@ -168,6 +168,21 @@ func GroupFromService(g *service.Group) *Group {
 // GroupFromServiceAdmin converts a service Group to DTO for admin users.
 // It includes internal fields like model_routing and account_count.
 func GroupFromServiceAdmin(g *service.Group) *AdminGroup {
+	out := groupFromServiceAdminShallow(g)
+	if out == nil {
+		return nil
+	}
+	if len(g.AccountGroups) > 0 {
+		out.AccountGroups = make([]AccountGroup, 0, len(g.AccountGroups))
+		for i := range g.AccountGroups {
+			ag := g.AccountGroups[i]
+			out.AccountGroups = append(out.AccountGroups, *AccountGroupFromService(&ag))
+		}
+	}
+	return out
+}
+
+func groupFromServiceAdminShallow(g *service.Group) *AdminGroup {
 	if g == nil {
 		return nil
 	}
@@ -202,13 +217,6 @@ func GroupFromServiceAdmin(g *service.Group) *AdminGroup {
 		ActiveAccountCount:           g.ActiveAccountCount,
 		RateLimitedAccountCount:      g.RateLimitedAccountCount,
 		SortOrder:                    g.SortOrder,
-	}
-	if len(g.AccountGroups) > 0 {
-		out.AccountGroups = make([]AccountGroup, 0, len(g.AccountGroups))
-		for i := range g.AccountGroups {
-			ag := g.AccountGroups[i]
-			out.AccountGroups = append(out.AccountGroups, *AccountGroupFromService(&ag))
-		}
 	}
 	return out
 }
@@ -477,9 +485,9 @@ func AccountFromService(a *service.Account) *Account {
 		}
 	}
 	if len(a.Groups) > 0 {
-		out.Groups = make([]*Group, 0, len(a.Groups))
+		out.Groups = make([]*AdminGroup, 0, len(a.Groups))
 		for _, g := range a.Groups {
-			out.Groups = append(out.Groups, GroupFromServiceShallow(g))
+			out.Groups = append(out.Groups, GroupFromServiceAdmin(g))
 		}
 	}
 	return out
@@ -544,7 +552,7 @@ func AccountGroupFromService(ag *service.AccountGroup) *AccountGroup {
 		Priority:  ag.Priority,
 		CreatedAt: ag.CreatedAt,
 		Account:   AccountFromServiceShallow(ag.Account),
-		Group:     GroupFromServiceShallow(ag.Group),
+		Group:     groupFromServiceAdminShallow(ag.Group),
 	}
 }
 

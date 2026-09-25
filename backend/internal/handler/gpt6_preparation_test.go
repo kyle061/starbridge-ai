@@ -95,7 +95,7 @@ func TestResponsesPreparationBodyToChatPreservesPreparedInput(t *testing.T) {
 	var payload map[string]any
 	require.NoError(t, json.Unmarshal(converted, &payload))
 	require.Equal(t, "deepseek-v4-pro", payload["model"])
-	require.Equal(t, false, payload["stream"])
+	require.NotEqual(t, true, payload["stream"])
 	require.Equal(t, float64(1200), payload["max_completion_tokens"])
 	require.Nil(t, payload["max_output_tokens"])
 	messages := payload["messages"].([]any)

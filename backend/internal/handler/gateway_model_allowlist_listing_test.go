@@ -28,10 +28,11 @@ func TestGatewayModels_ModelAllowlistWildcardExpandsAgainstSource(t *testing.T) 
 						Platform: service.PlatformOpenAI,
 						Credentials: map[string]any{
 							"model_mapping": map[string]any{
-								"gpt-5.4":       "gpt-5.4",
-								"gpt-5.5-codex": "gpt-5.5-codex",
-								"gpt-5.5-mini":  "gpt-5.5-mini",
-								"other-foo":     "other-foo",
+								"gpt-5.6-sol":  "gpt-5.6-sol",
+								"gpt-5.6-luna": "gpt-5.6-luna",
+								"gpt-5.5":      "gpt-5.5",
+								"gpt-5.4":      "gpt-5.4",
+								"other-foo":    "other-foo",
 							},
 						},
 					},
@@ -49,7 +50,7 @@ func TestGatewayModels_ModelAllowlistWildcardExpandsAgainstSource(t *testing.T) 
 			Platform: service.PlatformOpenAI,
 			ModelAllowlist: service.GroupModelAllowlist{
 				Enabled: true,
-				Models:  []string{"gpt-5.5-*", "gpt-5.4"},
+				Models:  []string{"gpt-5.6-*", "gpt-5.5", "gpt-5.4"},
 			},
 		},
 	})
@@ -60,7 +61,7 @@ func TestGatewayModels_ModelAllowlistWildcardExpandsAgainstSource(t *testing.T) 
 
 	var got gatewayModelsResponseForTest
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
-	require.Equal(t, []string{"gpt-5.5-codex", "gpt-5.5-mini", "gpt-5.4"}, modelIDsForTest(got.Data))
+	require.Equal(t, []string{"gpt-5.6-luna", "gpt-5.6-sol", "gpt-5.5"}, modelIDsForTest(got.Data))
 }
 
 // geminiAllowlistAccountRepoStub 在 gatewayModelsAccountRepoStub 之上补充
@@ -109,7 +110,7 @@ func TestGeminiV1BetaListModels_FiltersFallbackByAllowlist(t *testing.T) {
 			Platform: service.PlatformGemini,
 			ModelAllowlist: service.GroupModelAllowlist{
 				Enabled: true,
-				Models:  []string{"gemini-2.5-pro", "gemini-3-*"},
+				Models:  []string{"gemini-2.5-pro", "gemini-3*"},
 			},
 		},
 	})

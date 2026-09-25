@@ -21,6 +21,7 @@ func TestAllowUserViewErrorRequests_PersistsToDB(t *testing.T) {
 
 	err := svc.UpdateSettings(context.Background(), &SystemSettings{
 		AllowUserViewErrorRequests: true,
+		CustomerBillingMultiplier:  CustomerBillingMultiplierDefault,
 	})
 	require.NoError(t, err)
 

@@ -1,9 +1,14 @@
 import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createPinia } from "pinia";
 import { createI18n } from "vue-i18n";
 import type { SubscriptionPlan } from "@/types/payment";
 import SubscriptionPlanCard from "../SubscriptionPlanCard.vue";
+
+vi.mock("vue-i18n", async () => {
+  const actual = await vi.importActual<typeof import("vue-i18n")>("vue-i18n");
+  return { ...actual, useI18n: () => ({ t: (key: string) => key }) };
+});
 
 const i18n = createI18n({
   legacy: false,

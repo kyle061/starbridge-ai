@@ -128,6 +128,11 @@ vi.mock("@/api", () => ({
   },
 }));
 
+vi.mock("@/api/admin/affiliates", () => {
+  const affiliatesAPI = { listUsers: vi.fn().mockResolvedValue({ items: [], total: 0 }) };
+  return { default: affiliatesAPI, affiliatesAPI };
+});
+
 vi.mock("@/stores", () => ({
   useAppStore: () => ({
     showError,
@@ -556,6 +561,7 @@ function mountView() {
   return mount(SettingsView, {
     global: {
       stubs: {
+        'router-link': true,
         AppLayout: AppLayoutStub,
         Select: SelectStub,
         Toggle: ToggleStub,
@@ -1413,6 +1419,7 @@ describe("admin SettingsView payment visible method controls", () => {
     const wrapper = mount(SettingsView, {
       global: {
         stubs: {
+          'router-link': true,
           AppLayout: AppLayoutStub,
           Select: SelectStub,
           Toggle: ToggleStub,
@@ -1711,6 +1718,7 @@ describe("admin SettingsView payment visible method controls", () => {
     const wrapper = mount(SettingsView, {
       global: {
         stubs: {
+          'router-link': true,
           AppLayout: AppLayoutStub,
           Select: SelectStub,
           Toggle: ToggleStub,

@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import PlazaGroupSection from '../PlazaGroupSection.vue'
-import PlazaModelPricingTable from '../PlazaModelPricingTable.vue'
 import type { ModelPlazaGroup, PlazaModel } from '@/api/modelPlaza'
 
 vi.mock('vue-i18n', async () => {

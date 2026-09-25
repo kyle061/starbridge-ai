@@ -343,8 +343,8 @@ type Account struct {
 	Proxy         *Proxy         `json:"proxy,omitempty"`
 	AccountGroups []AccountGroup `json:"account_groups,omitempty"`
 
-	GroupIDs []int64  `json:"group_ids,omitempty"`
-	Groups   []*Group `json:"groups,omitempty"`
+	GroupIDs []int64       `json:"group_ids,omitempty"`
+	Groups   []*AdminGroup `json:"groups,omitempty"`
 }
 
 // AccountListItem is the compact representation returned by the admin account
@@ -449,8 +449,8 @@ type AccountGroup struct {
 	Priority  int       `json:"priority"`
 	CreatedAt time.Time `json:"created_at"`
 
-	Account *Account `json:"account,omitempty"`
-	Group   *Group   `json:"group,omitempty"`
+	Account *Account    `json:"account,omitempty"`
+	Group   *AdminGroup `json:"group,omitempty"`
 }
 
 type Proxy struct {

@@ -219,6 +219,7 @@ func TestSettingService_AffiliateAdminRechargeSetting(t *testing.T) {
 
 		err := svc.UpdateSettings(context.Background(), &SystemSettings{
 			AdminRechargeRebateEnabled: true,
+			CustomerBillingMultiplier:  CustomerBillingMultiplierDefault,
 		})
 		require.NoError(t, err)
 		require.Equal(t, "true", repo.updates[SettingKeyAffiliateAdminRechargeEnabled])
@@ -291,7 +292,7 @@ func TestSettingService_UpdateSettings_PersistsCompactHomeEnabled(t *testing.T) 
 	repo := &settingUpdateRepoStub{}
 	svc := NewSettingService(repo, &config.Config{})
 
-	err := svc.UpdateSettings(context.Background(), &SystemSettings{CompactHomeEnabled: true})
+	err := svc.UpdateSettings(context.Background(), &SystemSettings{CompactHomeEnabled: true, CustomerBillingMultiplier: CustomerBillingMultiplierDefault})
 
 	require.NoError(t, err)
 	require.Equal(t, "true", repo.updates[SettingKeyCompactHomeEnabled])
@@ -308,6 +309,7 @@ func TestSettingService_UpdateSettings_DefaultSubscriptions_ValidGroup(t *testin
 	svc.SetDefaultSubscriptionGroupReader(groupReader)
 
 	err := svc.UpdateSettings(context.Background(), &SystemSettings{
+		CustomerBillingMultiplier: CustomerBillingMultiplierDefault,
 		DefaultSubscriptions: []DefaultSubscriptionSetting{
 			{GroupID: 11, ValidityDays: 30},
 		},
@@ -409,6 +411,7 @@ func TestSettingService_UpdateSettings_RegistrationEmailSuffixWhitelist_Normaliz
 	svc := NewSettingService(repo, &config.Config{})
 
 	err := svc.UpdateSettings(context.Background(), &SystemSettings{
+		CustomerBillingMultiplier:        CustomerBillingMultiplierDefault,
 		RegistrationEmailSuffixWhitelist: []string{"example.com", "@EXAMPLE.com", " @foo.bar ", "*.EDU.CN"},
 	})
 	require.NoError(t, err)
@@ -440,16 +443,18 @@ func TestSettingService_UpdateSettings_TablePreferences(t *testing.T) {
 	svc := NewSettingService(repo, &config.Config{})
 
 	err := svc.UpdateSettings(context.Background(), &SystemSettings{
-		TableDefaultPageSize: 50,
-		TablePageSizeOptions: []int{20, 50, 100},
+		CustomerBillingMultiplier: CustomerBillingMultiplierDefault,
+		TableDefaultPageSize:      50,
+		TablePageSizeOptions:      []int{20, 50, 100},
 	})
 	require.NoError(t, err)
 	require.Equal(t, "50", repo.updates[SettingKeyTableDefaultPageSize])
 	require.Equal(t, "[20,50,100]", repo.updates[SettingKeyTablePageSizeOptions])
 
 	err = svc.UpdateSettings(context.Background(), &SystemSettings{
-		TableDefaultPageSize: 1000,
-		TablePageSizeOptions: []int{20, 100},
+		CustomerBillingMultiplier: CustomerBillingMultiplierDefault,
+		TableDefaultPageSize:      1000,
+		TablePageSizeOptions:      []int{20, 100},
 	})
 	require.NoError(t, err)
 	require.Equal(t, "1000", repo.updates[SettingKeyTableDefaultPageSize])
@@ -464,6 +469,7 @@ func TestSettingService_UpdateSettings_PaymentVisibleMethodsAndAdvancedScheduler
 	svc := NewSettingService(repo, &config.Config{})
 
 	err := svc.UpdateSettings(context.Background(), &SystemSettings{
+		CustomerBillingMultiplier:                          CustomerBillingMultiplierDefault,
 		PaymentVisibleMethodAlipaySource:                   "alipay",
 		PaymentVisibleMethodWxpaySource:                    "easypay",
 		PaymentVisibleMethodAlipayEnabled:                  true,
@@ -561,6 +567,7 @@ func TestSettingService_UpdateSettings_OpenAIAdvancedSchedulerWeightSums(t *test
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := NewSettingService(&settingUpdateRepoStub{}, &config.Config{})
+			tt.weights.CustomerBillingMultiplier = CustomerBillingMultiplierDefault
 			err := svc.UpdateSettings(context.Background(), &tt.weights)
 			if tt.wantErr {
 				require.Error(t, err)
@@ -617,6 +624,7 @@ func TestSettingService_UpdateSettings_AntigravityUserAgentVersion(t *testing.T)
 
 	err := svc.UpdateSettings(context.Background(), &SystemSettings{
 		AntigravityUserAgentVersion: "1.23.2",
+		CustomerBillingMultiplier:   CustomerBillingMultiplierDefault,
 	})
 	require.NoError(t, err)
 	require.Equal(t, "1.23.2", repo.updates[SettingKeyAntigravityUserAgentVersion])
@@ -634,11 +642,11 @@ func TestSettingService_InitializeDefaultSettingsPersistsConfiguredForwardedClie
 
 func TestSettingService_InitializeDefaultSettingsMigratesOnlyLegacyBranding(t *testing.T) {
 	repo := &forwardedIPMigrationRepoStub{values: map[string]string{
-		SettingKeyRegistrationEnabled: "true",
-		SettingKeySiteName:            "Sub2API",
-		SettingKeySiteSubtitle:        "Subscription to API Conversion Platform",
-		SettingKeySMTPFromName:        "Custom Sender",
-		SettingProductNamePrefix:      "Sub2API",
+		SettingKeyRegistrationEnabled:     "true",
+		SettingKeySiteName:                "Sub2API",
+		SettingKeySiteSubtitle:            "Subscription to API Conversion Platform",
+		SettingKeySMTPFromName:            "Custom Sender",
+		SettingProductNamePrefix:          "Sub2API",
 		SettingKeyLoginAgreementDocuments: `[{"id":"terms","title":"服务条款","content_md":""},{"id":"custom","title":"自定义条款","content_md":"正文"}]`,
 	}}
 	svc := NewSettingService(repo, &config.Config{})
@@ -686,7 +694,7 @@ func TestSettingService_InitializeDefaultSettingsRefreshesCustomerBillingMultipl
 
 	cost := &CostBreakdown{TotalCost: 0.026308}
 	applyRetailCost(cfg, "gpt-5.6-luna", cost)
-	require.InDelta(t, 0.157848, cost.ActualCost, 1e-12)
+	require.InDelta(t, 0.315696, cost.ActualCost, 1e-12)
 }
 
 func TestSettingService_UpdateSettings_APIKeyACLTrustForwardedIPRefreshesConfig(t *testing.T) {
@@ -697,6 +705,7 @@ func TestSettingService_UpdateSettings_APIKeyACLTrustForwardedIPRefreshesConfig(
 	err := svc.UpdateSettings(context.Background(), &SystemSettings{
 		APIKeyACLTrustForwardedIP: true,
 		ForwardedClientIPHeaders:  []string{" x-cdn-ip ", "X-CDN-IP", "true-client-ip"},
+		CustomerBillingMultiplier: CustomerBillingMultiplierDefault,
 	})
 	require.NoError(t, err)
 	require.Equal(t, "true", repo.updates[SettingKeyAPIKeyACLTrustForwardedIP])
@@ -735,6 +744,7 @@ func TestSettingService_UpdateSettings_WriteFailureDoesNotRefreshForwardedIPRunt
 	err := svc.UpdateSettings(context.Background(), &SystemSettings{
 		APIKeyACLTrustForwardedIP: true,
 		ForwardedClientIPHeaders:  []string{"X-New-IP"},
+		CustomerBillingMultiplier: CustomerBillingMultiplierDefault,
 	})
 
 	require.ErrorContains(t, err, "database unavailable")
@@ -993,7 +1003,8 @@ func TestSettingService_PasskeySwitchPersistsAndDefaultsToConfigured(t *testing.
 	updateRepo := &settingUpdateRepoStub{}
 	updateService := NewSettingService(updateRepo, cfg)
 	require.NoError(t, updateService.UpdateSettings(context.Background(), &SystemSettings{
-		PasskeyEnabled: false,
+		PasskeyEnabled:            false,
+		CustomerBillingMultiplier: CustomerBillingMultiplierDefault,
 	}))
 	require.Equal(t, "false", updateRepo.updates[SettingKeyPasskeyEnabled])
 

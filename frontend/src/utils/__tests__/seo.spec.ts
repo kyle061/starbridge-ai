@@ -61,7 +61,7 @@ describe('updateDocumentSeo', () => {
     updateDocumentSeo(route({
       name: 'Keys',
       path: '/keys',
-      meta: { indexable: false, descriptionKey: 'keys.description' },
+      meta: { indexable: false },
     }), 'Starbridge AI')
 
     expect(document.head.querySelector('meta[name="robots"]')?.getAttribute('content'))

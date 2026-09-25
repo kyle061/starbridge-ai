@@ -257,23 +257,23 @@ func TestGatewayModels_UnmappedOpenAIAccountsSupplementMappedModels(t *testing.T
 		{
 			name:     "unmapped parent and Spark shadow retain defaults and aliases",
 			accounts: accounts,
-			want:     append(openai.DefaultModelIDs(), alias),
+			want:     append(openai.SelectableModelIDs(), alias),
 		},
 		{
 			name:     "unmapped API key account also contributes defaults",
 			accounts: append([]service.Account{{ID: 4, Platform: service.PlatformOpenAI, Type: service.AccountTypeAPIKey}}, accounts[1:]...),
-			want:     append(openai.DefaultModelIDs(), alias),
+			want:     append(openai.SelectableModelIDs(), alias),
 		},
 		{
 			name:     "unmapped accounts alone retain default response shape",
 			accounts: accounts[:1],
-			want:     openai.DefaultModelIDs(),
+			want:     openai.SelectableModelIDs(),
 		},
 		{
 			name:     "custom list can select defaults and aliases",
 			accounts: accounts,
 			config:   service.GroupModelAllowlist{Enabled: true, Models: []string{alias, "gpt-5.6-sol", sparkModel, "unknown-model"}},
-			want:     []string{alias, "gpt-5.6-sol", sparkModel},
+			want:     []string{alias, "gpt-5.6-sol"},
 		},
 		{
 			name:     "unavailable custom selection remains empty",
@@ -284,12 +284,12 @@ func TestGatewayModels_UnmappedOpenAIAccountsSupplementMappedModels(t *testing.T
 		{
 			name:     "mapped accounts alone do not gain defaults",
 			accounts: accounts[1:],
-			want:     []string{sparkModel, alias},
+			want:     []string{alias},
 		},
 		{
 			name:     "unmapped accounts from another platform do not add defaults",
 			accounts: append([]service.Account{{ID: 4, Platform: service.PlatformAnthropic}}, accounts[1:]...),
-			want:     []string{sparkModel, alias},
+			want:     []string{alias},
 		},
 	}
 	for _, tt := range tests {
@@ -684,7 +684,7 @@ func TestGatewayModels_CustomModelsListDisabledKeepsOriginalModels(t *testing.T)
 
 	var got gatewayModelsResponseForTest
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
-	require.Equal(t, []string{"gpt-5.4", "gpt-5.5"}, modelIDsForTest(got.Data))
+	require.Equal(t, []string{"gpt-5.5"}, modelIDsForTest(got.Data))
 }
 
 func TestGatewayModels_OpenAIEmptyPoolDoesNotAdvertiseStaticDefaults(t *testing.T) {
@@ -755,7 +755,7 @@ func TestGatewayModels_CustomModelsListFiltersAndOrdersMappedModels(t *testing.T
 
 	var got gatewayModelsResponseForTest
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
-	require.Equal(t, []string{"gpt-5.5", "gpt-5.4"}, modelIDsForTest(got.Data))
+	require.Equal(t, []string{"gpt-5.5"}, modelIDsForTest(got.Data))
 }
 
 func TestGatewayModels_CompositeCustomModelsListFiltersAcrossConcretePlatforms(t *testing.T) {
@@ -1283,7 +1283,7 @@ func TestGatewayModels_CustomModelsListFiltersDefaultFallbackModels(t *testing.T
 
 	var got gatewayModelsResponseForTest
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
-	require.Equal(t, []string{"gpt-5.5", "gpt-5.4"}, modelIDsForTest(got.Data))
+	require.Equal(t, []string{"gpt-5.5"}, modelIDsForTest(got.Data))
 }
 
 func TestGatewayModels_OpenAICustomModelsListKeepsOpenAIResponseShapeForDefaultFallback(t *testing.T) {
@@ -1320,7 +1320,7 @@ func TestGatewayModels_OpenAICustomModelsListKeepsOpenAIResponseShapeForDefaultF
 
 	var got gatewayModelsResponseForTest
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
-	require.Equal(t, []string{"gpt-5.5", "gpt-5.4"}, modelIDsForTest(got.Data))
+	require.Equal(t, []string{"gpt-5.5"}, modelIDsForTest(got.Data))
 	require.Equal(t, "model", got.Data[0].Object)
 	require.NotZero(t, got.Data[0].Created)
 	require.Equal(t, "openai", got.Data[0].OwnedBy)

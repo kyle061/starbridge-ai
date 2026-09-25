@@ -11,6 +11,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
 )
 
@@ -660,11 +661,10 @@ func TestAuthService_ValidateToken_ExpiredReturnsClaimsWithError(t *testing.T) {
 	require.NotNil(t, claims)
 	require.Equal(t, int64(1), claims.UserID)
 
-	// 模拟过期 token（通过创建一个过期很久的 token）
-	service.cfg.JWT.ExpireHour = -1 // 设置为负数使 token 立即过期
-	expiredToken, err := service.GenerateToken(context.Background(), user)
+	// Sign an already expired token; generation clamps non-positive TTLs to one second.
+	claims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(-time.Hour))
+	expiredToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(service.cfg.JWT.Secret))
 	require.NoError(t, err)
-	service.cfg.JWT.ExpireHour = 1 // 恢复
 
 	// 验证过期 token 应返回 claims 和 ErrTokenExpired
 	claims, err = service.ValidateToken(expiredToken)

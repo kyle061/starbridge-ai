@@ -70,23 +70,8 @@ export async function setLocale(locale: string): Promise<void> {
   document.documentElement.setAttribute('lang', locale)
 
   // 同步更新浏览器页签标题，使其跟随语言切换
-  const { updateDocumentSeo } = await import('@/utils/seo')
-  const { default: router } = await import('@/router')
-  const { useAppStore } = await import('@/stores/app')
-  const { useAuthStore } = await import('@/stores/auth')
-  const { useAdminSettingsStore } = await import('@/stores/adminSettings')
-  const route = router.currentRoute.value
-  const appStore = useAppStore()
-  const authStore = useAuthStore()
-  const adminSettingsStore = useAdminSettingsStore()
-  const customMenuItems = [
-    ...(appStore.cachedPublicSettings?.custom_menu_items ?? []),
-    ...(authStore.isAdmin ? adminSettingsStore.customMenuItems : []),
-  ]
-  const { resolveSiteBillingMode } = await import('@/utils/siteBillingMode')
-  updateDocumentSeo(route, appStore.siteName, customMenuItems, appStore.cachedPublicSettings?.site_subtitle, {
-    billingMode: resolveSiteBillingMode(appStore.cachedPublicSettings),
-  })
+  const { syncLocaleDocumentSeo } = await import('./localeSeo')
+  syncLocaleDocumentSeo()
 }
 
 export function getLocale(): LocaleCode {
