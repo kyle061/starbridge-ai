@@ -3,6 +3,8 @@ name: starbridge
 services:
   gateway:
     image: ${STARBRIDGE_IMAGE:-starbridge-ai:local}
+    env_file:
+      - .env
     build:
       context: ../..
       dockerfile: Dockerfile
