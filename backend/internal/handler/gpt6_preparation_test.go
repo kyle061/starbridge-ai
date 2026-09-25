@@ -137,14 +137,30 @@ func TestGPT6PreparationFallsBackAfterCandidateFailure(t *testing.T) {
 	var attempted []string
 	result, err := firstSuccessfulGPT6Preparation(context.Background(), candidates, func(candidate gpt6PreparationCandidate) (*gpt6PreparationResult, error) {
 		attempted = append(attempted, candidate.Model)
-		if candidate.Platform == service.PlatformDeepseek {
-			return nil, errors.New("upstream error: 400")
+		if candidate.Model != "gpt-5.4-nano" {
+			return nil, errors.New("no account available")
 		}
 		return &gpt6PreparationResult{Model: candidate.Model, Document: "requirements"}, nil
 	})
 	require.NoError(t, err)
-	require.Equal(t, []string{"deepseek-v4-pro", "gpt-5.4-mini"}, attempted)
-	require.Equal(t, "gpt-5.4-mini", result.Model)
+	require.Equal(t, []string{"deepseek-v4-pro", "gpt-5.6-luna", "gpt-5.4-nano"}, attempted)
+	require.Equal(t, "gpt-5.4-nano", result.Model)
+}
+
+func TestGPT6PreparationCandidatesIncludeAffordableOpenAIFallbacks(t *testing.T) {
+	candidates := gpt6PreparationCandidates("deepseek-v4-pro", true)
+	models := make([]string, 0, len(candidates))
+	for _, candidate := range candidates {
+		models = append(models, candidate.Model)
+	}
+	require.Equal(t, []string{
+		"deepseek-v4-pro", "gpt-5.6-luna", "gpt-5.4-nano", "gpt-5.4-mini",
+		"gpt-5-mini", "gpt-5.2", "gpt-5.4",
+	}, models)
+	for _, candidate := range candidates[1:] {
+		require.Equal(t, service.PlatformOpenAI, candidate.Platform)
+		require.Equal(t, service.OpenAIEndpointCapabilityResponses, candidate.Capability)
+	}
 }
 
 func TestGPT6PreparationStopsFallbackAfterCancellation(t *testing.T) {

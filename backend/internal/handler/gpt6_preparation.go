@@ -112,8 +112,15 @@ func gpt6PreparationCandidates(prepModel string, responses bool) []gpt6Preparati
 		// keeps fixed-chat accounts eligible while their account protocol still
 		// controls whether the actual upstream request is native Responses.
 		{Model: prepModel, Platform: service.PlatformDeepseek, Capability: service.OpenAIEndpointCapabilityChatCompletions, UseChatCompletions: true},
+		// Composite groups may not have DeepSeek accounts, and model-level
+		// cooldowns can temporarily remove mini models. Try the other supported
+		// low-cost GPT models before falling back to standard-priced models.
+		{Model: "gpt-5.6-luna", Platform: service.PlatformOpenAI, Capability: service.OpenAIEndpointCapabilityResponses},
+		{Model: "gpt-5.4-nano", Platform: service.PlatformOpenAI, Capability: service.OpenAIEndpointCapabilityResponses},
 		{Model: "gpt-5.4-mini", Platform: service.PlatformOpenAI, Capability: service.OpenAIEndpointCapabilityResponses},
 		{Model: "gpt-5-mini", Platform: service.PlatformOpenAI, Capability: service.OpenAIEndpointCapabilityResponses},
+		{Model: "gpt-5.2", Platform: service.PlatformOpenAI, Capability: service.OpenAIEndpointCapabilityResponses},
+		{Model: "gpt-5.4", Platform: service.PlatformOpenAI, Capability: service.OpenAIEndpointCapabilityResponses},
 	}
 	if !responses {
 		for i := 1; i < len(candidates); i++ {
