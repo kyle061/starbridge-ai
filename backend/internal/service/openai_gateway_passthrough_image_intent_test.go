@@ -56,4 +56,28 @@ func TestOpenAIGatewayService_APIKeyPassthrough_ImageIntentPreservesGateAndBilli
 		require.Equal(t, "2K", result.ImageSize)
 		require.Equal(t, "2048x1152", result.ImageInputSize)
 	})
+
+	t.Run("missing image tool model defaults to the image model", func(t *testing.T) {
+		upstream := &httpUpstreamRecorder{resp: &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Body: io.NopCloser(strings.NewReader(
+				`{"output":[{"id":"ig_default_model","type":"image_generation_call","result":"final-image","size":"1024x1024"}],"usage":{"input_tokens":1,"output_tokens":2}}`,
+			)),
+		}}
+		svc := newOpenAIImageGenerationControlTestService(upstream)
+		c, _ := newOpenAIImageGenerationControlTestContext(true, "curl/8.0")
+		account := newOpenAIImageGenerationControlTestAccount()
+		account.Extra = map[string]any{"openai_passthrough": true}
+		request := []byte(`{"model":"gpt-6-luna","input":"draw","tools":[{"type":"image_generation"}]}`)
+
+		result, err := svc.Forward(context.Background(), c, account, request)
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		require.NotNil(t, upstream.lastReq)
+		require.Equal(t, "gpt-6-luna", gjson.GetBytes(upstream.lastBody, "model").String())
+		require.Equal(t, openAIImagesDefaultModel, gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation").model`).String())
+		require.Equal(t, openAIImagesDefaultModel, result.BillingModel)
+	})
 }

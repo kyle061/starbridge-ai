@@ -195,7 +195,7 @@ func TestOpenAIGatewayServiceForward_ExplicitImageToolWorksWithBridgeDisabled(t 
 	svc := newOpenAIImageGenerationControlTestService(upstream)
 	c, _ := newOpenAIImageGenerationControlTestContext(true, "codex_cli_rs/0.98.0")
 	account := newOpenAIImageGenerationControlTestAccount()
-	body := []byte(`{"model":"gpt-5.4","input":"draw","stream":false,"tools":[{"type":"image_generation","format":"jpeg"}]}`)
+	body := []byte(`{"model":"gpt-6-luna","input":"draw","stream":false,"tools":[{"type":"image_generation","format":"jpeg"}]}`)
 
 	result, err := svc.Forward(context.Background(), c, account, body)
 
@@ -203,6 +203,8 @@ func TestOpenAIGatewayServiceForward_ExplicitImageToolWorksWithBridgeDisabled(t 
 	require.NotNil(t, result)
 	require.NotNil(t, upstream.lastReq)
 	require.True(t, gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation")`).Exists())
+	require.Equal(t, openAIImagesDefaultModel, gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation").model`).String())
+	require.Equal(t, "gpt-6-luna", gjson.GetBytes(upstream.lastBody, "model").String())
 	require.Equal(t, "jpeg", gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation").output_format`).String())
 	require.False(t, gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation").format`).Exists())
 	instructions := gjson.GetBytes(upstream.lastBody, "instructions").String()

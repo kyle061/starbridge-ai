@@ -830,11 +830,29 @@ func TestNormalizeOpenAIResponsesImageGenerationTools_RewritesLegacyFields(t *te
 	first, ok := tools[0].(map[string]any)
 	require.True(t, ok)
 	require.Equal(t, "png", first["output_format"])
+	require.Equal(t, openAIImagesDefaultModel, first["model"])
 	require.Equal(t, 60, first["output_compression"])
 	_, hasFormat := first["format"]
 	require.False(t, hasFormat)
 	_, hasCompression := first["compression"]
 	require.False(t, hasCompression)
+}
+
+func TestNormalizeOpenAIResponsesImageGenerationToolsRoutesToImageModel(t *testing.T) {
+	reqBody := map[string]any{
+		"model": "gpt-6-luna",
+		"tools": []any{
+			map[string]any{"type": "image_generation", "model": "gpt-6-luna"},
+		},
+	}
+
+	require.True(t, normalizeOpenAIResponsesImageGenerationTools(reqBody))
+	require.Equal(t, "gpt-6-luna", reqBody["model"], "keep the text/reasoning driver unchanged")
+	tools, ok := reqBody["tools"].([]any)
+	require.True(t, ok)
+	imageTool, ok := tools[0].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, openAIImagesDefaultModel, imageTool["model"])
 }
 
 func TestEnsureOpenAIResponsesImageGenerationTool_NoTools(t *testing.T) {

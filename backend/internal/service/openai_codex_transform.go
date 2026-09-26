@@ -928,7 +928,13 @@ func normalizeOpenAIResponsesImageGenerationTools(reqBody map[string]any) bool {
 			delete(toolMap, "compression")
 			modified = true
 		}
-		imageModel := strings.ToLower(strings.TrimSpace(firstNonEmptyString(toolMap["model"])))
+		imageModel := strings.TrimSpace(firstNonEmptyString(toolMap["model"]))
+		if !isOpenAIImageGenerationModel(imageModel) {
+			toolMap["model"] = openAIImagesDefaultModel
+			imageModel = openAIImagesDefaultModel
+			modified = true
+		}
+		imageModel = strings.ToLower(imageModel)
 		if strings.HasPrefix(imageModel, "gpt-image-2") {
 			if _, ok := toolMap["input_fidelity"]; ok {
 				delete(toolMap, "input_fidelity")

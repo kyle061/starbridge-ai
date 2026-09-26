@@ -1183,7 +1183,7 @@ func TestMergeGroupConfiguredCodexModelsInjectsCurrentGroupAliases(t *testing.T)
 		},
 	}}
 	manifest := &OpenAIModelsResponse{
-		Body: []byte(`{"models":[{"slug":"gpt-5.6","display_name":"GPT-5.6","unknown":{"kept":true}}],"metadata":{"version":1}}`),
+		Body: []byte(`{"models":[{"slug":"gpt-5.6-sol","display_name":"GPT-5.6 Sol","unknown":{"kept":true}}],"metadata":{"version":1}}`),
 	}
 
 	err := svc.MergeGroupConfiguredCodexModels(
@@ -1195,7 +1195,7 @@ func TestMergeGroupConfiguredCodexModelsInjectsCurrentGroupAliases(t *testing.T)
 	require.NoError(t, err)
 	models := decodeCodexManifestModels(t, manifest.Body)
 	require.Len(t, models, 2)
-	require.Equal(t, "gpt-5.6", models[0]["slug"])
+	require.Equal(t, "gpt-5.6-sol", models[0]["slug"])
 	require.Equal(t, map[string]any{"kept": true}, models[0]["unknown"])
 	requireCompleteConfiguredCodexModel(t, models[1], "deepseek-4-pro")
 	require.EqualValues(t, 1_000_000, models[1]["context_window"])
@@ -1295,14 +1295,14 @@ func TestBuildGroupConfiguredCodexModelsManifestExpandsSelectedModelCoveredByWil
 		Platform: PlatformOpenAI,
 		ModelAllowlist: GroupModelAllowlist{
 			Enabled: true,
-			Models:  []string{"gpt-5.6"},
+			Models:  []string{"gpt-5.6-sol"},
 		},
 	}
 
 	manifest, configured, err := svc.BuildGroupConfiguredCodexModelsManifest(context.Background(), group, "")
 	require.NoError(t, err)
 	require.True(t, configured)
-	require.Equal(t, []string{"gpt-5.6"}, codexManifestModelSlugs(t, manifest.Body))
+	require.Equal(t, []string{"gpt-5.6-sol"}, codexManifestModelSlugs(t, manifest.Body))
 	require.NotContains(t, string(manifest.Body), "gpt-*")
 }
 
@@ -1426,7 +1426,7 @@ func TestMergeGroupConfiguredCodexModelsFiltersAutoReviewByDefault(t *testing.T)
 	const groupID int64 = 74
 	svc := &OpenAIGatewayService{accountRepo: codexModelsVisibilityAccountRepo{}}
 	manifest := &OpenAIModelsResponse{
-		Body: []byte(`{"models":[{"slug":"codex-auto-review","visibility":"list"},{"slug":"codex-auto-future","visibility":"list"},{"slug":"gpt-image-2","visibility":"list"},{"slug":"gpt-5.6","visibility":"list"}]}`),
+		Body: []byte(`{"models":[{"slug":"codex-auto-review","visibility":"list"},{"slug":"codex-auto-future","visibility":"list"},{"slug":"gpt-image-2","visibility":"list"},{"slug":"gpt-5.6-sol","visibility":"list"}]}`),
 	}
 
 	require.NoError(t, svc.MergeGroupConfiguredCodexModels(
@@ -1437,7 +1437,7 @@ func TestMergeGroupConfiguredCodexModelsFiltersAutoReviewByDefault(t *testing.T)
 	))
 	models := decodeCodexManifestModels(t, manifest.Body)
 	require.Len(t, models, 1)
-	require.Equal(t, "gpt-5.6", models[0]["slug"])
+	require.Equal(t, "gpt-5.6-sol", models[0]["slug"])
 	require.Equal(t, codexModelsManifestBodyETag(manifest.Body), manifest.ETag)
 }
 
@@ -1461,7 +1461,7 @@ func TestMergeGroupConfiguredCodexModelsFiltersAccountMappedAutoReviewByDefault(
 		},
 	}}
 	manifest := &OpenAIModelsResponse{
-		Body: []byte(`{"models":[{"slug":"codex-auto-review","visibility":"hide","model_messages":{"auto_review":{"enabled":true}}},{"slug":"gpt-5.6","visibility":"list"}]}`),
+		Body: []byte(`{"models":[{"slug":"codex-auto-review","visibility":"hide","model_messages":{"auto_review":{"enabled":true}}},{"slug":"gpt-5.6-sol","visibility":"list"}]}`),
 	}
 
 	require.NoError(t, svc.MergeGroupConfiguredCodexModels(
@@ -1470,7 +1470,7 @@ func TestMergeGroupConfiguredCodexModelsFiltersAccountMappedAutoReviewByDefault(
 		manifest,
 		"",
 	))
-	require.Equal(t, []string{"gpt-5.6"}, codexManifestModelSlugs(t, manifest.Body))
+	require.Equal(t, []string{"gpt-5.6-sol"}, codexManifestModelSlugs(t, manifest.Body))
 }
 
 // An explicit group selection must not re-advertise an internal probe model.
@@ -1480,7 +1480,7 @@ func TestMergeGroupConfiguredCodexModelsHidesExplicitAutoReviewSelection(t *test
 	const groupID int64 = 76
 	svc := &OpenAIGatewayService{accountRepo: codexModelsVisibilityAccountRepo{}}
 	manifest := &OpenAIModelsResponse{
-		Body: []byte(`{"models":[{"slug":"codex-auto-review","visibility":"list"},{"slug":"gpt-5.6","visibility":"list"}]}`),
+		Body: []byte(`{"models":[{"slug":"codex-auto-review","visibility":"list"},{"slug":"gpt-5.6-sol","visibility":"list"}]}`),
 	}
 	group := &Group{
 		ID:       groupID,
