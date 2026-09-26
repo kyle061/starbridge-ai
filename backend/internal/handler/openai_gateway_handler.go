@@ -2660,10 +2660,7 @@ func (h *OpenAIGatewayHandler) ResponsesWebSocket(c *gin.Context) {
 			requestPlatform,
 		)
 		if err != nil {
-			reqLog.Warn("openai.websocket_account_select_failed",
-				zap.Error(openAICompatibleSelectionErrorForLog(err, requestPlatform)),
-				zap.Int("excluded_account_count", len(failedAccountIDs)),
-			)
+			logOpenAIWSAccountSelectionFailure(reqLog, err, requestPlatform, len(failedAccountIDs), lastFailoverErr)
 			if lastFailoverErr != nil {
 				closeOpenAIWSFailoverExhausted(c, wsConn, lastFailoverErr)
 			} else {
@@ -3856,6 +3853,31 @@ func closeOpenAIWSFailoverExhausted(c *gin.Context, conn *coderws.Conn, failover
 
 	service.MarkOpsStreamFailure(c, errorType, errorCode, message, intendedStatus)
 	closeOpenAIClientWS(conn, closeStatus, message)
+}
+
+func logOpenAIWSAccountSelectionFailure(
+	reqLog *zap.Logger,
+	selectionErr error,
+	platform string,
+	excludedAccountCount int,
+	lastFailoverErr *service.UpstreamFailoverError,
+) {
+	selectionError := zap.Error(openAICompatibleSelectionErrorForLog(selectionErr, platform))
+	if lastFailoverErr != nil {
+		reqLog.Info("openai.websocket_failover_exhausted",
+			selectionError,
+			zap.Int("excluded_account_count", excludedAccountCount),
+			zap.Int("upstream_status", lastFailoverErr.StatusCode),
+			zap.String("upstream_stage", string(lastFailoverErr.Stage)),
+			zap.String("upstream_scope", string(lastFailoverErr.Scope)),
+			zap.String("upstream_reason", string(lastFailoverErr.Reason)),
+		)
+		return
+	}
+	reqLog.Warn("openai.websocket_account_select_failed",
+		selectionError,
+		zap.Int("excluded_account_count", excludedAccountCount),
+	)
 }
 
 func writeContentModerationWSError(ctx context.Context, conn *coderws.Conn, decision *service.ContentModerationDecision) {
