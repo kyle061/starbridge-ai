@@ -80,15 +80,20 @@ cd "$deploy_root/deploy/starbridge"
 [[ ! -L .env ]] || fail 'The environment file must not be a symlink.'
 if [[ ! -f .env ]]; then
   python3 init-env.py --admin-email "$admin_email"
+  new_env=1
+else
+  new_env=0
 fi
-python3 - "$app_port" "$image" <<'PY'
+python3 - "$app_port" "$image" "$new_env" <<'PY'
 import os
 from pathlib import Path
 import sys
 import tempfile
 
 path = Path(".env")
-updates = {"APP_PORT": sys.argv[1], "BIND_HOST": "0.0.0.0", "STARBRIDGE_IMAGE": sys.argv[2]}
+updates = {"APP_PORT": sys.argv[1], "STARBRIDGE_IMAGE": sys.argv[2]}
+if sys.argv[3] == "1":
+    updates["BIND_HOST"] = "0.0.0.0"
 lines = []
 for line in path.read_text().splitlines():
     key = line.partition("=")[0]

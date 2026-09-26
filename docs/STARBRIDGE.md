@@ -53,9 +53,11 @@ bash install-restricted-ssh.sh /path/to/actions.pub 19090
 
 可在可信终端使用 `ssh-keyscan -p 22 177.0.143.11` 获取主机公钥，并与服务器控制台显示的 SSH 主机指纹核对后存入 `DEPLOY_KNOWN_HOSTS`。缺少必填 Secret 时，工作流会在运行摘要标明跳过部署。
 
-首次部署在 `/opt/starbridge/deploy/starbridge/.env`（或指定目录的对应路径）生成管理员和数据库密码。通过 SSH 在服务器本地查看其中的 `ADMIN_PASSWORD` 登录；后续部署保留已有密码、JWT/TOTP 密钥和数据卷，只更新绑定端口、绑定地址与镜像版本。健康检查通过才会报告成功。若容器未就绪，使用 `docker compose -p starbridge --env-file /opt/starbridge/deploy/starbridge/.env -f /opt/starbridge/deploy/starbridge/compose.yaml logs --tail=100 gateway` 检查日志。
+首次部署在 `/opt/starbridge/deploy/starbridge/.env`（或指定目录的对应路径）生成管理员和数据库密码。通过 SSH 在服务器本地查看其中的 `ADMIN_PASSWORD` 登录；后续部署保留已有密码、JWT/TOTP 密钥、绑定地址和数据卷，只更新绑定端口与镜像版本。健康检查通过才会报告成功。若容器未就绪，使用 `docker compose -p starbridge --env-file /opt/starbridge/deploy/starbridge/.env -f /opt/starbridge/deploy/starbridge/compose.yaml logs --tail=100 gateway` 检查日志。
 
 建议在服务器防火墙只放行你选择的端口，并使用 HTTPS 反向代理。不要把 `.env`、SSH 私钥或管理员密码提交到仓库。
+
+已经由同一 Compose 网络内的 Caddy 代理 `gateway:8080` 时，应在服务器 `.env` 中把 `BIND_HOST` 设为 `127.0.0.1`，避免公网绕过 Caddy 直连应用端口。确认 Caddy 容器当前 IP 后，只将该地址以 `/32` 加入 `SERVER_TRUSTED_PROXIES`（例如 `172.19.0.5/32`），并在后台「安全与认证」关闭「信任反代传递的客户端 IP」兼容开关。不要信任整个 Docker 网段或宿主机网桥地址；Caddy 重建后若 IP 改变，应先更新该地址，再重启 gateway。生产服务器的部署脚本由安装器复制，修改仓库脚本后需由服务器管理员重新运行安装器；旧脚本会在每次部署时重新开放 `BIND_HOST=0.0.0.0`。
 
 ### 2.2 HTTPS 与证书自动轮换
 

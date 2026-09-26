@@ -128,7 +128,7 @@ elif args[0] == "compose" and "up" in args and os.environ.get("FAIL_UP"):
         directory = self.root / "deploy/starbridge"
         for name in [".env.example", "init-env.py", "compose.yaml"]:
             shutil.copyfile(SOURCE / name, directory / name)
-        (directory / ".env").write_text("# custom settings\nADMIN_PASSWORD=keep-me\nJWT_SECRET=keep-jwt\nUPSTREAM_HOSTS=custom.example\nAPP_PORT=9999\n")
+        (directory / ".env").write_text("# custom settings\nADMIN_PASSWORD=keep-me\nJWT_SECRET=keep-jwt\nUPSTREAM_HOSTS=custom.example\nAPP_PORT=9999\nBIND_HOST=127.0.0.1\nSERVER_TRUSTED_PROXIES=172.19.0.5/32\n")
         (self.root / "starbridge-image.tar.gz").write_bytes(b"mock image")
         return directory
 
@@ -139,7 +139,9 @@ elif args[0] == "compose" and "up" in args and os.environ.get("FAIL_UP"):
         self.assertEqual(result.returncode, 0, result.stderr)
         contents = (directory / ".env").read_text()
         for value in ["# custom settings", "ADMIN_PASSWORD=keep-me", "JWT_SECRET=keep-jwt",
-                      "UPSTREAM_HOSTS=custom.example", f"APP_PORT={chosen_port}", f"STARBRIDGE_IMAGE={IMAGE}"]:
+                      "UPSTREAM_HOSTS=custom.example", "BIND_HOST=127.0.0.1",
+                      "SERVER_TRUSTED_PROXIES=172.19.0.5/32", f"APP_PORT={chosen_port}",
+                      f"STARBRIDGE_IMAGE={IMAGE}"]:
             self.assertIn(value, contents)
         self.assertEqual((directory / ".env").stat().st_mode & 0o777, 0o600)
         starts = [cmd for cmd in self.commands() if "up" in cmd]
@@ -149,6 +151,17 @@ elif args[0] == "compose" and "up" in args and os.environ.get("FAIL_UP"):
         self.assertIn("--wait", starts[0])
         self.assertEqual(starts[0][-3:], ["gateway", "postgres", "redis"])
         self.assertFalse((self.root / "starbridge-image.tar.gz").exists())
+
+    def test_first_apply_keeps_direct_access_for_installations_without_caddy(self):
+        result = self.run_script()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        directory = self.root / "deploy/starbridge"
+        for name in [".env.example", "init-env.py", "compose.yaml"]:
+            shutil.copyfile(SOURCE / name, directory / name)
+        (self.root / "starbridge-image.tar.gz").write_bytes(b"mock image")
+        result = self.run_script(mode="apply")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("BIND_HOST=0.0.0.0", (directory / ".env").read_text())
 
     def test_unhealthy_update_is_reported_as_failure(self):
         self.stage_apply()
