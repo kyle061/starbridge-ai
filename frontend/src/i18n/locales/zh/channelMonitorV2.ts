@@ -96,7 +96,8 @@ export default {
       refreshHint: '影响矩阵时间粒度与刷新节奏',
       refreshAria: '汇总频率',
       platformsTitle: '平台与模型',
-      platformsHint: '留空 = 展示全部真实模型名；填写后仅名单内单独成行，其余归入「其他」',
+      platformsHint: '默认按所选时间范围内的真实请求发现模型；手工填写名单时，其他模型归入「其他」。',
+      useObservedModels: '按实际请求自动识别',
       modelsPlaceholder: '留空=全部真实模型；或填写主流模型名单（其余归其他）',
       badgeAllModels: '全部模型',
       badgeOther: '+ 其他',
@@ -120,7 +121,7 @@ export default {
         warningCache: '缓存率关注 %',
         criticalCache: '缓存率异常 %',
       },
-      namedModelsEmpty: '各平台模型列表为空：将展示全部真实模型名（不归入「其他」）。',
+      namedModelsEmpty: '模型名单为空：根据所选时间范围内的实际请求自动展示模型，无请求的模型不会占位。',
       namedModelsCount: '将展示 {count} 个命名模型维度；名单外模型归入各平台「其他」。',
       userContractTitle: '用户端展示约定',
       userContract: {

@@ -84,11 +84,22 @@
       </div>
 
       <div class="card overflow-hidden !rounded-3xl !border-0 shadow-sm ring-1 ring-gray-900/5 dark:!bg-dark-800 dark:ring-dark-700">
-        <div class="card-header !py-3">
-          <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ t('channelMonitorV2.settings.platformsTitle') }}</h3>
-          <p class="mt-0.5 text-xs text-gray-500 dark:text-dark-400">
-            {{ t('channelMonitorV2.settings.platformsHint') }}
-          </p>
+        <div class="card-header flex flex-wrap items-center justify-between gap-3 !py-3">
+          <div>
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ t('channelMonitorV2.settings.platformsTitle') }}</h3>
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-dark-400">
+              {{ t('channelMonitorV2.settings.platformsHint') }}
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm inline-flex items-center gap-1.5"
+            :disabled="namedModelCount === 0"
+            @click="useObservedModels"
+          >
+            <Icon name="refresh" size="sm" />
+            {{ t('channelMonitorV2.settings.useObservedModels') }}
+          </button>
         </div>
         <div class="divide-y divide-gray-100 dark:divide-dark-700">
           <div
@@ -352,6 +363,11 @@ function setModels(platform: MonitorConfig['platforms'][number], event: Event) {
         .filter(Boolean)
     ),
   ].sort()
+}
+
+function useObservedModels() {
+  if (!draft.value) return
+  for (const platform of draft.value.platforms) platform.models = []
 }
 
 function toggleGroup(id: number) {

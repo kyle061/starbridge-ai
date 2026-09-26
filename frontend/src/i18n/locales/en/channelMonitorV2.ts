@@ -98,7 +98,8 @@ export default {
       refreshAria: 'Aggregation interval',
       platformsTitle: 'Platforms and models',
       platformsHint:
-        'Leave empty = show all real model names; when filled, only listed models get their own rows and the rest roll into “Other”',
+        'By default, discover models from real requests in the selected time range. A manual list groups other models as “Other”.',
+      useObservedModels: 'Discover from requests',
       modelsPlaceholder: 'Empty = all real models; or list popular models (rest → Other)',
       badgeAllModels: 'All models',
       badgeOther: '+ Other',
@@ -123,7 +124,7 @@ export default {
         warningCache: 'Cache rate watch %',
         criticalCache: 'Cache rate critical %',
       },
-      namedModelsEmpty: 'Platform model lists are empty: every real model name will be shown (not folded into “Other”).',
+      namedModelsEmpty: 'No pinned models: show models found in real requests within the selected time range; models without traffic do not occupy rows.',
       namedModelsCount: 'Showing {count} named model dimensions; unlisted models fold into per-platform “Other”.',
       userContractTitle: 'User-facing display contract',
       userContract: {
