@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -321,6 +322,7 @@ func TestChannelMonitorV2ErrorAggregationCountsFinalUserErrorsOnly(t *testing.T)
 	// request_id dedup must be time-bounded (no full-history scan).
 	require.Contains(t, query, "interval '90 minutes'")
 	require.Contains(t, query, "current_error.created_at >= $1 - interval '90 minutes'")
+	require.Contains(t, query, fmt.Sprintf("model, category, %d, count(*)", service.ChannelMonitorV2TaxonomyVersion), "error aggregates must use the version read by details and ignored-error queries")
 }
 
 func TestChannelMonitorV2ErrorAggregationResolvesCompositePlatform(t *testing.T) {

@@ -11,7 +11,7 @@ import (
 
 const (
 	ChannelMonitorV2OtherModel      = "__other__"
-	ChannelMonitorV2TaxonomyVersion = 1
+	ChannelMonitorV2TaxonomyVersion = 2
 )
 
 var (
