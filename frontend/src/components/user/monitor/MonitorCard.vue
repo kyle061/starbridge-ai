@@ -38,8 +38,9 @@
       <span
         class="px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0"
         :class="statusBadgeClass(item.primary_status)"
+        :title="statusHint(item.primary_status, item.check_mode)"
       >
-        {{ statusLabel(item.primary_status) }}
+        {{ statusLabel(item.primary_status, item.check_mode) }}
       </span>
     </div>
 
@@ -118,6 +119,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const {
   statusLabel,
+  statusHint,
   statusBadgeClass,
   providerLabel,
   providerBadgeClass,

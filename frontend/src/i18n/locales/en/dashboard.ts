@@ -555,10 +555,14 @@ export default {
   monitorCommon: {
     status: {
       operational: 'Operational',
-      degraded: 'Degraded',
+      degraded: 'Needs attention',
+      slowResponse: 'Slow response',
       failed: 'Failed',
       error: 'Error',
       unknown: '-'
+    },
+    statusHint: {
+      slowResponse: 'The probe succeeded but exceeded the latency threshold. Live requests did not switch models.'
     },
     providers: {
       openai: 'OpenAI',
@@ -637,7 +641,7 @@ export default {
     },
     overall: {
       operational: 'OPERATIONAL',
-      degraded: 'DEGRADED',
+      degraded: 'NEEDS ATTENTION',
       unavailable: 'UNAVAILABLE'
     },
     columns: {

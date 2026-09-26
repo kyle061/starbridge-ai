@@ -9,7 +9,7 @@
           class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
           :class="statusBadgeClass(row.primary_status)"
         >
-          {{ statusLabel(row.primary_status) }}
+          {{ statusLabel(row.primary_status, row.check_mode) }}
         </span>
       </template>
       <div class="space-y-2">
@@ -19,8 +19,11 @@
             class="ml-1 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium"
             :class="statusBadgeClass(row.primary_status)"
           >
-            {{ statusLabel(row.primary_status) }}
+            {{ statusLabel(row.primary_status, row.check_mode) }}
           </span>
+        </div>
+        <div v-if="statusHint(row.primary_status, row.check_mode)" class="text-[11px] text-gray-300">
+          {{ statusHint(row.primary_status, row.check_mode) }}
         </div>
         <div v-if="(row.extra_models?.length ?? 0) === 0" class="text-[11px] text-gray-300">
           {{ t('monitorCommon.extraModelsEmpty') }}
@@ -45,7 +48,7 @@
                     class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px]"
                     :class="statusBadgeClass(m.status)"
                   >
-                    {{ statusLabel(m.status) }}
+                    {{ statusLabel(m.status, row.check_mode) }}
                   </span>
                 </td>
                 <td class="py-0.5 text-gray-100">{{ formatLatency(m.latency_ms) }}</td>
@@ -73,5 +76,5 @@ defineProps<{
 }>()
 
 const { t } = useI18n()
-const { statusLabel, statusBadgeClass, formatLatency, formatMonitorModel } = useChannelMonitorFormat()
+const { statusLabel, statusHint, statusBadgeClass, formatLatency, formatMonitorModel } = useChannelMonitorFormat()
 </script>

@@ -55,6 +55,7 @@ type channelMonitorUserListItem struct {
 	ID                   int64                                `json:"id"`
 	Name                 string                               `json:"name"`
 	Provider             string                               `json:"provider"`
+	CheckMode            string                               `json:"check_mode"`
 	GroupName            string                               `json:"group_name"`
 	PrimaryModel         string                               `json:"primary_model"`
 	PrimaryStatus        string                               `json:"primary_status"`
@@ -81,6 +82,7 @@ type channelMonitorUserDetailResponse struct {
 	ID        int64                         `json:"id"`
 	Name      string                        `json:"name"`
 	Provider  string                        `json:"provider"`
+	CheckMode string                        `json:"check_mode"`
 	GroupName string                        `json:"group_name"`
 	Models    []channelMonitorUserModelStat `json:"models"`
 }
@@ -117,6 +119,7 @@ func userMonitorViewToItem(v *service.UserMonitorView, includeQuota bool) channe
 		ID:                   v.ID,
 		Name:                 v.Name,
 		Provider:             v.Provider,
+		CheckMode:            v.CheckMode,
 		GroupName:            v.GroupName,
 		PrimaryModel:         v.PrimaryModel,
 		PrimaryStatus:        v.PrimaryStatus,
@@ -149,6 +152,7 @@ func userMonitorDetailToResponse(d *service.UserMonitorDetail) *channelMonitorUs
 		ID:        d.ID,
 		Name:      d.Name,
 		Provider:  d.Provider,
+		CheckMode: d.CheckMode,
 		GroupName: d.GroupName,
 		Models:    models,
 	}

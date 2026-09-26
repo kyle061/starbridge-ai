@@ -48,9 +48,19 @@ export interface AvailabilityRow {
 export function useChannelMonitorFormat() {
   const { t } = useI18n()
 
-  function statusLabel(s: MonitorStatus | ''): string {
+  function statusLabel(s: MonitorStatus | '', mode?: CheckMode): string {
     if (!s) return t('monitorCommon.status.unknown')
+    if (s === STATUS_DEGRADED && mode && mode !== CHECK_MODE_QUOTA) {
+      return t('monitorCommon.status.slowResponse')
+    }
     return t(`monitorCommon.status.${s}`)
+  }
+
+  function statusHint(s: MonitorStatus | '', mode?: CheckMode): string | undefined {
+    if (s === STATUS_DEGRADED && mode && mode !== CHECK_MODE_QUOTA) {
+      return t('monitorCommon.statusHint.slowResponse')
+    }
+    return undefined
   }
 
   function statusBadgeClass(s: MonitorStatus | ''): string {
@@ -226,6 +236,7 @@ export function useChannelMonitorFormat() {
 
   return {
     statusLabel,
+    statusHint,
     statusBadgeClass,
     providerLabel,
     checkModeLabel,

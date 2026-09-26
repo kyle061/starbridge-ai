@@ -4,7 +4,7 @@
  */
 
 import { apiClient } from './client'
-import type { MonitorQuotaSnapshot, Provider, MonitorStatus } from './admin/channelMonitor'
+import type { CheckMode, MonitorQuotaSnapshot, Provider, MonitorStatus } from './admin/channelMonitor'
 
 export type { Provider, MonitorStatus } from './admin/channelMonitor'
 
@@ -25,6 +25,7 @@ export interface UserMonitorView {
   id: number
   name: string
   provider: Provider
+  check_mode: CheckMode
   group_name: string
   primary_model: string
   primary_status: MonitorStatus
@@ -58,6 +59,7 @@ export interface UserMonitorDetail {
   id: number
   name: string
   provider: Provider
+  check_mode: CheckMode
   group_name: string
   models: UserMonitorModelDetail[]
 }

@@ -152,6 +152,7 @@ func (s *ChannelMonitorService) GetUserDetail(ctx context.Context, id int64) (*U
 		ID:        m.ID,
 		Name:      m.Name,
 		Provider:  m.Provider,
+		CheckMode: defaultCheckMode(m.CheckMode),
 		GroupName: m.GroupName,
 		Models:    models,
 	}, nil
@@ -234,6 +235,7 @@ func buildUserViewFromSummary(
 		ID:               m.ID,
 		Name:             m.Name,
 		Provider:         m.Provider,
+		CheckMode:        defaultCheckMode(m.CheckMode),
 		GroupName:        m.GroupName,
 		PrimaryModel:     m.PrimaryModel,
 		PrimaryStatus:    summary.PrimaryStatus,

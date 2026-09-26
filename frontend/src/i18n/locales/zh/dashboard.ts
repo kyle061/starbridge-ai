@@ -560,10 +560,14 @@ export default {
   monitorCommon: {
     status: {
       operational: '正常',
-      degraded: '降级',
+      degraded: '需关注',
+      slowResponse: '响应缓慢',
       failed: '失败',
       error: '错误',
       unknown: '-'
+    },
+    statusHint: {
+      slowResponse: '探活成功，但响应时间超过监控阈值；不代表正式请求切换了模型。'
     },
     providers: {
       openai: 'OpenAI',
@@ -642,7 +646,7 @@ export default {
     },
     overall: {
       operational: 'OPERATIONAL',
-      degraded: 'DEGRADED',
+      degraded: '需关注',
       unavailable: 'UNAVAILABLE'
     },
     columns: {
