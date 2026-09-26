@@ -202,9 +202,9 @@
       >
         <MetricCell
           :label="t('channelMonitorV2.metrics.successRate')"
-          :value="formatPercent(1 - snapshot.metrics.error_rate)"
+          :value="formatObservedSuccessRate(snapshot.metrics)"
           :detail="t('channelMonitorV2.metrics.errorRateValue', { value: formatPercent(snapshot.metrics.error_rate) })"
-          :state="snapshot.health.error_rate"
+          :state="monitorSuccessState(snapshot.metrics, snapshot.health)"
         />
         <MetricCell
           :label="t('channelMonitorV2.metrics.ttftP50')"
@@ -308,7 +308,7 @@
                 >
                   <td>
                     <div class="flex items-center gap-2">
-                      <span :class="statusDot(row.health.error_rate)" aria-hidden="true"></span>
+                      <span :class="statusDot(monitorSuccessState(row.metrics, row.health))" aria-hidden="true"></span>
                       <div>
                         <span class="block text-xs text-gray-500 dark:text-dark-400">{{ row.platform }}</span>
                         <strong class="font-semibold text-gray-900 dark:text-white">
@@ -318,7 +318,7 @@
                     </div>
                   </td>
                   <td>
-                    <span class="block" :class="successRateTextClass(row.health.error_rate)">{{ formatPercent(1 - row.metrics.error_rate) }}</span>
+                    <span class="block" :class="successRateTextClass(monitorSuccessState(row.metrics, row.health))">{{ formatObservedSuccessRate(row.metrics) }}</span>
                     <small class="text-xs text-gray-400">{{ t('channelMonitorV2.metrics.errorRateValue', { value: formatPercent(row.metrics.error_rate) }) }}</small>
                   </td>
                   <td>
@@ -419,7 +419,7 @@
                     </strong>
                   </td>
                   <td>
-                    <span class="block">{{ formatPercent(1 - row.metrics.error_rate) }}</span>
+                    <span class="block">{{ formatObservedSuccessRate(row.metrics) }}</span>
                     <small class="text-xs text-gray-400">{{ t('channelMonitorV2.metrics.errorRateValue', { value: formatPercent(row.metrics.error_rate) }) }}</small>
                   </td>
                   <td>
@@ -492,6 +492,8 @@ import {
   formatLatencyPrivacy,
   formatMonitorMs,
   formatMonitorPercent,
+  formatObservedSuccessRate,
+  monitorSuccessState,
   formatMonitorThroughput,
   formatMonitorTokensPerSecond,
   tokensPerSecondFromTpm,

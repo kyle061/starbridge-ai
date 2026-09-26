@@ -753,11 +753,11 @@ func (r *channelMonitorV2Repository) loadErrorDetails(ctx context.Context, filte
 	conditions := []string{
 		"current_error.created_at >= $1",
 		"current_error.created_at < $2",
-		"NOT current_error.is_count_tokens",
-		"(COALESCE(current_error.status_code, 0) >= 400 OR current_error.error_type = 'cyber_policy')",
+		channelMonitorV2InferenceErrorPredicate,
 		`(NULLIF(current_error.request_id, '') IS NULL OR NOT EXISTS (
 				SELECT 1 FROM ops_error_logs newer
 				WHERE newer.request_id = current_error.request_id
+				  AND newer.created_at >= $1 - INTERVAL '90 minutes' AND newer.created_at < $2
 				  AND NOT newer.is_count_tokens
 				  AND (COALESCE(newer.status_code, 0) >= 400 OR newer.error_type = 'cyber_policy')
 				  AND (newer.created_at, newer.id) > (current_error.created_at, current_error.id)
@@ -765,13 +765,15 @@ func (r *channelMonitorV2Repository) loadErrorDetails(ctx context.Context, filte
 	}
 	args := []any{filter.Start, filter.End}
 	platforms := channelMonitorV2EnabledPlatforms(cfg)
-	if len(filter.Platforms) > 0 {
+	if filter.RestrictGroups {
+		platforms = filter.Platforms
+	} else if len(filter.Platforms) > 0 {
 		platforms = intersectStrings(platforms, filter.Platforms)
 	}
 	if len(platforms) > 0 {
 		args = append(args, pq.Array(platforms))
-		conditions = append(conditions, fmt.Sprintf("lower(COALESCE(NULLIF(TRIM(current_error.platform), ''), 'unknown')) = ANY($%d)", len(args)))
-	} else {
+		conditions = append(conditions, fmt.Sprintf("%s = ANY($%d)", channelMonitorV2ErrorPlatformSQL, len(args)))
+	} else if !filter.RestrictGroups {
 		conditions = append(conditions, "FALSE")
 	}
 	groups, groupScopeEmpty := channelMonitorV2ScopedGroupIDs(filter, cfg)
@@ -782,7 +784,7 @@ func (r *channelMonitorV2Repository) loadErrorDetails(ctx context.Context, filte
 		conditions = append(conditions, fmt.Sprintf("COALESCE(current_error.group_id, 0) = ANY($%d)", len(args)))
 	}
 	query := `SELECT
-			lower(COALESCE(NULLIF(TRIM(current_error.platform), ''), 'unknown')) AS platform,
+			` + channelMonitorV2ErrorPlatformSQL + ` AS platform,
 			COALESCE(current_error.group_id, 0) AS group_id,
 			COALESCE(NULLIF(TRIM(current_error.requested_model), ''), NULLIF(TRIM(current_error.model), ''), 'unknown') AS model,
 			COALESCE(current_error.error_type, '') AS error_type,
@@ -793,6 +795,8 @@ func (r *channelMonitorV2Repository) loadErrorDetails(ctx context.Context, filte
 			LEFT(COALESCE(NULLIF(current_error.upstream_error_message, ''), NULLIF(current_error.error_message, ''), NULLIF(current_error.upstream_error_detail, ''), NULLIF(current_error.error_body, ''), current_error.error_type, ''), 600) AS message,
 			COUNT(*) AS count
 		FROM ops_error_logs current_error
+		LEFT JOIN groups g ON g.id = current_error.group_id
+		LEFT JOIN accounts a ON a.id = current_error.account_id
 		WHERE ` + strings.Join(conditions, " AND ") + `
 		GROUP BY 1,2,3,4,5,6,7,8,9
 		ORDER BY count DESC
@@ -1359,6 +1363,7 @@ func (a *metricAccumulator) metric(minutes float64, admin bool) service.ChannelM
 	}
 	m := service.ChannelMonitorV2Metric{SuccessRequests: a.success, ErrorRequests: a.errors, RequestCount: requests, InputTokens: a.input, OutputTokens: a.output, CacheCreationTokens: a.cacheCreation, CacheReadTokens: a.cacheRead, TokenCount: tokens, RPM: float64(requests) / minutes, TPM: float64(tokens) / minutes, CacheRateNumerator: a.cacheRead, CacheRateDenominator: denom, TTFT: latencyMetric(a.ttftSum, a.ttftCount, a.hist["ttft"]), Duration: latencyMetric(a.durationSum, a.durationCount, a.hist["duration"])}
 	if requests > 0 {
+		m.HasRequests = true
 		m.ErrorRate = float64(a.errors) / float64(requests)
 		m.SuccessRate = float64(a.success) / float64(requests)
 	}

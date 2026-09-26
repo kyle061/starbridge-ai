@@ -11,6 +11,27 @@ import (
 const channelMonitorV2PlatformSQL = `lower(` + usageLogEffectivePlatformExpr + `)`
 const channelMonitorV2ModelSQL = `COALESCE(NULLIF(TRIM(ul.requested_model), ''), NULLIF(TRIM(ul.model), ''), 'unknown')`
 
+// Failures before account selection still have an intended provider. Prefer
+// recorded routing/account data; infer only recognizable model namespaces.
+const channelMonitorV2ErrorPlatformSQL = `COALESCE(
+  CASE WHEN lower(TRIM(g.platform)) = 'composite' THEN NULLIF(NULLIF(lower(TRIM(a.platform)), ''), 'unknown') END,
+  NULLIF(NULLIF(NULLIF(lower(TRIM(current_error.platform)), ''), 'composite'), 'unknown'),
+  NULLIF(NULLIF(NULLIF(lower(TRIM(g.platform)), ''), 'composite'), 'unknown'),
+  NULLIF(NULLIF(lower(TRIM(a.platform)), ''), 'unknown'),
+  CASE
+    WHEN lower(COALESCE(NULLIF(TRIM(current_error.requested_model), ''), current_error.model, '')) ~ '(^|/)(gpt-|chatgpt-|codex|o[0-9]($|-))' THEN 'openai'
+    WHEN lower(COALESCE(NULLIF(TRIM(current_error.requested_model), ''), current_error.model, '')) ~ '(^|/)deepseek-' THEN 'deepseek'
+    WHEN lower(COALESCE(NULLIF(TRIM(current_error.requested_model), ''), current_error.model, '')) ~ '(^|/)claude-' THEN 'anthropic'
+    WHEN lower(COALESCE(NULLIF(TRIM(current_error.requested_model), ''), current_error.model, '')) ~ '(^|/)gemini-' THEN 'gemini'
+    WHEN lower(COALESCE(NULLIF(TRIM(current_error.requested_model), ''), current_error.model, '')) ~ '(^|/)grok-' THEN 'grok'
+  END, 'unknown')`
+
+// Model discovery requests never generate usage rows and cannot be mixed into
+// the denominator of inference availability. Retain them in raw ops logs.
+const channelMonitorV2InferenceErrorPredicate = `NOT current_error.is_count_tokens
+  AND (COALESCE(current_error.status_code, 0) >= 400 OR current_error.error_type = 'cyber_policy')
+  AND COALESCE(NULLIF(current_error.request_path, ''), current_error.inbound_endpoint, '') !~ '(^|/)(v1|v1beta)/models(/[^:?]*)?([?].*)?$'`
+
 // Tiered retention balances UI windows against storage:
 //
 //	1m facts  → short (late writes + rebuild rollups)
@@ -249,15 +270,7 @@ WITH dedup AS (
   )
   SELECT DISTINCT ON (COALESCE(NULLIF(current_error.request_id, ''), 'error:' || current_error.id::text))
     date_trunc('minute', current_error.created_at) AS bucket_start,
-    -- Composite groups are a routing layer: resolve the concrete account
-    -- platform (mirrors usageLogEffectivePlatformExpr on the usage side) so
-    -- error facts share the usage facts' platform key. Without this, composite
-    -- group errors aggregate under platform 'composite', which is never an
-    -- enabled config platform, and are filtered out of every monitor v2 query.
-    lower(CASE
-      WHEN g.platform = 'composite' THEN COALESCE(NULLIF(TRIM(a.platform), ''), NULLIF(NULLIF(lower(TRIM(current_error.platform)), ''), 'composite'), 'unknown')
-      ELSE COALESCE(NULLIF(TRIM(current_error.platform), ''), 'unknown')
-    END) AS platform,
+    ` + channelMonitorV2ErrorPlatformSQL + ` AS platform,
     COALESCE(current_error.group_id, 0) AS group_id,
     COALESCE(NULLIF(TRIM(current_error.requested_model), ''), NULLIF(TRIM(current_error.model), ''), 'unknown') AS model,
     current_error.user_id, current_error.error_type, current_error.error_owner, COALESCE(current_error.status_code, 0) AS status_code,
@@ -277,8 +290,7 @@ WITH dedup AS (
         AND current_error.created_at < $2
       )
     )
-    AND NOT current_error.is_count_tokens
-    AND (COALESCE(current_error.status_code, 0) >= 400 OR current_error.error_type = 'cyber_policy')
+    AND ` + channelMonitorV2InferenceErrorPredicate + `
   ORDER BY COALESCE(NULLIF(current_error.request_id, ''), 'error:' || current_error.id::text), current_error.created_at DESC, current_error.id DESC
 ), classified AS (
   SELECT *, CASE
@@ -289,7 +301,7 @@ WITH dedup AS (
     WHEN text LIKE ANY(ARRAY['%failed to deserialize%','%missing required parameter%','%invalid request%','%invalid_request%','%tool_choice%']) THEN 'invalid_request'
     WHEN text LIKE ANY(ARRAY['%does not support the requested model%','%not supported by any configured account%','%model not supported%','%unsupported model%']) THEN 'model_unsupported'
     WHEN text LIKE ANY(ARRAY['%group not allowed%','%group_not_allowed%','%group access%']) THEN 'group_access'
-    WHEN text LIKE ANY(ARRAY['%run out of credits%','%insufficient balance%','%insufficient quota%','%subscription%','%quota exceeded%','%billing hard limit%']) THEN 'quota_or_balance'
+    WHEN text LIKE ANY(ARRAY['%run out of credits%','%insufficient balance%','%insufficient_balance%','%insufficient quota%','%insufficient_quota%','%subscription%','%quota exceeded%','%billing hard limit%','%余额已用完%','%余额不足%','%额度已用完%']) THEN 'quota_or_balance'
     WHEN text LIKE ANY(ARRAY['%no available accounts%','%no healthy account%','%no healthy upstream account%','%failover budget exhausted%','%account pool%']) THEN 'account_pool_unavailable'
     WHEN status_code = 429 OR upstream_status_code = 429 OR text LIKE ANY(ARRAY['%rate limit%','%rate_limit%','%high demand%','%overloaded%','%concurrency limit%','%capacity%']) THEN 'rate_or_capacity'
     WHEN status_code IN (408,504) OR text LIKE ANY(ARRAY['%timeout%','%deadline exceeded%','%error code: 524%','%gateway time-out%','%gateway timeout%']) THEN 'timeout'
@@ -316,7 +328,7 @@ WITH dedup AS (
   ON CONFLICT (bucket_start, platform, group_id, model, user_id) DO UPDATE SET error_requests = EXCLUDED.error_requests, computed_at = NOW()
 )
 INSERT INTO channel_monitor_v2_error_metrics_1m (bucket_start, platform, group_id, model, error_category, taxonomy_version, error_requests)
-SELECT bucket_start, platform, group_id, model, category, 1, COUNT(*) FROM classified GROUP BY 1,2,3,4,5
+SELECT bucket_start, platform, group_id, model, category, 2, COUNT(*) FROM classified GROUP BY 1,2,3,4,5
 ON CONFLICT (bucket_start, platform, group_id, model, error_category, taxonomy_version)
 DO UPDATE SET error_requests = EXCLUDED.error_requests`
 
@@ -353,13 +365,8 @@ var channelMonitorV2FixedRollupSeconds = []int{300, 3600, 43200, 86400}
 
 func (r *channelMonitorV2Repository) recomputeFixedRollups(ctx context.Context, tx *sql.Tx, start, end time.Time) error {
 	for _, seconds := range channelMonitorV2FixedRollupSeconds {
-		// Coarse buckets are immutable between boundaries during the normal
-		// trailing refresh. Historical backfills and boundary-crossing windows
-		// still rebuild them; this avoids repeatedly regrouping the full current
-		// day/user table every few minutes.
-		if seconds >= 43200 && sameFixedRollupBucket(start, end, seconds) {
-			continue
-		}
+		// Current 12h/day buckets also contain live requests. Refresh all tiers
+		// together so 7d/30d views do not freeze until the next bucket boundary.
 		interval := fmt.Sprintf("%d seconds", seconds)
 		for _, table := range []string{
 			"channel_monitor_v2_latency_histograms_rollup",
@@ -385,14 +392,6 @@ func (r *channelMonitorV2Repository) recomputeFixedRollups(ctx context.Context, 
 		}
 	}
 	return nil
-}
-
-func sameFixedRollupBucket(start, end time.Time, seconds int) bool {
-	if !end.After(start) {
-		return true
-	}
-	interval := time.Duration(seconds) * time.Second
-	return start.Truncate(interval).Equal(end.Add(-time.Nanosecond).Truncate(interval))
 }
 
 // PostgreSQL interprets a TIMESTAMPTZ literal without an explicit offset in

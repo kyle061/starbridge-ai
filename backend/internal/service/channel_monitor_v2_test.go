@@ -301,6 +301,23 @@ func TestChannelMonitorV2ScopedConfigDiscoversRealModelsWithoutChangingGlobalCon
 	require.Equal(t, cfg.Platforms[0].Models, channelMonitorV2ConfigForScope(cfg, ChannelMonitorV2Filter{}).Platforms[0].Models)
 }
 
+func TestChannelMonitorV2RecognizesLocalizedBalanceErrors(t *testing.T) {
+	for _, message := range []string{"账户余额已用完，请充值后继续使用原 Key", "余额不足", "API key 额度已用完", "insufficient_balance", "insufficient_quota"} {
+		require.Equal(t, "quota_or_balance", ClassifyChannelMonitorV2Error(ChannelMonitorV2ErrorInput{StatusCode: 403, Message: message}))
+	}
+}
+
+func TestChannelMonitorV2RedactionPreservesEmptyVersusFailedTraffic(t *testing.T) {
+	failed := ChannelMonitorV2Metric{RequestCount: 10, ErrorRequests: 10, SuccessRate: 0, ErrorRate: 0}
+	redactChannelMonitorV2Metric(&failed, true)
+	require.True(t, failed.HasRequests)
+	require.Zero(t, failed.RequestCount)
+	require.Zero(t, failed.SuccessRate)
+	empty := ChannelMonitorV2Metric{}
+	redactChannelMonitorV2Metric(&empty, true)
+	require.False(t, empty.HasRequests)
+}
+
 func TestChannelMonitorV2DefaultHealthThresholdsAreTolerant(t *testing.T) {
 	p50 := int64(2500)
 	health := ChannelMonitorV2HealthFor(ChannelMonitorV2Metric{

@@ -328,12 +328,40 @@ func TestChannelMonitorV2ErrorAggregationResolvesCompositePlatform(t *testing.T)
 	// Composite groups are a routing layer: error facts must resolve the concrete
 	// account platform (joining groups/accounts) so they aggregate under the same
 	// platform key as usage facts instead of the never-enabled 'composite' platform.
-	require.Contains(t, query, "g.platform = 'composite'")
+	require.Contains(t, query, "lower(trim(g.platform)) = 'composite'")
 	require.Contains(t, query, "left join groups g on g.id = current_error.group_id")
 	require.Contains(t, query, "left join accounts a on a.id = current_error.account_id")
 	require.Contains(t, query, "a.platform")
-	require.Contains(t, query, "nullif(trim(a.platform), '')")
+	require.Contains(t, query, "nullif(lower(trim(a.platform)), '')")
 	require.NotContains(t, query, "nullif(trim(a.platform))")
+	require.Contains(t, query, "current_error.requested_model")
+	require.Contains(t, query, "then 'openai'")
+	require.Contains(t, query, "then 'deepseek'")
+}
+
+func TestChannelMonitorV2RefreshesLiveCoarseBuckets(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+	mock.ExpectBegin()
+	tx, err := db.Begin()
+	require.NoError(t, err)
+	// A refresh contained in a single hour must still update 12h and daily views.
+	start := time.Date(2026, 9, 26, 15, 0, 0, 0, time.UTC)
+	end := start.Add(10 * time.Minute)
+	for _, seconds := range channelMonitorV2FixedRollupSeconds {
+		for i := 0; i < 4; i++ {
+			mock.ExpectExec("DELETE FROM channel_monitor_v2_").WithArgs(sqlmock.AnyArg(), seconds, start, end).WillReturnResult(sqlmock.NewResult(0, 0))
+		}
+		for i := 0; i < 4; i++ {
+			mock.ExpectExec("INSERT INTO channel_monitor_v2_").WithArgs(sqlmock.AnyArg(), seconds, start, end).WillReturnResult(sqlmock.NewResult(0, 1))
+		}
+	}
+	mock.ExpectRollback()
+	repo := &channelMonitorV2Repository{db: db}
+	require.NoError(t, repo.recomputeFixedRollups(context.Background(), tx, start, end))
+	require.NoError(t, tx.Rollback())
+	require.NoError(t, mock.ExpectationsWereMet())
 }
 
 func TestChannelMonitorV2UsageSuccessExcludesCyberBillingRows(t *testing.T) {
@@ -405,13 +433,6 @@ func TestChannelMonitorV2TierRetentionPolicy(t *testing.T) {
 	now := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
 	require.Equal(t, now.Add(-7*24*time.Hour), channelMonitorV2RetentionCutoff(now, channelMonitorV2RetentionMetrics1m))
 	require.Equal(t, now.Add(-90*24*time.Hour), channelMonitorV2RetentionCutoff(now, channelMonitorV2MaxRetention()))
-}
-
-func TestSameFixedRollupBucket(t *testing.T) {
-	start := time.Date(2026, 8, 7, 10, 0, 0, 0, time.UTC)
-	require.True(t, sameFixedRollupBucket(start, start.Add(10*time.Minute), 86400))
-	require.False(t, sameFixedRollupBucket(start, start.Add(15*time.Hour), 43200))
-	require.False(t, sameFixedRollupBucket(start, start.Add(24*time.Hour), 86400))
 }
 
 // Needles present in service.ClassifyChannelMonitorV2Error must appear in the

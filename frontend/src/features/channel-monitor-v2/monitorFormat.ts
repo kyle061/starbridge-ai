@@ -6,7 +6,7 @@
  * request/error/token counts in user-facing surfaces.
  */
 
-import type { HealthScoreBand, HealthState, MonitorHealth } from '@/api/channelMonitorV2'
+import type { HealthScoreBand, HealthState, MonitorHealth, MonitorMetric } from '@/api/channelMonitorV2'
 import { formatCompactNumber } from '@/utils/format'
 
 export function monitorIntlLocale(): string {
@@ -75,6 +75,35 @@ export function formatMonitorSuccessRate(successRequests: number, requestCount: 
 
 export function formatMonitorSuccessRateFromError(errorRate: number): string {
   return formatMonitorPercent(1 - (errorRate || 0))
+}
+
+export function monitorSuccessRate(metrics: MonitorMetric): number | null {
+  if (metrics.has_requests === false) return null
+  if (metrics.success_rate != null) return Math.min(1, Math.max(0, metrics.success_rate))
+  if (metrics.request_count > 0) return metrics.success_requests / metrics.request_count
+  // Mixed-version deployments may still omit the traffic flag and success ratio.
+  if (metrics.error_rate > 0 || metrics.rpm > 0) return 1 - metrics.error_rate
+  return null
+}
+
+export function formatObservedSuccessRate(metrics: MonitorMetric): string {
+  const rate = monitorSuccessRate(metrics)
+  return rate == null ? '-' : formatMonitorPercent(rate)
+}
+
+export function monitorSuccessState(metrics: MonitorMetric, health?: MonitorHealth): HealthState {
+  const rate = monitorSuccessRate(metrics)
+  if (rate == null) return 'unknown'
+  const errorRate = 1 - rate
+  if (errorRate >= (health?.thresholds?.critical_error_rate ?? 0.2)) return 'critical'
+  if (errorRate >= (health?.thresholds?.warning_error_rate ?? 0.05)) return 'warning'
+  return 'healthy'
+}
+
+export function monitorSuccessScore(metrics: MonitorMetric, health: MonitorHealth): number | null {
+  const rate = monitorSuccessRate(metrics)
+  if (rate == null) return null
+  return Math.max(0, 100 * (1 - (1 - rate) / (health.thresholds?.critical_error_rate || 0.2)))
 }
 
 /**

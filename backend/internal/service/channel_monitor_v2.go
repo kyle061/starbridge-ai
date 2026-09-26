@@ -89,6 +89,7 @@ type ChannelMonitorV2Filter struct {
 }
 
 type ChannelMonitorV2Metric struct {
+	HasRequests              bool                    `json:"has_requests"`
 	SuccessRequests          int64                   `json:"success_requests"`
 	ErrorRequests            int64                   `json:"error_requests"`
 	RequestCount             int64                   `json:"request_count"`
@@ -652,6 +653,7 @@ func redactChannelMonitorV2Metric(m *ChannelMonitorV2Metric, hideThroughput bool
 	if m == nil {
 		return
 	}
+	m.HasRequests = m.HasRequests || m.RequestCount > 0
 	m.SuccessRequests = 0
 	m.ErrorRequests = 0
 	m.RequestCount = 0

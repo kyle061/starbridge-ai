@@ -57,10 +57,10 @@
             :class="showThroughput ? 'matrix-row--with-tps' : ''"
           >
             <div class="dimension-cell flex min-w-0 items-center gap-2 bg-white dark:bg-dark-800" :title="rowLabel(entry.row)">
-              <span :class="['status-dot', cellClass(entry.row.health, entry.row.metrics.request_count)]"></span>
+              <span :class="['status-dot', cellClass(entry.row.health, entry.row.metrics)]"></span>
               <strong class="truncate text-xs font-semibold text-gray-800 dark:text-gray-100">{{ rowLabel(entry.row) }}</strong>
             </div>
-            <strong class="summary-value bg-white text-xs font-medium tabular-nums dark:bg-dark-800" :class="successRateTextClass(entry.row.health.error_rate)">
+            <strong class="summary-value bg-white text-xs font-medium tabular-nums dark:bg-dark-800" :class="successRateTextClass(monitorSuccessState(entry.row.metrics, entry.row.health))">
               {{ successRate(entry.row.metrics) }}
             </strong>
             <strong
@@ -87,7 +87,7 @@
                 :key="slot.start"
                 class="pulse-cell relative rounded-sm border-0 p-0 outline-offset-1"
                 :class="[
-                  slot.bucket ? cellClass(slot.bucket.health, slot.bucket.metrics.request_count) : 'health-unknown',
+                  slot.bucket ? cellClass(slot.bucket.health, slot.bucket.metrics) : 'health-unknown',
                   slot.bucket ? 'has-data' : 'is-empty',
                 ]"
                 tabindex="0"
@@ -103,7 +103,7 @@
                 <span class="pulse-tooltip" role="tooltip">
                   <template v-if="slot.bucket">
                     <span class="pulse-tooltip-line pulse-tooltip-title">{{ formatBucketRange(slot.start) }}</span>
-                    <span class="pulse-tooltip-line">{{ t('channelMonitorV2.matrix.scoreLine', { score: formatScore(slot.bucket.health) }) }}</span>
+                    <span class="pulse-tooltip-line">{{ t('channelMonitorV2.matrix.scoreLine', { score: formatScore(slot.bucket.health, slot.bucket.metrics) }) }}</span>
                     <span class="pulse-tooltip-line">{{ t('channelMonitorV2.metrics.successRateValue', { value: successRate(slot.bucket.metrics) }) }}</span>
                     <span class="pulse-tooltip-line">{{ t('channelMonitorV2.metrics.ttftValue', { value: latencyPrivacy(slot.bucket.metrics.ttft) }) }}</span>
                     <span v-if="showThroughput" class="pulse-tooltip-line">{{ t('channelMonitorV2.metrics.tpsValue', { value: formatTps(slot.bucket.metrics.tpm) }) }}</span>
@@ -181,7 +181,10 @@ import {
   formatLatencyPrivacy,
   formatMonitorMs,
   formatMonitorPercent,
-  formatMonitorSuccessRateFromError,
+  formatObservedSuccessRate,
+  monitorSuccessState,
+  monitorSuccessScore,
+  scoreToBand,
   formatMonitorThroughput,
   formatMonitorTokensPerSecond,
   tokensPerSecondFromTpm,
@@ -344,8 +347,9 @@ watch(
   },
 )
 
-function cellClass(health: MonitorHealth, requestCount: number): string {
-  return healthScoreClass(health, props.healthMode, requestCount)
+function cellClass(health: MonitorHealth, metrics: MonitorMetric): string {
+  if (props.healthMode === 'success') return `health-${scoreToBand(monitorSuccessScore(metrics, health))}`
+  return healthScoreClass(health, props.healthMode, metrics.request_count)
 }
 
 function rowLabel(row: MonitorMatrixRow): string {
@@ -360,16 +364,11 @@ function rowKey(row: MonitorMatrixRow): string {
 }
 
 function successRate(metrics: MonitorMetric): string {
-  // Empty traffic: no request count and no throughput signal.
-  // When throughput is hidden for privacy, still show success from error_rate.
-  const noCount = metrics.request_count <= 0
-  const noTP = (metrics.rpm || 0) <= 0 && (metrics.tpm || 0) <= 0
-  if (noCount && noTP && props.showThroughput) return '-'
-  return formatMonitorSuccessRateFromError(metrics.error_rate)
+  return formatObservedSuccessRate(metrics)
 }
 
-function formatScore(health: MonitorHealth): string {
-  const score = healthModeScore(health, props.healthMode)
+function formatScore(health: MonitorHealth, metrics: MonitorMetric): string {
+  const score = props.healthMode === 'success' ? monitorSuccessScore(metrics, health) : healthModeScore(health, props.healthMode)
   if (score == null) return '—'
   return `${Math.round(score)}`
 }
@@ -382,7 +381,7 @@ function bucketTooltipLines(bucket: MonitorMatrixBucket): string[] {
   const metrics = bucket.metrics
   const lines = [
     formatBucketRange(bucket.bucket_start),
-    t('channelMonitorV2.matrix.scoreLine', { score: formatScore(bucket.health) }),
+    t('channelMonitorV2.matrix.scoreLine', { score: formatScore(bucket.health, metrics) }),
     t('channelMonitorV2.metrics.successRateValue', { value: successRate(metrics) }),
     t('channelMonitorV2.metrics.ttftValue', { value: latencyPrivacy(metrics.ttft) }),
   ]

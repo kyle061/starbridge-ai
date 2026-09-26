@@ -14,12 +14,23 @@ import {
   healthStateClass,
   scoreToBand,
   successRateTextClass,
+  formatObservedSuccessRate,
+  monitorSuccessState,
   tokensPerSecondFromTpm,
   ttftDisplayState,
 } from '../monitorFormat'
-import type { MonitorHealth } from '@/api/channelMonitorV2'
+import type { MonitorHealth, MonitorMetric } from '@/api/channelMonitorV2'
 
 describe('monitorFormat accuracy', () => {
+  it('does not count ignored failures as successful requests', () => {
+    const metric = { has_requests: true, success_rate: 0, request_count: 0, error_rate: 0.929 } as MonitorMetric
+    expect(formatObservedSuccessRate(metric)).toBe('0.00%')
+    expect(monitorSuccessState(metric)).toBe('critical')
+    expect(formatObservedSuccessRate({ ...metric, has_requests: false })).toBe('-')
+    expect(monitorSuccessState({ ...metric, has_requests: false })).toBe('unknown')
+    expect(formatObservedSuccessRate({ ...metric, success_rate: 1, error_rate: 0 })).toBe('100.0%')
+    expect(monitorSuccessState({ ...metric, success_rate: 1, error_rate: 0 })).toBe('healthy')
+  })
   it('converts backend TPM (per minute) to tokens/sec for display', () => {
     expect(tokensPerSecondFromTpm(60)).toBe(1)
     expect(tokensPerSecondFromTpm(6000)).toBe(100)

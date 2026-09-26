@@ -34,6 +34,9 @@ export interface LatencyMetric {
 }
 
 export interface MonitorMetric {
+  /** Preserved when absolute counts and throughput are hidden. */
+  has_requests?: boolean
+  success_rate?: number
   success_requests: number
   error_requests: number
   request_count: number
