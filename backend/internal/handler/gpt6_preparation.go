@@ -41,6 +41,14 @@ func requiresGPT6Preparation(apiKey *service.APIKey, model string) bool {
 	return service.IsGPT6Model(model)
 }
 
+// Image requests keep their original prompt and tool instead of entering the text-only preparation pass.
+func requiresGPT6PreparationForRequest(apiKey *service.APIKey, model string, body []byte, responses bool) bool {
+	if !requiresGPT6Preparation(apiKey, model) {
+		return false
+	}
+	return !responses || !service.IsExplicitImageGenerationIntent("/v1/responses", model, body)
+}
+
 func gpt6PreparedBodyOrOriginal(original, prepared []byte, preparationErr error) []byte {
 	if preparationErr != nil || prepared == nil {
 		return original
@@ -56,7 +64,8 @@ func gpt6PreparationBillingMultiplier(cfg *config.Config) float64 {
 }
 
 func (h *OpenAIGatewayHandler) prepareGPT6Request(c *gin.Context, apiKey *service.APIKey, model string, body []byte, responses bool) ([]byte, error) {
-	if h == nil || h.gatewayService == nil || h.cfg == nil || !h.cfg.Billing.GPT6Preparation.Enabled || !requiresGPT6Preparation(apiKey, model) {
+	if h == nil || h.gatewayService == nil || h.cfg == nil || !h.cfg.Billing.GPT6Preparation.Enabled ||
+		!requiresGPT6PreparationForRequest(apiKey, model, body, responses) {
 		return body, nil
 	}
 	if responses && !hasGPT6PreparationInput(body) {

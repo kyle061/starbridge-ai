@@ -35,6 +35,16 @@ func TestRequiresGPT6PreparationOnlyForCompositeGroups(t *testing.T) {
 	}
 }
 
+func TestRequiresGPT6PreparationForRequestSkipsImageGeneration(t *testing.T) {
+	apiKey := &service.APIKey{Group: &service.Group{Platform: service.PlatformComposite}}
+	textRequest := []byte(`{"model":"gpt-6-luna","input":"write a function"}`)
+	imageRequest := []byte(`{"model":"gpt-6-luna","input":"draw a cat","tools":[{"type":"image_generation"}]}`)
+
+	require.True(t, requiresGPT6PreparationForRequest(apiKey, "gpt-6-luna", textRequest, true))
+	require.False(t, requiresGPT6PreparationForRequest(apiKey, "gpt-6-luna", imageRequest, true))
+	require.True(t, requiresGPT6PreparationForRequest(apiKey, "gpt-6-luna", imageRequest, false), "only Responses image requests bypass preparation")
+}
+
 func TestGPT6PreparationBillingMultiplierFollowsAdminPricing(t *testing.T) {
 	cfg := &config.Config{}
 	cfg.Billing.GPT6Preparation.PreparationMultiplier = 12
