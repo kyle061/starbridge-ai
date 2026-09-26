@@ -17,15 +17,16 @@ import (
 
 type userUsageRepoCapture struct {
 	service.UsageLogRepository
-	listParams   pagination.PaginationParams
-	listFilters  usagestats.UsageLogFilters
-	statsFilters usagestats.UsageLogFilters
-	trendFilters usagestats.UsageLogFilters
-	groupFilters usagestats.UsageLogFilters
-	listRows     []service.UsageLog
-	stats        *usagestats.UsageStats
-	modelStats   []usagestats.ModelStat
-	groupStats   []usagestats.GroupStat
+	listParams        pagination.PaginationParams
+	listFilters       usagestats.UsageLogFilters
+	statsFilters      usagestats.UsageLogFilters
+	trendFilters      usagestats.UsageLogFilters
+	groupFilters      usagestats.UsageLogFilters
+	groupCustomerView bool
+	listRows          []service.UsageLog
+	stats             *usagestats.UsageStats
+	modelStats        []usagestats.ModelStat
+	groupStats        []usagestats.GroupStat
 }
 
 func (s *userUsageRepoCapture) ListWithFilters(ctx context.Context, params pagination.PaginationParams, filters usagestats.UsageLogFilters) ([]service.UsageLog, *pagination.PaginationResult, error) {
@@ -66,6 +67,7 @@ func (s *userUsageRepoCapture) GetModelStatsWithFilters(ctx context.Context, sta
 }
 
 func (s *userUsageRepoCapture) GetGroupStatsWithFilters(ctx context.Context, startTime, endTime time.Time, userID, apiKeyID, accountID, groupID int64, requestType *int16, stream *bool, billingType *int8) ([]usagestats.GroupStat, error) {
+	s.groupCustomerView = usagestats.CustomerBillingViewFromContext(ctx)
 	s.groupFilters = usagestats.UsageLogFilters{
 		UserID:      userID,
 		APIKeyID:    apiKeyID,
@@ -266,6 +268,13 @@ func TestUserUsageStatsUsesScopedFilters(t *testing.T) {
 			TotalCost:        0.10,
 			TotalActualCost:  0.08,
 			TotalAccountCost: &accountCost,
+			Endpoints: []usagestats.EndpointStat{{
+				Endpoint:    "/v1/responses",
+				Requests:    2,
+				TotalTokens: 30,
+				Cost:        0.10,
+				ActualCost:  0.08,
+			}},
 			UpstreamEndpoints: []usagestats.EndpointStat{{
 				Endpoint: "/v1/responses",
 			}},
@@ -287,8 +296,11 @@ func TestUserUsageStatsUsesScopedFilters(t *testing.T) {
 	require.NotNil(t, repo.statsFilters.RequestType)
 	require.Equal(t, int16(service.RequestTypeSync), *repo.statsFilters.RequestType)
 	require.Equal(t, "token", repo.statsFilters.BillingMode)
+	require.True(t, repo.statsFilters.CustomerView)
 	require.Contains(t, rec.Body.String(), `"total_cost":0.08`)
 	require.Contains(t, rec.Body.String(), `"total_actual_cost":0.08`)
+	require.Contains(t, rec.Body.String(), `"endpoint":"/v1/responses","requests":2,"total_tokens":30,"cost":0.08,"actual_cost":0.08`)
+	require.NotContains(t, rec.Body.String(), `"cost":0.1`)
 	require.NotContains(t, rec.Body.String(), "total_account_cost")
 	require.NotContains(t, rec.Body.String(), "upstream_endpoints")
 	require.NotContains(t, rec.Body.String(), "endpoint_paths")
@@ -332,7 +344,9 @@ func TestUserUsageDashboardModelsRejectsAdminModelSources(t *testing.T) {
 func TestUserUsageSnapshotUsesScopedFilters(t *testing.T) {
 	repo := &userUsageRepoCapture{
 		modelStats: []usagestats.ModelStat{{Model: "gpt-5", AccountCost: 0.07}},
-		groupStats: []usagestats.GroupStat{{GroupID: 1, GroupName: "default", AccountCost: 0.06}},
+		groupStats: []usagestats.GroupStat{{
+			GroupID: 1, GroupName: "default", Cost: 0.125, ActualCost: 0.375, AccountCost: 0.5,
+		}},
 	}
 	router := newUserUsageRequestTypeTestRouter(repo)
 
@@ -347,6 +361,9 @@ func TestUserUsageSnapshotUsesScopedFilters(t *testing.T) {
 	require.Equal(t, int16(service.RequestTypeStream), *repo.trendFilters.RequestType)
 	require.Equal(t, int64(42), repo.groupFilters.UserID)
 	require.Equal(t, int64(11), repo.groupFilters.GroupID)
+	require.True(t, repo.groupCustomerView)
+	require.Contains(t, rec.Body.String(), `"group_name":"default","requests":0,"total_tokens":0,"cost":0.375,"actual_cost":0.375`)
+	require.NotContains(t, rec.Body.String(), `"cost":0.125`)
 	require.NotContains(t, rec.Body.String(), "account_cost")
 }
 

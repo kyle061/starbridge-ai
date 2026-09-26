@@ -513,7 +513,6 @@ func (h *UsageHandler) DashboardModels(c *gin.Context) {
 		response.ErrorFrom(c, err)
 		return
 	}
-	projectUserModelStats(stats)
 
 	response.Success(c, gin.H{
 		"models":     userModelStatsFromUsageStats(stats),
@@ -569,7 +568,6 @@ func (h *UsageHandler) DashboardSnapshotV2(c *gin.Context) {
 			response.ErrorFrom(c, err)
 			return
 		}
-		projectUserModelStats(models)
 		resp["models"] = userModelStatsFromUsageStats(models)
 	}
 	if includeGroups {
@@ -578,7 +576,6 @@ func (h *UsageHandler) DashboardSnapshotV2(c *gin.Context) {
 			response.ErrorFrom(c, err)
 			return
 		}
-		projectUserGroupStats(groups)
 		resp["groups"] = userGroupStatsFromUsageStats(groups)
 	}
 
@@ -596,7 +593,7 @@ func userModelStatsFromUsageStats(stats []usagestats.ModelStat) []userModelStat 
 			CacheCreationTokens: stat.CacheCreationTokens,
 			CacheReadTokens:     stat.CacheReadTokens,
 			TotalTokens:         stat.TotalTokens,
-			Cost:                stat.Cost,
+			Cost:                stat.ActualCost,
 			ActualCost:          stat.ActualCost,
 		})
 	}
@@ -627,18 +624,6 @@ func projectUserTrend(trend []usagestats.TrendDataPoint) {
 	}
 }
 
-func projectUserModelStats(stats []usagestats.ModelStat) {
-	for i := range stats {
-		stats[i].Cost = stats[i].ActualCost
-	}
-}
-
-func projectUserGroupStats(stats []usagestats.GroupStat) {
-	for i := range stats {
-		stats[i].Cost = stats[i].ActualCost
-	}
-}
-
 func userGroupStatsFromUsageStats(stats []usagestats.GroupStat) []userGroupStat {
 	out := make([]userGroupStat, 0, len(stats))
 	for _, stat := range stats {
@@ -647,7 +632,7 @@ func userGroupStatsFromUsageStats(stats []usagestats.GroupStat) []userGroupStat 
 			GroupName:   stat.GroupName,
 			Requests:    stat.Requests,
 			TotalTokens: stat.TotalTokens,
-			Cost:        stat.Cost,
+			Cost:        stat.ActualCost,
 			ActualCost:  stat.ActualCost,
 		})
 	}
