@@ -74,6 +74,26 @@ func TestBuildGPT6PreparationBodyKeepsTaskButDisablesTools(t *testing.T) {
 	require.Contains(t, string(finalBody), "objective: ship it")
 }
 
+func TestGPT6PreparationSkipsResponsesWithoutInput(t *testing.T) {
+	cfg := &config.Config{}
+	cfg.Billing.GPT6Preparation.Enabled = true
+	h := &OpenAIGatewayHandler{cfg: cfg, gatewayService: &service.OpenAIGatewayService{}}
+	apiKey := &service.APIKey{Group: &service.Group{Platform: service.PlatformComposite}}
+	for _, body := range [][]byte{
+		[]byte(`{"model":"gpt-6-luna"}`),
+		[]byte(`{"model":"gpt-6-luna","input":null}`),
+		[]byte(`{"model":"gpt-6-luna","input":"  "}`),
+		[]byte(`{"model":"gpt-6-luna","input":[]}`),
+		[]byte(`{"model":"gpt-6-luna","input":[{"type":"additional_tools","tools":[]}]}`),
+	} {
+		prepared, err := h.prepareGPT6Request(nil, apiKey, "gpt-6-luna", body, true)
+		require.NoError(t, err)
+		require.Equal(t, body, prepared)
+	}
+	require.True(t, hasGPT6PreparationInput([]byte(`{"input":"ship it"}`)))
+	require.True(t, hasGPT6PreparationInput([]byte(`{"input":[{"role":"user","content":"ship it"}]}`)))
+}
+
 func TestBuildGPT6PreparationBodyPreservesResponseInstructions(t *testing.T) {
 	prepared, err := buildGPT6PreparationBody([]byte(`{"model":"gpt-6","instructions":"use the existing API","input":"ship it"}`), "deepseek-v4-pro", 1200, true)
 	require.NoError(t, err)

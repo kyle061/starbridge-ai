@@ -26,7 +26,7 @@ func TestWriteOpenAIFastPolicyBlockedResponseMarksBusinessLimited(t *testing.T) 
 	require.Equal(t, OpsClientBusinessLimitedReasonLocalPolicyDenied, reason)
 }
 
-func TestOpsMetricsCollectorQueryErrorCountsExcludesCountTokens(t *testing.T) {
+func TestOpsMetricsCollectorQueryErrorCountsExcludesProbesAndClientDisconnects(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 
@@ -34,7 +34,7 @@ func TestOpsMetricsCollectorQueryErrorCountsExcludesCountTokens(t *testing.T) {
 	start := time.Date(2026, 5, 26, 10, 0, 0, 0, time.UTC)
 	end := start.Add(time.Hour)
 
-	mock.ExpectQuery(`(?s)FROM ops_error_logs\s+WHERE created_at >= \$1 AND created_at < \$2\s+AND is_count_tokens = FALSE`).
+	mock.ExpectQuery(`(?s)FROM ops_error_logs\s+WHERE created_at >= \$1 AND created_at < \$2\s+AND is_count_tokens = FALSE\s+AND status_code IS DISTINCT FROM 499`).
 		WithArgs(start, end).
 		WillReturnRows(sqlmock.NewRows([]string{
 			"error_total",

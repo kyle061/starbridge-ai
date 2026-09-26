@@ -84,6 +84,7 @@ error_base AS (
   -- Exclude count_tokens requests from error metrics as they are informational probes
   WHERE created_at >= $1 AND created_at < $2
     AND is_count_tokens = FALSE
+    AND status_code IS DISTINCT FROM 499
 ),
 error_agg AS (
   SELECT

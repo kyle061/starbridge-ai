@@ -56,6 +56,9 @@ func (h *OpenAIGatewayHandler) prepareGPT6Request(c *gin.Context, apiKey *servic
 	if h == nil || h.gatewayService == nil || h.cfg == nil || !h.cfg.Billing.GPT6Preparation.Enabled || !requiresGPT6Preparation(apiKey, model) {
 		return body, nil
 	}
+	if responses && !hasGPT6PreparationInput(body) {
+		return body, nil
+	}
 	prep := h.cfg.Billing.GPT6Preparation
 	prepModel := strings.TrimSpace(prep.Model)
 	if prepModel == "" {
@@ -91,6 +94,24 @@ func (h *OpenAIGatewayHandler) prepareGPT6Request(c *gin.Context, apiKey *servic
 	h.submitGPT6PreparationUsage(c, apiKey, attempt.Account, result, model, gpt6PreparationBillingMultiplier(h.cfg), body)
 
 	return appendGPT6Requirements(body, document), nil
+}
+
+func hasGPT6PreparationInput(body []byte) bool {
+	var request map[string]any
+	if err := json.Unmarshal(body, &request); err != nil {
+		return true
+	}
+	input := gpt6PreparationInputWithoutTools(request["input"])
+	switch value := input.(type) {
+	case nil:
+		return false
+	case string:
+		return strings.TrimSpace(value) != ""
+	case []any:
+		return len(value) > 0
+	default:
+		return true
+	}
 }
 
 type gpt6PreparationCandidate struct {
