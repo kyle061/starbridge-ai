@@ -7,8 +7,9 @@ import "strings"
 
 var catalogs = map[string][]string{
 	"openai": {
-		"gpt-5.5", "gpt-5.6", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna",
-		"gpt-6", "gpt-6-astra", "gpt-6-sol", "gpt-6-luna",
+		// Keep gpt-5.6 and gpt-6 aliases routable, but list their concrete models only.
+		"gpt-5.5", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna",
+		"gpt-6-astra", "gpt-6-sol", "gpt-6-luna",
 		"gpt-image-2", "gpt-image-2.5-flare", "gpt-image-2.5-sunburst",
 	},
 	"anthropic": {

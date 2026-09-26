@@ -210,7 +210,7 @@ func TestCodexModelsHidesRetiredUpstreamModels(t *testing.T) {
 		Status: service.StatusActive, Schedulable: true, Concurrency: 1,
 		Credentials: map[string]any{"api_key": "sk-test", "base_url": "https://upstream.example/v1"},
 	}}}
-	upstream := &codexModelsFailoverHTTPUpstream{firstBody: `{"object":"list","data":[{"id":"gpt-4o-audio-preview"},{"id":"gpt-5.2-chat-latest"},{"id":"gpt-5.2-2025-12-11"},{"id":"gpt-5.3-codex-spark"},{"id":"gpt-5.4"},{"id":"gpt-image-1.5"},{"id":"gpt-5.5"},{"id":"gpt-5.6-sol"},{"id":"gpt-6-astra"}]}`}
+	upstream := &codexModelsFailoverHTTPUpstream{firstBody: `{"object":"list","data":[{"id":"gpt-4o-audio-preview"},{"id":"gpt-5.2-chat-latest"},{"id":"gpt-5.2-2025-12-11"},{"id":"gpt-5.3-codex-spark"},{"id":"gpt-5.4"},{"id":"gpt-image-1.5"},{"id":"gpt-5.5"},{"id":"gpt-5.6"},{"id":"gpt-5.6-sol"},{"id":"gpt-5.6-terra"},{"id":"gpt-5.6-luna"},{"id":"gpt-6"},{"id":"gpt-6-astra"},{"id":"gpt-6-sol"},{"id":"gpt-6-luna"}]}`}
 	gateway := service.NewOpenAIGatewayService(
 		repo, nil, nil, nil, nil, nil, nil, &config.Config{RunMode: config.RunModeSimple}, nil, nil, nil, nil, nil,
 		upstream, nil, nil, nil, nil, nil, nil, nil, nil,
@@ -220,7 +220,10 @@ func TestCodexModelsHidesRetiredUpstreamModels(t *testing.T) {
 
 	first := performCodexModelsRequestForGroup(t, handler, group, "")
 	require.Equal(t, http.StatusOK, first.Code, first.Body.String())
-	require.Equal(t, []string{"gpt-5.5", "gpt-5.6-sol", "gpt-6-astra"}, codexHandlerManifestSlugs(t, first))
+	require.Equal(t, []string{
+		"gpt-5.5", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna",
+		"gpt-6-astra", "gpt-6-sol", "gpt-6-luna",
+	}, codexHandlerManifestSlugs(t, first))
 	require.Equal(t, service.CodexModelsManifestETag(first.Body.Bytes()), first.Header().Get("ETag"))
 	second := performCodexModelsRequestForGroup(t, handler, group, first.Header().Get("ETag"))
 	require.Equal(t, http.StatusNotModified, second.Code)

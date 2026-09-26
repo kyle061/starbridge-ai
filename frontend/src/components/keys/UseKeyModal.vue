@@ -1138,42 +1138,8 @@ function generateOpenCodeConfig(platform: string, baseUrl: string, apiKey: strin
     }
   }
   const openaiModels = {
-    'gpt-6': {
-      name: 'GPT-6 (Astra)',
-      limit: {
-        context: 1050000,
-        output: 128000
-      },
-      options: {
-        store: false
-      },
-      variants: {
-        low: {},
-        medium: {},
-        high: {},
-        xhigh: {},
-        max: {}
-      }
-    },
     'gpt-6-astra': {
       name: 'GPT-6 Astra',
-      limit: {
-        context: 1050000,
-        output: 128000
-      },
-      options: {
-        store: false
-      },
-      variants: {
-        low: {},
-        medium: {},
-        high: {},
-        xhigh: {},
-        max: {}
-      }
-    },
-    'gpt-5.6': {
-      name: 'GPT-5.6 (Sol)',
       limit: {
         context: 1050000,
         output: 128000

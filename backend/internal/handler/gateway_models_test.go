@@ -226,7 +226,7 @@ func TestGatewayCodexModels_CompositeUsesCompleteEffectiveModelList(t *testing.T
 	require.Equal(t, http.StatusOK, rec.Code)
 	var got codexModelsResponseForTest
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
-	want := service.FilterCodexModelIDsForGroup(openai.DefaultModelIDs(), nil)
+	want := service.FilterCodexModelIDsForGroup(openai.SelectableModelIDs(), nil)
 	require.ElementsMatch(t, append(want, "grok-4.6"), codexModelSlugsForTest(got.Models))
 }
 

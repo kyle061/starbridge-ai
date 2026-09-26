@@ -12,20 +12,24 @@ describe('useModelWhitelist', () => {
 
     expect(models).toEqual([
       'gpt-5.5',
-      'gpt-5.6', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna',
-      'gpt-6', 'gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna',
+      'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna',
+      'gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna',
       'gpt-image-2', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'
     ])
   })
 
-  it('openai 预设映射包含 GPT-6 别名和 Astra', () => {
+  it('openai 预设只列具体 GPT 模型，不重复列出别名', () => {
     const supported = new Set(getModelsByPlatform('openai'))
     const presets = getPresetMappingsByPlatform('openai')
 
+    expect(supported.has('gpt-5.6')).toBe(false)
+    expect(supported.has('gpt-6')).toBe(false)
     expect(presets).toEqual(expect.arrayContaining([
-      expect.objectContaining({ label: 'GPT-6', from: 'gpt-6', to: 'gpt-6' }),
+      expect.objectContaining({ label: 'GPT-5.6 Sol', from: 'gpt-5.6-sol', to: 'gpt-5.6-sol' }),
       expect.objectContaining({ label: 'GPT-6 Astra', from: 'gpt-6-astra', to: 'gpt-6-astra' })
     ]))
+    expect(presets.map(preset => preset.from)).not.toContain('gpt-5.6')
+    expect(presets.map(preset => preset.from)).not.toContain('gpt-6')
     expect(presets.every(preset => supported.has(preset.from) && supported.has(preset.to))).toBe(true)
   })
 
