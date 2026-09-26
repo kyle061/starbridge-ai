@@ -122,8 +122,8 @@ func TestChannelMonitorV2WhereRestrictsOrdinaryViewerToAllowedConfiguredGroups(t
 		GroupIDs:  []int64{3, 4, 9},
 	}
 	where, args := channelMonitorV2Where(filter, cfg, "m")
-	require.Contains(t, where, "m.group_id = ANY($4)")
-	require.Equal(t, pq.Array([]int64{4}), args[3])
+	require.Contains(t, where, "m.group_id = ANY($3)")
+	require.Equal(t, pq.Array([]int64{4}), args[2])
 }
 
 func TestChannelMonitorV2WhereRejectsOrdinaryViewerWithNoAllowedGroups(t *testing.T) {
@@ -138,6 +138,27 @@ func TestChannelMonitorV2WhereRejectsOrdinaryViewerWithNoAllowedGroups(t *testin
 	where, _ := channelMonitorV2Where(filter, cfg, "m")
 	require.Contains(t, where, "FALSE")
 	require.NotContains(t, where, "m.group_id = ANY")
+}
+
+func TestChannelMonitorV2ScopedWhereDiscoversUnconfiguredKeyPlatform(t *testing.T) {
+	filter := service.ChannelMonitorV2Filter{
+		Start: time.Unix(1, 0), End: time.Unix(2, 0),
+		AllowedGroupIDs: []int64{7}, RestrictGroups: true,
+	}
+	cfg := service.ChannelMonitorV2Config{
+		Platforms: []service.ChannelMonitorV2PlatformConfig{{Platform: "openai", Enabled: true}},
+		GroupIDs:  []int64{7},
+	}
+	where, args := channelMonitorV2Where(filter, cfg, "m")
+	require.NotContains(t, where, "m.platform = ANY")
+	require.Contains(t, where, "m.group_id = ANY($3)")
+	require.Equal(t, pq.Array([]int64{7}), args[2])
+
+	filter.Platforms = []string{"deepseek"}
+	where, args = channelMonitorV2Where(filter, cfg, "m")
+	require.Contains(t, where, "m.platform = ANY($3)")
+	require.Equal(t, pq.Array([]string{"deepseek"}), args[2])
+	require.Equal(t, pq.Array([]int64{7}), args[3])
 }
 
 func TestChannelMonitorV2CatalogKeepsViewerScopeWhileIgnoringPickerFilters(t *testing.T) {

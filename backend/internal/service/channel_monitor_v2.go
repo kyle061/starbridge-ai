@@ -475,6 +475,7 @@ func channelMonitorV2ConfigForScope(cfg ChannelMonitorV2Config, filter ChannelMo
 	if !filter.RestrictGroups {
 		return cfg
 	}
+	cfg.GroupIDs = nil
 	cfg.Platforms = append([]ChannelMonitorV2PlatformConfig(nil), cfg.Platforms...)
 	for i := range cfg.Platforms {
 		cfg.Platforms[i].Models = nil

@@ -292,9 +292,11 @@ func TestChannelMonitorV2SuccessColorDoesNotDependOnSampleMinimumOrOverallScore(
 }
 
 func TestChannelMonitorV2ScopedConfigDiscoversRealModelsWithoutChangingGlobalConfig(t *testing.T) {
-	cfg := ChannelMonitorV2Config{Platforms: []ChannelMonitorV2PlatformConfig{{Platform: "openai", Enabled: true, Models: []string{"gpt-5"}}}}
+	cfg := ChannelMonitorV2Config{GroupIDs: []int64{3}, Platforms: []ChannelMonitorV2PlatformConfig{{Platform: "openai", Enabled: true, Models: []string{"gpt-5"}}}}
 	scoped := channelMonitorV2ConfigForScope(cfg, ChannelMonitorV2Filter{RestrictGroups: true, AllowedGroupIDs: []int64{7}})
 	require.Empty(t, scoped.Platforms[0].Models)
+	require.Empty(t, scoped.GroupIDs)
+	require.Equal(t, []int64{3}, cfg.GroupIDs)
 	require.Equal(t, []string{"gpt-5"}, cfg.Platforms[0].Models)
 	require.Equal(t, cfg.Platforms[0].Models, channelMonitorV2ConfigForScope(cfg, ChannelMonitorV2Filter{}).Platforms[0].Models)
 }

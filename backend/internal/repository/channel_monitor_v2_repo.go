@@ -1169,13 +1169,17 @@ func channelMonitorV2Where(filter service.ChannelMonitorV2Filter, cfg service.Ch
 	conditions := []string{alias + ".bucket_start >= $1", alias + ".bucket_start < $2"}
 	args := []any{filter.Start, filter.End}
 	platforms := channelMonitorV2EnabledPlatforms(cfg)
-	if len(filter.Platforms) > 0 {
+	if filter.RestrictGroups {
+		// Key-scoped views discover platforms from traffic in the key's groups,
+		// including platforms absent from the operator's global display list.
+		platforms = filter.Platforms
+	} else if len(filter.Platforms) > 0 {
 		platforms = intersectStrings(platforms, filter.Platforms)
 	}
 	if len(platforms) > 0 {
 		args = append(args, pq.Array(platforms))
 		conditions = append(conditions, fmt.Sprintf("%s.platform = ANY($%d)", alias, len(args)))
-	} else {
+	} else if !filter.RestrictGroups {
 		conditions = append(conditions, "FALSE")
 	}
 	groups, groupScopeEmpty := channelMonitorV2ScopedGroupIDs(filter, cfg)
