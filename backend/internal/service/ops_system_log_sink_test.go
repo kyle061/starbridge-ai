@@ -73,6 +73,16 @@ func TestOpsSystemLogSink_ShouldIndex(t *testing.T) {
 			event: &logger.LogEvent{Level: "info", Component: "app"},
 			want:  false,
 		},
+		{
+			name:  "bounded slow first-token diagnostic",
+			event: &logger.LogEvent{Level: "info", Component: "gateway.latency", Message: "openai.slow_first_token ttft_ms=6000"},
+			want:  true,
+		},
+		{
+			name:  "unrelated latency info stays unindexed",
+			event: &logger.LogEvent{Level: "info", Component: "gateway.latency", Message: "other event"},
+			want:  false,
+		},
 	}
 
 	for _, tc := range cases {

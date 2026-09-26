@@ -179,6 +179,10 @@ func (s *OpsSystemLogSink) shouldIndex(event *logger.LogEvent) bool {
 	if strings.Contains(component, "http.access") {
 		return s.persistAccessLogs.Load()
 	}
+	// Slow first-token diagnostics are already limited to one per account/minute.
+	if component == "gateway.latency" && strings.HasPrefix(event.Message, "openai.slow_first_token ") {
+		return true
+	}
 	if strings.Contains(component, "audit") {
 		return true
 	}

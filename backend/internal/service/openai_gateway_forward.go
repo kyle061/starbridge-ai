@@ -19,6 +19,17 @@ import (
 
 // Forward forwards request to OpenAI API
 func (s *OpenAIGatewayService) Forward(ctx context.Context, c *gin.Context, account *Account, body []byte) (*OpenAIForwardResult, error) {
+	if account == nil || account.Platform != PlatformOpenAI || !gjson.GetBytes(body, "stream").Bool() {
+		return s.forwardResponses(ctx, c, account, body)
+	}
+	timing := &openAIForwardTiming{startedAt: time.Now()}
+	ctx = context.WithValue(ctx, openAIForwardTimingKey{}, timing)
+	result, err := s.forwardResponses(ctx, c, account, body)
+	timing.logSlowRequest(ctx, c, account, result)
+	return result, err
+}
+
+func (s *OpenAIGatewayService) forwardResponses(ctx context.Context, c *gin.Context, account *Account, body []byte) (*OpenAIForwardResult, error) {
 	beginUpstreamResponseModelObservation(c)
 	ClearActualOpenAIUpstreamEndpoint(c)
 	if shouldForwardOpenAIResponsesViaRawChatCompletions(account) {
@@ -37,6 +48,9 @@ func (s *OpenAIGatewayService) Forward(ctx context.Context, c *gin.Context, acco
 		return nil, err
 	}
 	startTime := time.Now()
+	if timing, ok := ctx.Value(openAIForwardTimingKey{}).(*openAIForwardTiming); ok {
+		timing.metricStartedAt = startTime
+	}
 	// 固定渠道映射后的请求级 canonical body；账号 normalize/strip 不得改写跨 failover hint。
 	canonicalImageIntentBody := body
 
