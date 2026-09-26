@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -85,6 +87,7 @@ func TestGPT6PreparationSkipsResponsesWithoutInput(t *testing.T) {
 		[]byte(`{"model":"gpt-6-luna","input":"  "}`),
 		[]byte(`{"model":"gpt-6-luna","input":[]}`),
 		[]byte(`{"model":"gpt-6-luna","input":[{"type":"additional_tools","tools":[]}]}`),
+		[]byte(`{"model":"gpt-6-luna","input":[{"type":"function_call_output","output":"tool result"}]}`),
 	} {
 		prepared, err := h.prepareGPT6Request(nil, apiKey, "gpt-6-luna", body, true)
 		require.NoError(t, err)
@@ -104,21 +107,47 @@ func TestBuildGPT6PreparationBodyPreservesResponseInstructions(t *testing.T) {
 	require.Equal(t, "ship it", payload["input"])
 }
 
+func TestBuildGPT6PreparationBodyBoundsOriginalInstructions(t *testing.T) {
+	body, err := json.Marshal(map[string]any{
+		"model": "gpt-6", "input": "ship it", "instructions": strings.Repeat("private context ", 2000),
+	})
+	require.NoError(t, err)
+	prepared, err := buildGPT6PreparationBody(body, "gpt-5.6-luna", 1200, true)
+	require.NoError(t, err)
+	var payload map[string]any
+	require.NoError(t, json.Unmarshal(prepared, &payload))
+	require.LessOrEqual(t, len([]rune(payload["instructions"].(string))), len([]rune(gpt6PreparationInstruction))+gpt6PreparationMaxInstrRunes+100)
+}
+
 func TestBuildGPT6PreparationBodyRemovesEmbeddedToolDeclarations(t *testing.T) {
 	body := []byte(`{"model":"gpt-6","input":[{"role":"user","content":"ship it"},{"type":"additional_tools","tools":[{"type":"function","name":"exec"}]},{"type":"tool_search_output","call_id":"search_1","tools":[{"type":"function","name":"inspect"}]},{"type":"tool_search_output","call_id":"search_2","output":"found docs","tools":[{"type":"function","name":"read"}]}]}`)
 	prepared, err := buildGPT6PreparationBody(body, "deepseek-v4-pro", 1200, true)
 	require.NoError(t, err)
 	var payload map[string]any
 	require.NoError(t, json.Unmarshal(prepared, &payload))
-	items := payload["input"].([]any)
-	require.Len(t, items, 2)
-	require.Equal(t, "ship it", items[0].(map[string]any)["content"])
-	require.Equal(t, "found docs", items[1].(map[string]any)["output"])
-	require.Nil(t, items[1].(map[string]any)["tools"])
+	require.Equal(t, "ship it", payload["input"])
 
 	converted, err := responsesPreparationBodyToChat(prepared)
 	require.NoError(t, err)
 	require.NotContains(t, string(converted), `"tools"`)
+}
+
+func TestGPT6PreparationUsesLatestUserTextWithBoundedContext(t *testing.T) {
+	input := []any{
+		map[string]any{"role": "user", "content": "old request"},
+		map[string]any{"type": "function_call_output", "output": strings.Repeat("tool data", 1000)},
+		map[string]any{"role": "user", "content": []any{
+			map[string]any{"type": "input_text", "text": "fix the billing bug"},
+			map[string]any{"type": "input_image", "image_url": "data:image/png;base64,private"},
+		}},
+	}
+	require.Equal(t, "fix the billing bug", gpt6PreparationTaskInput(input))
+	longText := strings.Repeat("a", 5000) + strings.Repeat("b", 5000)
+	limited := gpt6PreparationTaskInput(longText)
+	require.Contains(t, limited, "[earlier content omitted]")
+	require.True(t, strings.HasPrefix(limited, strings.Repeat("a", 4000)))
+	require.True(t, strings.HasSuffix(limited, strings.Repeat("b", 4000)))
+	require.Less(t, len(limited), len(longText))
 }
 
 func TestBuildGPT6PreparationChatBodyPrependsAnalystInstruction(t *testing.T) {
@@ -199,9 +228,10 @@ func TestGPT6PreparationSkipsConfiguredGPT6ModelAndUsesGPT5Fallback(t *testing.T
 }
 
 func TestGPT6PreparationFailureLogDoesNotReportFinalModelDowngrade(t *testing.T) {
-	core, observed := observer.New(zapcore.WarnLevel)
+	core, observed := observer.New(zapcore.InfoLevel)
 	logGPT6PreparationFallback(zap.New(core), "openai.gpt6_preparation_failed", "gpt-6-luna", 0, errors.New("no preparation account"))
 	require.Len(t, observed.All(), 1)
+	require.Equal(t, zapcore.InfoLevel, observed.All()[0].Level)
 	fields := observed.All()[0].ContextMap()
 	require.Equal(t, "continue_original_request", fields["preparation_fallback"])
 	require.Equal(t, false, fields["formal_model_downgraded"])
@@ -218,6 +248,19 @@ func TestGPT6PreparationStopsFallbackAfterCancellation(t *testing.T) {
 		return nil, context.Canceled
 	})
 	require.ErrorIs(t, err, context.Canceled)
+	require.Equal(t, 1, attempts)
+}
+
+func TestGPT6PreparationStopsFallbackAtDeadline(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	var attempts int
+	_, err := firstSuccessfulGPT6Preparation(ctx, gpt6PreparationCandidates("deepseek-v4-pro", true), func(gpt6PreparationCandidate) (*gpt6PreparationResult, error) {
+		attempts++
+		<-ctx.Done()
+		return nil, ctx.Err()
+	})
+	require.ErrorIs(t, err, context.DeadlineExceeded)
 	require.Equal(t, 1, attempts)
 }
 

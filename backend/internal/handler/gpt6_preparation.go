@@ -24,6 +24,9 @@ import (
 const (
 	gpt6PreparationInstruction      = "You are an internal requirements analyst. Read the user's request and produce a concise, implementation-ready requirements document for the final GPT6 executor. Include objective, constraints, acceptance criteria, edge cases, and open assumptions. Do not execute tools or claim that the task is complete. Return only the document."
 	gpt6PreparationMaxDocumentBytes = 16 << 10
+	gpt6PreparationMaxInputRunes    = 8192
+	gpt6PreparationMaxInstrRunes    = 2048
+	gpt6PreparationTimeout          = 12 * time.Second
 )
 
 func requiresGPT6Preparation(apiKey *service.APIKey, model string) bool {
@@ -69,8 +72,10 @@ func (h *OpenAIGatewayHandler) prepareGPT6Request(c *gin.Context, apiKey *servic
 		maxOutput = 1200
 	}
 
-	attempt, err := firstSuccessfulGPT6Preparation(c.Request.Context(), gpt6PreparationCandidates(prepModel, responses), func(candidate gpt6PreparationCandidate) (*gpt6PreparationResult, error) {
-		return h.runGPT6PreparationCandidate(c, apiKey, body, maxOutput, responses, candidate)
+	attemptCtx, cancel := context.WithTimeout(c.Request.Context(), gpt6PreparationTimeout)
+	defer cancel()
+	attempt, err := firstSuccessfulGPT6Preparation(attemptCtx, gpt6PreparationCandidates(prepModel, responses), func(candidate gpt6PreparationCandidate) (*gpt6PreparationResult, error) {
+		return h.runGPT6PreparationCandidate(attemptCtx, c, apiKey, body, maxOutput, responses, candidate)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("GPT6 requirements request failed: %w", err)
@@ -101,17 +106,55 @@ func hasGPT6PreparationInput(body []byte) bool {
 	if err := json.Unmarshal(body, &request); err != nil {
 		return true
 	}
-	input := gpt6PreparationInputWithoutTools(request["input"])
+	return gpt6PreparationTaskInput(request["input"]) != ""
+}
+
+func gpt6PreparationTaskInput(input any) string {
 	switch value := input.(type) {
-	case nil:
-		return false
 	case string:
-		return strings.TrimSpace(value) != ""
+		return limitGPT6PreparationText(value, gpt6PreparationMaxInputRunes)
 	case []any:
-		return len(value) > 0
-	default:
-		return true
+		// Tool continuations already have GPT6 context and do not need a new requirements pass.
+		for i := len(value) - 1; i >= 0; i-- {
+			item, ok := value[i].(map[string]any)
+			if !ok || item["role"] != "user" {
+				continue
+			}
+			if text := limitGPT6PreparationText(gpt6PreparationText(item["content"]), gpt6PreparationMaxInputRunes); text != "" {
+				return text
+			}
+		}
 	}
+	return ""
+}
+
+func gpt6PreparationText(content any) string {
+	switch value := content.(type) {
+	case string:
+		return value
+	case map[string]any:
+		if text, ok := value["text"].(string); ok {
+			return text
+		}
+	case []any:
+		var parts []string
+		for _, item := range value {
+			if text := strings.TrimSpace(gpt6PreparationText(item)); text != "" {
+				parts = append(parts, text)
+			}
+		}
+		return strings.Join(parts, "\n")
+	}
+	return ""
+}
+
+func limitGPT6PreparationText(value string, maxRunes int) string {
+	text := []rune(strings.TrimSpace(value))
+	if len(text) <= maxRunes {
+		return string(text)
+	}
+	half := maxRunes / 2
+	return string(text[:half]) + "\n[earlier content omitted]\n" + string(text[len(text)-half:])
 }
 
 type gpt6PreparationCandidate struct {
@@ -184,7 +227,7 @@ func logGPT6PreparationFallback(reqLog *zap.Logger, event, model string, turn in
 	if turn > 0 {
 		fields = append(fields, zap.Int("turn", turn))
 	}
-	reqLog.Warn(event, fields...)
+	reqLog.Info(event, fields...)
 }
 
 func firstSuccessfulGPT6Preparation(ctx context.Context, candidates []gpt6PreparationCandidate, attempt func(gpt6PreparationCandidate) (*gpt6PreparationResult, error)) (*gpt6PreparationResult, error) {
@@ -208,7 +251,7 @@ func firstSuccessfulGPT6Preparation(ctx context.Context, candidates []gpt6Prepar
 	return nil, errors.Join(failures...)
 }
 
-func (h *OpenAIGatewayHandler) runGPT6PreparationCandidate(c *gin.Context, apiKey *service.APIKey, body []byte, maxOutput int, responses bool, candidate gpt6PreparationCandidate) (*gpt6PreparationResult, error) {
+func (h *OpenAIGatewayHandler) runGPT6PreparationCandidate(ctx context.Context, c *gin.Context, apiKey *service.APIKey, body []byte, maxOutput int, responses bool, candidate gpt6PreparationCandidate) (*gpt6PreparationResult, error) {
 	if apiKey == nil || apiKey.GroupID == nil {
 		return nil, errors.New("GPT6 preparation requires a group")
 	}
@@ -223,7 +266,7 @@ func (h *OpenAIGatewayHandler) runGPT6PreparationCandidate(c *gin.Context, apiKe
 		}
 	}
 	// Suppress composite execution candidates; this pass selects the candidate platform.
-	prepCtx := service.WithoutCompositeRouteCandidates(c.Request.Context())
+	prepCtx := service.WithoutCompositeRouteCandidates(ctx)
 	selection, _, err := h.gatewayService.SelectAccountWithSchedulerForCapability(
 		prepCtx, apiKey.GroupID, "", "", candidate.Model, nil,
 		service.OpenAIUpstreamTransportHTTPSSE, candidate.Capability, false, false, true, candidate.Platform,
@@ -242,7 +285,7 @@ func (h *OpenAIGatewayHandler) runGPT6PreparationCandidate(c *gin.Context, apiKe
 	// needs its own recorder and must never receive the client writer.
 	recorder := httptest.NewRecorder()
 	prepContext, _ := gin.CreateTestContext(recorder)
-	prepContext.Request = c.Request.Clone(c.Request.Context())
+	prepContext.Request = c.Request.Clone(ctx)
 	prepContext.Request.Body = io.NopCloser(bytes.NewReader(prepBody))
 	prepContext.Request.ContentLength = int64(len(prepBody))
 	prepContext.Request.Header = c.Request.Header.Clone()
@@ -255,9 +298,9 @@ func (h *OpenAIGatewayHandler) runGPT6PreparationCandidate(c *gin.Context, apiKe
 
 	var result *service.OpenAIForwardResult
 	if candidate.UseChatCompletions || !responses {
-		result, err = h.gatewayService.ForwardAsChatCompletions(c.Request.Context(), prepContext, selection.Account, prepBody, "", "")
+		result, err = h.gatewayService.ForwardAsChatCompletions(ctx, prepContext, selection.Account, prepBody, "", "")
 	} else {
-		result, err = h.gatewayService.Forward(c.Request.Context(), prepContext, selection.Account, prepBody)
+		result, err = h.gatewayService.Forward(ctx, prepContext, selection.Account, prepBody)
 	}
 	if err != nil {
 		return nil, err
@@ -336,10 +379,10 @@ func buildGPT6PreparationBody(body []byte, model string, maxOutput int, response
 	if responses {
 		instructions := gpt6PreparationInstruction
 		if originalInstructions, ok := original["instructions"].(string); ok && strings.TrimSpace(originalInstructions) != "" {
-			instructions += "\n\nOriginal request instructions:\n" + originalInstructions
+			instructions += "\n\nOriginal request instructions:\n" + limitGPT6PreparationText(originalInstructions, gpt6PreparationMaxInstrRunes)
 		}
 		payload["instructions"] = instructions
-		payload["input"] = gpt6PreparationInputWithoutTools(original["input"])
+		payload["input"] = gpt6PreparationTaskInput(original["input"])
 		payload["max_output_tokens"] = maxOutput
 	} else {
 		payload["max_tokens"] = maxOutput
@@ -347,40 +390,6 @@ func buildGPT6PreparationBody(body []byte, model string, maxOutput int, response
 		payload["messages"] = append([]any{map[string]any{"role": "system", "content": gpt6PreparationInstruction}}, messages...)
 	}
 	return json.Marshal(payload)
-}
-
-func gpt6PreparationInputWithoutTools(input any) any {
-	items, ok := input.([]any)
-	if !ok {
-		return input
-	}
-	filtered := make([]any, 0, len(items))
-	for _, item := range items {
-		object, ok := item.(map[string]any)
-		if !ok {
-			filtered = append(filtered, item)
-			continue
-		}
-		switch object["type"] {
-		case "additional_tools":
-			continue
-		case "tool_search_output":
-			if _, hasTools := object["tools"]; hasTools {
-				if _, hasOutput := object["output"]; !hasOutput {
-					continue
-				}
-				copy := make(map[string]any, len(object)-1)
-				for key, value := range object {
-					if key != "tools" {
-						copy[key] = value
-					}
-				}
-				item = copy
-			}
-		}
-		filtered = append(filtered, item)
-	}
-	return filtered
 }
 
 func appendGPT6Requirements(body []byte, document string) []byte {
