@@ -156,14 +156,16 @@ func (r *channelMonitorV2Repository) GetDimensions(ctx context.Context, filter s
 		count    int64
 	}
 	groupCounts := map[int64]groupValue{}
-	for _, platform := range channelMonitorV2EnabledPlatforms(cfg) {
-		platformCounts[platform] += 0
-		for _, p := range cfg.Platforms {
-			if p.Platform != platform || len(p.Models) == 0 {
-				continue
-			}
-			for _, model := range p.Models {
-				modelCounts[platform+"\x00"+model] = modelValue{platform: platform, count: 0}
+	if !filter.RestrictGroups {
+		for _, platform := range channelMonitorV2EnabledPlatforms(cfg) {
+			platformCounts[platform] += 0
+			for _, p := range cfg.Platforms {
+				if p.Platform != platform || len(p.Models) == 0 {
+					continue
+				}
+				for _, model := range p.Models {
+					modelCounts[platform+"\x00"+model] = modelValue{platform: platform, count: 0}
+				}
 			}
 		}
 	}
@@ -508,6 +510,10 @@ func channelMonitorV2MatrixDimensionKey(groupBy service.ChannelMonitorV2GroupBy,
 
 func seedChannelMonitorV2MatrixAccumulators(filter service.ChannelMonitorV2Filter, cfg service.ChannelMonitorV2Config, groupBy service.ChannelMonitorV2GroupBy, groupInfo map[int64]channelMonitorV2GroupInfo) map[channelMonitorV2MatrixKey]*channelMonitorV2MatrixAccumulator {
 	accs := map[channelMonitorV2MatrixKey]*channelMonitorV2MatrixAccumulator{}
+	// Key-scoped model views show only models actually observed in their groups.
+	if filter.RestrictGroups && (groupBy == service.ChannelMonitorV2GroupByPlatformModel || groupBy == service.ChannelMonitorV2GroupByPlatformGroupModel) {
+		return accs
+	}
 	platforms := channelMonitorV2EnabledPlatforms(cfg)
 	if len(filter.Platforms) > 0 {
 		platforms = intersectStrings(platforms, filter.Platforms)

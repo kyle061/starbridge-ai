@@ -60,7 +60,7 @@
               <span :class="['status-dot', cellClass(entry.row.health, entry.row.metrics.request_count)]"></span>
               <strong class="truncate text-xs font-semibold text-gray-800 dark:text-gray-100">{{ rowLabel(entry.row) }}</strong>
             </div>
-            <strong class="summary-value bg-white text-xs font-medium tabular-nums text-gray-600 dark:bg-dark-800 dark:text-gray-300">
+            <strong class="summary-value bg-white text-xs font-medium tabular-nums dark:bg-dark-800" :class="successRateTextClass(entry.row.health.error_rate)">
               {{ successRate(entry.row.metrics) }}
             </strong>
             <strong
@@ -187,6 +187,7 @@ import {
   tokensPerSecondFromTpm,
   healthModeScore,
   healthScoreClass,
+  successRateTextClass,
 } from '@/features/channel-monitor-v2/monitorFormat'
 import {
   applyWheelZoom,

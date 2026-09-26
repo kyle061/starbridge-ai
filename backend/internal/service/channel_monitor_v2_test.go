@@ -266,6 +266,39 @@ func TestChannelMonitorV2HealthLeavesMissingTTFTUnknown(t *testing.T) {
 	require.Equal(t, "healthy", health.Overall)
 }
 
+func TestChannelMonitorV2SuccessColorDoesNotDependOnSampleMinimumOrOverallScore(t *testing.T) {
+	thresholds := DefaultChannelMonitorV2HealthThresholds()
+	thresholds.MinimumSample = 50
+	lowTraffic := ChannelMonitorV2HealthForWithThresholds(ChannelMonitorV2Metric{RequestCount: 1, SuccessRequests: 1}, thresholds)
+	require.Equal(t, "healthy", lowTraffic.ErrorRate)
+	require.NotNil(t, lowTraffic.ErrorRateScore)
+	require.InDelta(t, 100, *lowTraffic.ErrorRateScore, 0.01)
+	require.Equal(t, "unknown", lowTraffic.Overall)
+	require.Nil(t, lowTraffic.Score)
+
+	thresholds.WarningCacheRate = 0.85
+	thresholds.CriticalCacheRate = 0.60
+	thresholds.ErrorWeight = 0.20
+	thresholds.TTFTWeight = 0.40
+	thresholds.CacheWeight = 0.40
+	requestCount := int64(100)
+	badTTFT := int64(30000)
+	lowOverall := ChannelMonitorV2HealthForWithThresholds(ChannelMonitorV2Metric{
+		RequestCount: requestCount, SuccessRequests: requestCount,
+		CacheRateDenominator: 100, TTFT: ChannelMonitorV2Latency{SampleCount: 100, P50Ms: &badTTFT},
+	}, thresholds)
+	require.Equal(t, "healthy", lowOverall.ErrorRate)
+	require.Equal(t, "critical", lowOverall.Overall)
+}
+
+func TestChannelMonitorV2ScopedConfigDiscoversRealModelsWithoutChangingGlobalConfig(t *testing.T) {
+	cfg := ChannelMonitorV2Config{Platforms: []ChannelMonitorV2PlatformConfig{{Platform: "openai", Enabled: true, Models: []string{"gpt-5"}}}}
+	scoped := channelMonitorV2ConfigForScope(cfg, ChannelMonitorV2Filter{RestrictGroups: true, AllowedGroupIDs: []int64{7}})
+	require.Empty(t, scoped.Platforms[0].Models)
+	require.Equal(t, []string{"gpt-5"}, cfg.Platforms[0].Models)
+	require.Equal(t, cfg.Platforms[0].Models, channelMonitorV2ConfigForScope(cfg, ChannelMonitorV2Filter{}).Platforms[0].Models)
+}
+
 func TestChannelMonitorV2DefaultHealthThresholdsAreTolerant(t *testing.T) {
 	p50 := int64(2500)
 	health := ChannelMonitorV2HealthFor(ChannelMonitorV2Metric{

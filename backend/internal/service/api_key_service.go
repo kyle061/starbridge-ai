@@ -125,6 +125,10 @@ type apiKeyAllByUserIDLister interface {
 	ListAllByUserID(ctx context.Context, userID int64, filters APIKeyListFilters) ([]APIKey, error)
 }
 
+type apiKeyActiveGroupIDLister interface {
+	ListActiveGroupIDsByUserID(ctx context.Context, userID int64) ([]int64, error)
+}
+
 // APIKeyRateLimitData holds rate limit usage and window state for an API key.
 type APIKeyRateLimitData struct {
 	Usage5h       float64
@@ -1065,6 +1069,16 @@ func (s *APIKeyService) GetAvailableGroups(ctx context.Context, userID int64) ([
 	}
 
 	return availableGroups, nil
+}
+
+// GetActiveKeyGroupIDs returns only groups bound to the user's usable API keys.
+// A monitor must not infer the user's selected groups from public group access.
+func (s *APIKeyService) GetActiveKeyGroupIDs(ctx context.Context, userID int64) ([]int64, error) {
+	lister, ok := s.apiKeyRepo.(apiKeyActiveGroupIDLister)
+	if !ok {
+		return nil, fmt.Errorf("list active API key groups: repository does not support group projection")
+	}
+	return lister.ListActiveGroupIDsByUserID(ctx, userID)
 }
 
 // canUserBindGroupInternal 内部方法，检查用户是否可以绑定分组（使用预加载的订阅数据）

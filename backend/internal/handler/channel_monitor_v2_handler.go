@@ -20,6 +20,7 @@ type ChannelMonitorV2Handler struct {
 
 type channelMonitorV2GroupAuthorizer interface {
 	GetAvailableGroups(ctx context.Context, userID int64) ([]service.Group, error)
+	GetActiveKeyGroupIDs(ctx context.Context, userID int64) ([]int64, error)
 }
 
 func NewChannelMonitorV2Handler(svc *service.ChannelMonitorV2Service, apiKeyService *service.APIKeyService) *ChannelMonitorV2Handler {
@@ -69,13 +70,15 @@ func (h *ChannelMonitorV2Handler) UpdateConfig(c *gin.Context) {
 	response.Success(c, updated)
 }
 
-func (h *ChannelMonitorV2Handler) Dimensions(c *gin.Context) {
+func (h *ChannelMonitorV2Handler) Dimensions(c *gin.Context)      { h.dimensions(c, false) }
+func (h *ChannelMonitorV2Handler) AdminDimensions(c *gin.Context) { h.dimensions(c, true) }
+
+func (h *ChannelMonitorV2Handler) dimensions(c *gin.Context, adminEndpoint bool) {
 	filter, ok := h.parseFilter(c)
 	if !ok {
 		return
 	}
-	admin := channelMonitorV2IsAdmin(c)
-	if !h.scopeFilter(c, &filter, admin) {
+	if !h.scopeFilter(c, &filter, adminEndpoint) {
 		return
 	}
 	result, err := h.service.Dimensions(c.Request.Context(), filter)
@@ -84,7 +87,7 @@ func (h *ChannelMonitorV2Handler) Dimensions(c *gin.Context) {
 		return
 	}
 	// Admin and user share this handler; only non-admin responses strip volume.
-	if !admin {
+	if !channelMonitorV2IsAdmin(c) {
 		service.RedactChannelMonitorV2Dimensions(result)
 	}
 	response.Success(c, result)
@@ -107,7 +110,7 @@ func (h *ChannelMonitorV2Handler) snapshot(c *gin.Context, admin bool) {
 	if !h.scopeFilter(c, &filter, admin) {
 		return
 	}
-	result, err := h.service.Snapshot(c.Request.Context(), filter, admin)
+	result, err := h.service.Snapshot(c.Request.Context(), filter, admin || channelMonitorV2IsAdmin(c))
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
@@ -123,7 +126,7 @@ func (h *ChannelMonitorV2Handler) models(c *gin.Context, admin bool) {
 	if !h.scopeFilter(c, &filter, admin) {
 		return
 	}
-	result, err := h.service.Models(c.Request.Context(), filter, admin)
+	result, err := h.service.Models(c.Request.Context(), filter, admin || channelMonitorV2IsAdmin(c))
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
@@ -144,7 +147,7 @@ func (h *ChannelMonitorV2Handler) matrix(c *gin.Context, admin bool) {
 	if !h.scopeFilter(c, &filter, admin) {
 		return
 	}
-	result, err := h.service.Matrix(c.Request.Context(), filter, groupBy, admin)
+	result, err := h.service.Matrix(c.Request.Context(), filter, groupBy, admin || channelMonitorV2IsAdmin(c))
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
@@ -152,16 +155,18 @@ func (h *ChannelMonitorV2Handler) matrix(c *gin.Context, admin bool) {
 	response.Success(c, result)
 }
 
-func (h *ChannelMonitorV2Handler) Errors(c *gin.Context) {
+func (h *ChannelMonitorV2Handler) Errors(c *gin.Context)      { h.errors(c, false) }
+func (h *ChannelMonitorV2Handler) AdminErrors(c *gin.Context) { h.errors(c, true) }
+
+func (h *ChannelMonitorV2Handler) errors(c *gin.Context, adminEndpoint bool) {
 	filter, ok := h.parseFilter(c)
 	if !ok {
 		return
 	}
-	admin := channelMonitorV2IsAdmin(c)
-	if !h.scopeFilter(c, &filter, admin) {
+	if !h.scopeFilter(c, &filter, adminEndpoint) {
 		return
 	}
-	result, err := h.service.ErrorsForViewer(c.Request.Context(), filter, admin)
+	result, err := h.service.ErrorsForViewer(c.Request.Context(), filter, adminEndpoint || channelMonitorV2IsAdmin(c))
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
@@ -182,7 +187,7 @@ func (h *ChannelMonitorV2Handler) users(c *gin.Context, admin bool) {
 	if !h.scopeFilter(c, &filter, admin) {
 		return
 	}
-	result, err := h.service.Users(c.Request.Context(), filter, subject.UserID, admin)
+	result, err := h.service.Users(c.Request.Context(), filter, subject.UserID, admin || channelMonitorV2IsAdmin(c))
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
@@ -203,15 +208,30 @@ func (h *ChannelMonitorV2Handler) scopeFilter(c *gin.Context, filter *service.Ch
 		response.Unauthorized(c, "user not found in context")
 		return false
 	}
-	groups, err := h.apiKeyService.GetAvailableGroups(c.Request.Context(), subject.UserID)
+	keyGroupIDs, err := h.apiKeyService.GetActiveKeyGroupIDs(c.Request.Context(), subject.UserID)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return false
 	}
 	filter.RestrictGroups = true
-	filter.AllowedGroupIDs = make([]int64, 0, len(groups))
-	for i := range groups {
-		filter.AllowedGroupIDs = append(filter.AllowedGroupIDs, groups[i].ID)
+	if channelMonitorV2IsAdmin(c) || len(keyGroupIDs) == 0 {
+		filter.AllowedGroupIDs = keyGroupIDs
+		return true
+	}
+	groups, err := h.apiKeyService.GetAvailableGroups(c.Request.Context(), subject.UserID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return false
+	}
+	available := make(map[int64]struct{}, len(groups))
+	for _, group := range groups {
+		available[group.ID] = struct{}{}
+	}
+	filter.AllowedGroupIDs = make([]int64, 0, len(keyGroupIDs))
+	for _, groupID := range keyGroupIDs {
+		if _, ok := available[groupID]; ok {
+			filter.AllowedGroupIDs = append(filter.AllowedGroupIDs, groupID)
+		}
 	}
 	return true
 }

@@ -852,11 +852,11 @@ func registerChannelMonitorV2Routes(admin *gin.RouterGroup, h *handler.Handlers,
 		reads := monitor.Group("")
 		reads.Use(modeV2Guard)
 		{
-			reads.GET("/dimensions", h.ChannelMonitorV2.Dimensions)
+			reads.GET("/dimensions", h.ChannelMonitorV2.AdminDimensions)
 			reads.GET("/snapshot", h.ChannelMonitorV2.AdminSnapshot)
 			reads.GET("/models", h.ChannelMonitorV2.AdminModels)
 			reads.GET("/matrix", h.ChannelMonitorV2.AdminMatrix)
-			reads.GET("/errors", h.ChannelMonitorV2.Errors)
+			reads.GET("/errors", h.ChannelMonitorV2.AdminErrors)
 			reads.GET("/users", h.ChannelMonitorV2.AdminUsers)
 		}
 	}

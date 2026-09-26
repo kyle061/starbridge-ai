@@ -82,6 +82,28 @@ function metrics(requestCount: number): MonitorMetric {
 }
 
 describe('RelayPulseMatrix', () => {
+  it('keeps the success-rate text green when the composite score is red', () => {
+    const wrapper = mount(RelayPulseMatrix, {
+      props: {
+        rows: [{
+          platform: 'openai', group_id: 7, group_name: 'mine', model: 'gpt-6',
+          metrics: { ...metrics(100), error_rate: 0, success_requests: 100, error_requests: 0 },
+          health: { ...health, overall: 'critical', score: 10, error_rate: 'healthy', error_rate_score: 100 },
+          buckets: [],
+        }],
+        coverage: {
+          requested_start: '2026-08-01T00:00:00Z', requested_end: '2026-08-01T00:01:00Z',
+          coverage_start: '2026-08-01T00:00:00Z', data_through: '2026-08-01T00:01:00Z',
+          computed_at: '2026-08-01T00:01:00Z', aggregation_lag_seconds: 0,
+          coverage_complete: true, bucket_seconds: 60,
+        },
+        healthMode: 'success',
+      },
+    })
+    expect(wrapper.find('.summary-value').classes().join(' ')).toContain('text-emerald-600')
+    expect(wrapper.find('.dimension-cell .status-dot').classes()).toContain('health-score10')
+  })
+
   it('shows privacy-safe hover tooltips and multi-band colors without click modal', async () => {
     const wrapper = mount(RelayPulseMatrix, {
       props: {

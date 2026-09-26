@@ -308,7 +308,7 @@
                 >
                   <td>
                     <div class="flex items-center gap-2">
-                      <span :class="statusDot(row.health)" aria-hidden="true"></span>
+                      <span :class="statusDot(row.health.error_rate)" aria-hidden="true"></span>
                       <div>
                         <span class="block text-xs text-gray-500 dark:text-dark-400">{{ row.platform }}</span>
                         <strong class="font-semibold text-gray-900 dark:text-white">
@@ -318,7 +318,7 @@
                     </div>
                   </td>
                   <td>
-                    <span class="block">{{ formatPercent(1 - row.metrics.error_rate) }}</span>
+                    <span class="block" :class="successRateTextClass(row.health.error_rate)">{{ formatPercent(1 - row.metrics.error_rate) }}</span>
                     <small class="text-xs text-gray-400">{{ t('channelMonitorV2.metrics.errorRateValue', { value: formatPercent(row.metrics.error_rate) }) }}</small>
                   </td>
                   <td>
@@ -480,7 +480,6 @@ import type {
   MonitorDimensions,
   MonitorErrorRow,
   MonitorFilter,
-  MonitorHealth,
   MonitorMatrixGroupBy,
   MonitorMatrixResponse,
   MonitorModelRow,
@@ -496,7 +495,7 @@ import {
   formatMonitorThroughput,
   formatMonitorTokensPerSecond,
   tokensPerSecondFromTpm,
-  healthScoreClass,
+  successRateTextClass,
   monitorErrorCategoryLabel,
   ttftDisplayState,
 } from '@/features/channel-monitor-v2/monitorFormat'
@@ -684,7 +683,7 @@ function parseTab(value: unknown, allowUsers: boolean): Tab {
 }
 function parseHealthMode(value: unknown): HealthMode {
   const allowed: HealthMode[] = ['overall', 'success', 'ttft', 'cache']
-  return allowed.includes(value as HealthMode) ? (value as HealthMode) : 'overall'
+  return allowed.includes(value as HealthMode) ? (value as HealthMode) : 'success'
 }
 function parseTrendView(value: unknown): TrendView {
   return value === 'line' ? 'line' : 'pulse'
@@ -711,15 +710,15 @@ async function loadDimensions(signal?: AbortSignal, id = sequence) {
     groupIds: [],
     models: [],
   }
-  const next = await api.getDimensions(rangeOnly, isAdmin.value, signal)
+  const next = await api.getDimensions(rangeOnly, false, signal)
   if (id !== sequence) return
   dimensions.value = next
 }
 
 async function loadMetrics(signal?: AbortSignal, id = sequence) {
   const [nextSnapshot, nextMatrix] = await Promise.all([
-    api.getSnapshot(filter.value, isAdmin.value, signal),
-    api.getMatrix(filter.value, matrixGroupBy.value, isAdmin.value, signal),
+    api.getSnapshot(filter.value, false, signal),
+    api.getMatrix(filter.value, matrixGroupBy.value, false, signal),
   ])
   if (id !== sequence) return
   snapshot.value = nextSnapshot
@@ -780,11 +779,11 @@ async function loadTab(signal?: AbortSignal, id = sequence) {
   tabLoading.value = true
   try {
     if (activeTab.value === 'models') {
-      modelRows.value = (await api.getModels(filter.value, isAdmin.value, signal)).items || []
+      modelRows.value = (await api.getModels(filter.value, false, signal)).items || []
     } else if (activeTab.value === 'errors') {
-      errorRows.value = (await api.getErrors(filter.value, isAdmin.value, signal)).items || []
+      errorRows.value = (await api.getErrors(filter.value, false, signal)).items || []
     } else if (showUserRanking.value) {
-      userRows.value = (await api.getUsers(filter.value, isAdmin.value, signal)).items || []
+      userRows.value = (await api.getUsers(filter.value, false, signal)).items || []
     } else {
       userRows.value = []
     }
@@ -874,17 +873,8 @@ function formatTime(value: string) {
     minute: '2-digit',
   }).format(new Date(value))
 }
-function statusDot(health?: MonitorHealth | HealthState) {
-  if (!health || typeof health === 'string') {
-    return `status-dot health-${health || 'unknown'}`
-  }
-  // Prefer multi-band score when available; otherwise fall back to the coarse
-  // overall state for mixed-version/older payloads.
-  const klass =
-    health.score != null
-      ? healthScoreClass(health, 'overall', 0)
-      : `health-${health.overall || 'unknown'}`
-  return `status-dot ${klass}`
+function statusDot(state?: HealthState) {
+  return `status-dot health-${state || 'unknown'}`
 }
 function errorLabel(value: string) {
   const key = `channelMonitorV2.errorCategories.${value}`

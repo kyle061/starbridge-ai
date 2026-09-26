@@ -13,6 +13,7 @@ import {
   healthScoreClass,
   healthStateClass,
   scoreToBand,
+  successRateTextClass,
   tokensPerSecondFromTpm,
   ttftDisplayState,
 } from '../monitorFormat'
@@ -110,6 +111,13 @@ describe('monitorFormat accuracy', () => {
   it('maps health states for status dots', () => {
     expect(healthStateClass('healthy')).toBe('health-healthy')
     expect(healthStateClass(undefined)).toBe('health-unknown')
+  })
+
+  it('colors a successful rate green independently of composite health', () => {
+    expect(successRateTextClass('healthy')).toContain('emerald')
+    expect(successRateTextClass('warning')).toContain('amber')
+    expect(successRateTextClass('critical')).toContain('red')
+    expect(successRateTextClass('unknown')).toContain('gray')
   })
 
   it('keeps missing first-token samples neutral instead of critical', () => {

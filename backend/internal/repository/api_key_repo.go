@@ -506,6 +506,28 @@ func (r *apiKeyRepository) ListAllByUserID(ctx context.Context, userID int64, fi
 	return outKeys, nil
 }
 
+// ListActiveGroupIDsByUserID projects only group IDs, avoiding key material and
+// usage-log lookups on the frequently refreshed channel-status page.
+func (r *apiKeyRepository) ListActiveGroupIDsByUserID(ctx context.Context, userID int64) ([]int64, error) {
+	var rows []struct {
+		GroupID int64 `json:"group_id"`
+	}
+	err := r.activeQuery().Where(
+		apikey.UserIDEQ(userID),
+		apikey.StatusEQ(service.StatusActive),
+		apikey.GroupIDNotNil(),
+		apikey.Or(apikey.ExpiresAtIsNil(), apikey.ExpiresAtGT(time.Now())),
+	).GroupBy(apikey.FieldGroupID).Scan(ctx, &rows)
+	if err != nil {
+		return nil, err
+	}
+	groupIDs := make([]int64, 0, len(rows))
+	for _, row := range rows {
+		groupIDs = append(groupIDs, row.GroupID)
+	}
+	return groupIDs, nil
+}
+
 func (r *apiKeyRepository) attachLastUsedIPs(ctx context.Context, keys []service.APIKey) error {
 	if len(keys) == 0 || r.sql == nil {
 		return nil

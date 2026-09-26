@@ -469,12 +469,25 @@ func (s *ChannelMonitorV2Service) ParseFilter(rangeValue string, platforms, mode
 	}, nil
 }
 
+// A key-scoped view discovers model names from traffic in the key's groups.
+// The operator's global named-model inventory is only for the global view.
+func channelMonitorV2ConfigForScope(cfg ChannelMonitorV2Config, filter ChannelMonitorV2Filter) ChannelMonitorV2Config {
+	if !filter.RestrictGroups {
+		return cfg
+	}
+	cfg.Platforms = append([]ChannelMonitorV2PlatformConfig(nil), cfg.Platforms...)
+	for i := range cfg.Platforms {
+		cfg.Platforms[i].Models = nil
+	}
+	return cfg
+}
+
 func (s *ChannelMonitorV2Service) Dimensions(ctx context.Context, filter ChannelMonitorV2Filter) (*ChannelMonitorV2Dimensions, error) {
 	cfg, err := s.getEnabledConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
-	dims, err := s.repo.GetDimensions(ctx, filter, *cfg)
+	dims, err := s.repo.GetDimensions(ctx, filter, channelMonitorV2ConfigForScope(*cfg, filter))
 	if err != nil {
 		return nil, err
 	}
@@ -489,7 +502,7 @@ func (s *ChannelMonitorV2Service) Snapshot(ctx context.Context, filter ChannelMo
 	if err != nil {
 		return nil, err
 	}
-	snap, err := s.repo.GetSnapshot(ctx, filter, *cfg, admin)
+	snap, err := s.repo.GetSnapshot(ctx, filter, channelMonitorV2ConfigForScope(*cfg, filter), admin)
 	if err != nil {
 		return nil, err
 	}
@@ -504,7 +517,7 @@ func (s *ChannelMonitorV2Service) Models(ctx context.Context, filter ChannelMoni
 	if err != nil {
 		return nil, err
 	}
-	list, err := s.repo.GetModels(ctx, filter, *cfg, admin)
+	list, err := s.repo.GetModels(ctx, filter, channelMonitorV2ConfigForScope(*cfg, filter), admin)
 	if err != nil {
 		return nil, err
 	}
@@ -525,7 +538,7 @@ func (s *ChannelMonitorV2Service) Matrix(ctx context.Context, filter ChannelMoni
 	if err != nil {
 		return nil, err
 	}
-	matrix, err := s.repo.GetMatrix(ctx, filter, *cfg, groupBy, admin)
+	matrix, err := s.repo.GetMatrix(ctx, filter, channelMonitorV2ConfigForScope(*cfg, filter), groupBy, admin)
 	if err != nil {
 		return nil, err
 	}
@@ -574,7 +587,7 @@ func (s *ChannelMonitorV2Service) ErrorsForViewer(ctx context.Context, filter Ch
 	if err != nil {
 		return nil, err
 	}
-	list, err := s.repo.GetErrors(ctx, filter, *cfg, admin)
+	list, err := s.repo.GetErrors(ctx, filter, channelMonitorV2ConfigForScope(*cfg, filter), admin)
 	if err != nil {
 		return nil, err
 	}
@@ -667,7 +680,7 @@ func (s *ChannelMonitorV2Service) Users(ctx context.Context, filter ChannelMonit
 	if s.hideUserRankingForViewer(ctx, admin) {
 		return &ChannelMonitorV2List[ChannelMonitorV2UserRow]{Items: []ChannelMonitorV2UserRow{}}, nil
 	}
-	result, err := s.repo.GetUsers(ctx, filter, *cfg, admin)
+	result, err := s.repo.GetUsers(ctx, filter, channelMonitorV2ConfigForScope(*cfg, filter), admin)
 	if err != nil {
 		return nil, err
 	}
@@ -971,11 +984,13 @@ func ChannelMonitorV2HealthForWithThresholds(metrics ChannelMonitorV2Metric, thr
 	}
 	parts := make([]scored, 0, 3)
 
-	if metrics.RequestCount >= result.MinimumSample {
+	if metrics.RequestCount > 0 {
 		s := errorRateScore(metrics.ErrorRate, thresholds.CriticalErrorRate)
 		result.ErrorRateScore = &s
 		result.ErrorRate = healthBand(metrics.ErrorRate, thresholds.WarningErrorRate, thresholds.CriticalErrorRate)
-		parts = append(parts, scored{score: s, weight: thresholds.ErrorWeight, band: result.ErrorRate})
+		if metrics.RequestCount >= result.MinimumSample {
+			parts = append(parts, scored{score: s, weight: thresholds.ErrorWeight, band: result.ErrorRate})
+		}
 	}
 	// Prefer p50 for TTFT scoring; fall back to p95 only if p50 is missing.
 	if metrics.TTFT.SampleCount >= result.MinimumSample {
