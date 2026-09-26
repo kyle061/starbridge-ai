@@ -2108,7 +2108,7 @@ func setDefaults() {
 	viper.SetDefault("billing.retail_pricing.standard_multiplier", 6.0)
 	viper.SetDefault("billing.retail_pricing.latest_multiplier", 6.0)
 	viper.SetDefault("billing.retail_pricing.latest_model_prefixes", []string{"gpt-6", "deepseek-v4"})
-	viper.SetDefault("billing.gpt6_preparation.enabled", true)
+	viper.SetDefault("billing.gpt6_preparation.enabled", false)
 	viper.SetDefault("billing.gpt6_preparation.model", "deepseek-v4-pro")
 	viper.SetDefault("billing.gpt6_preparation.preparation_multiplier", 6.0)
 	viper.SetDefault("billing.gpt6_preparation.max_output_tokens", 1200)

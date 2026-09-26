@@ -54,6 +54,13 @@ func TestStarbridgeRetailPricingDefaultsLatestGeneration(t *testing.T) {
 	require.Equal(t, []string{"gpt-6", "deepseek-v4"}, cfg.Billing.RetailPricing.LatestModelPrefixes)
 }
 
+func TestGPT6PreparationDisabledByDefault(t *testing.T) {
+	resetViperWithJWTSecret(t)
+	cfg, err := Load()
+	require.NoError(t, err)
+	require.False(t, cfg.Billing.GPT6Preparation.Enabled)
+}
+
 func TestLoadTimezonePrecedence(t *testing.T) {
 	tests := []struct {
 		name         string

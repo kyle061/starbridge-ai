@@ -50,8 +50,8 @@ export const PROVIDERS: readonly Provider[] = [
   PROVIDER_OPENCODE_GO,
 ]
 
-/** 仅支持配额模式（无探活 adapter）的 provider。 */
-export const QUOTA_ONLY_PROVIDERS: readonly Provider[] = [PROVIDER_ANTIGRAVITY]
+/** 仅支持配额模式（无稳定独立探活 adapter）的 provider。 */
+export const QUOTA_ONLY_PROVIDERS: readonly Provider[] = [PROVIDER_ANTIGRAVITY, PROVIDER_OPENCODE_GO]
 
 export const CHECK_MODES: readonly CheckMode[] = [
   CHECK_MODE_PROBE,

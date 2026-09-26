@@ -136,6 +136,34 @@ func TestOpenAIGatewayServiceForward_CodexImageInjectionRespectsGroupCapability(
 	}
 }
 
+func TestOpenAIGatewayServiceForward_GPT6PreparationSkipsCodexImageBridge(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	upstream := &httpUpstreamRecorder{
+		resp: &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Body:       io.NopCloser(strings.NewReader(`{"id":"resp_gpt6_preparation","model":"gpt-5.6-luna","usage":{"input_tokens":1,"output_tokens":1}}`)),
+		},
+	}
+	svc := newOpenAIImageGenerationControlTestService(upstream)
+	svc.cfg.Gateway.CodexImageGenerationBridgeEnabled = true
+	c, _ := newOpenAIImageGenerationControlTestContext(true, "codex_cli_rs/0.98.0")
+	SetOpenAIClientTransport(c, OpenAIClientTransportHTTP)
+	SetOpenAIImageIntentHint(c, true)
+	c.Set("gpt6_preparation", true)
+	account := newOpenAIImageGenerationControlTestAccount()
+
+	result, err := svc.Forward(context.Background(), c, account, []byte(`{"model":"gpt-5.6-luna","input":"draw a cat","stream":false}`))
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.NotNil(t, upstream.lastReq)
+	require.False(t, gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation")`).Exists())
+	require.False(t, gjson.GetBytes(upstream.lastBody, "tool_choice").Exists())
+	require.NotContains(t, gjson.GetBytes(upstream.lastBody, "instructions").String(), "image_generation")
+}
+
 func TestOpenAIBuildUpstreamRequestOpenAIPassthroughForwardsResponsesLiteHeader(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	c, _ := newOpenAIImageGenerationControlTestContext(true, "codex_cli_rs/0.98.0")

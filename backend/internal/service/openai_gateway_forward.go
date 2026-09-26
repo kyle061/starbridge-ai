@@ -350,7 +350,9 @@ func (s *OpenAIGatewayService) Forward(ctx context.Context, c *gin.Context, acco
 	if apiKey != nil {
 		imageGenerationAllowed = GroupAllowsImageGeneration(apiKey.Group)
 	}
-	codexImageGenerationBridgeEnabled := isCodexCLI &&
+	gpt6PreparationValue, _ := c.Get("gpt6_preparation")
+	gpt6Preparation, _ := gpt6PreparationValue.(bool)
+	codexImageGenerationBridgeEnabled := !gpt6Preparation && isCodexCLI &&
 		!isOpenAIResponsesLiteHeader(c.GetHeader(responsesLiteHeader)) &&
 		imageGenerationAllowed &&
 		codexImageGenerationExplicitToolPolicy != codexImageGenerationExplicitToolPolicyStrip &&

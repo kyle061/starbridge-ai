@@ -250,6 +250,7 @@ func (h *OpenAIGatewayHandler) runGPT6PreparationCandidate(c *gin.Context, apiKe
 		prepContext.Set(key, value)
 	}
 	service.SetOpenAIClientTransport(prepContext, service.OpenAIClientTransportHTTP)
+	service.SetOpenAIImageIntentHint(prepContext, false)
 	prepContext.Set("gpt6_preparation", true)
 
 	var result *service.OpenAIForwardResult

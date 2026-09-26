@@ -9,8 +9,9 @@ import (
 // 渠道监控参数校验与归一化辅助函数。
 // 校验失败一律返回 channel_monitor_const.go 中预定义的 Err* 错误，错误信息不含具体 IP/hostname，避免泄露内网拓扑。
 
-// monitorProviders 渠道监控支持的全部 provider（与迁移 226 的 CHECK 约束一致）。
-// 不再以 adapter 表为唯一来源：antigravity 没有探活 adapter，但支持配额模式。
+// monitorProviders 渠道监控支持的全部 provider（与迁移 238 的 CHECK 约束一致）。
+// 不再以 adapter 表为唯一来源：antigravity / opencode_go 没有稳定的
+// 独立探活 adapter，但都支持配额模式。
 //
 //nolint:gochecknoglobals // 静态查表，初始化后不变。
 var monitorProviders = map[string]struct{}{
@@ -23,10 +24,12 @@ var monitorProviders = map[string]struct{}{
 	MonitorProviderZhipu:       {},
 	MonitorProviderDeepseek:    {},
 	MonitorProviderMiniMax:     {},
+	MonitorProviderOpenCodeGo:  {},
 }
 
 // probeCapableProviders 支持探活（probe / quota_probe）的 provider。
-// antigravity 上游无 Chat/Responses 可打（仅 IDE 代理形态），只允许配额模式。
+// antigravity 上游无 Chat/Responses 可打（仅 IDE 代理形态），opencode_go
+// 的实际上游协议由关联账号按模型动态决定，监控目前只支持配额模式。
 //
 //nolint:gochecknoglobals // 静态查表，初始化后不变。
 var probeCapableProviders = map[string]struct{}{
@@ -73,6 +76,7 @@ func monitorCheckModeUsesQuota(checkMode string) bool {
 //	------------------------+-------+-------+------------
 //	openai/anthropic/...    |  Y    |  Y    |  Y
 //	antigravity（无 adapter）|  N    |  Y    |  N
+//	opencode_go（动态协议）  |  N    |  Y    |  N
 func validateCheckMode(provider, checkMode string) error {
 	checkMode = defaultCheckMode(checkMode)
 	switch checkMode {

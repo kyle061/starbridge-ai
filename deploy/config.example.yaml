@@ -1115,10 +1115,10 @@ billing:
   # Set to 0 to only require balance > 0.
   # 余额计费请求转发前要求的保守最小余额；设为 0 则仅要求余额 > 0。
   minimum_balance_reserve: 0.000001
-  # Composite GPT6 requests may use a DeepSeek requirements pass before OpenAI
-  # execution. If preparation is unavailable, the original GPT6 request proceeds.
+  # Optional requirements pass for composite GPT6 requests. Enabling it adds an
+  # extra model request and associated usage charges before the OpenAI request.
   gpt6_preparation:
-    enabled: true
+    enabled: false
     model: deepseek-v4-pro
     preparation_multiplier: 6.0
     max_output_tokens: 1200
