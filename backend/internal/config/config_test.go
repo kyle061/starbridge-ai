@@ -49,16 +49,8 @@ func TestStarbridgeRetailPricingDefaultsLatestGeneration(t *testing.T) {
 	require.True(t, cfg.Billing.RetailPricing.Enabled)
 	require.Equal(t, 6.0, cfg.Billing.RetailPricing.StandardMultiplier)
 	require.Equal(t, 6.0, cfg.Billing.RetailPricing.LatestMultiplier)
-	require.Equal(t, 6.0, cfg.Billing.GPT6Preparation.PreparationMultiplier)
 	// GPT-6 supersedes GPT-5.6; previous generations use the standard rate.
 	require.Equal(t, []string{"gpt-6", "deepseek-v4"}, cfg.Billing.RetailPricing.LatestModelPrefixes)
-}
-
-func TestGPT6PreparationDisabledByDefault(t *testing.T) {
-	resetViperWithJWTSecret(t)
-	cfg, err := Load()
-	require.NoError(t, err)
-	require.False(t, cfg.Billing.GPT6Preparation.Enabled)
 }
 
 func TestLoadTimezonePrecedence(t *testing.T) {

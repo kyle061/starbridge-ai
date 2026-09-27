@@ -311,9 +311,8 @@ func compositeRouteCandidatesForSelection(ctx context.Context, openAICompatible 
 	if len(candidates) < 2 || isOpenAICompatibleCompositePlatform(candidates[0].TargetPlatform) != openAICompatible {
 		return nil
 	}
-	// GPT6 uses DeepSeek only for the private requirements pass. Keep the
-	// final execution on the selected GPT6 provider even when a DeepSeek
-	// fallback route exists in the composite group.
+	// Keep GPT6 execution on the configured OpenAI provider even if a composite
+	// group contains a DeepSeek route for the same public model.
 	gpt6FinalExecution := IsGPT6Model(candidates[0].PublicModel)
 	filtered := make([]CompositeRouteDecision, 0, len(candidates))
 	for _, candidate := range candidates {

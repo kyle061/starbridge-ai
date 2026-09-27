@@ -160,12 +160,6 @@ func (h *OpenAIGatewayHandler) ChatCompletions(c *gin.Context) {
 	// 分组利润控制：chat completions 文本入口请求级装门并固定 pricingAt。
 	ccPricingCtx, pricingAt := h.gatewayService.WithOpenAIRequestPricingContext(c.Request.Context(), apiKey.GroupID)
 	c.Request = c.Request.WithContext(ccPricingCtx)
-	preparedBody, preparationErr := h.prepareGPT6Request(c, apiKey, reqModel, body, false)
-	if preparationErr != nil {
-		logGPT6PreparationFallback(reqLog, "openai_chat_completions.gpt6_preparation_failed", reqModel, 0, preparationErr)
-	}
-	preparedBody = gpt6PreparedBodyOrOriginal(body, preparedBody, preparationErr)
-	body = preparedBody
 
 	for {
 		if failoverClientGone(c) {

@@ -73,7 +73,7 @@ func ensureStandardRelayDefaultGroups(ctx context.Context, client *dbent.Client)
 }
 
 func standardRelayDefaultRoutes(groupID int64) []standardRelayRoute {
-	routes := make([]standardRelayRoute, 0, 6)
+	routes := make([]standardRelayRoute, 0, 4)
 	for _, model := range []string{"gpt-6", "gpt-6-astra"} {
 		routes = append(routes, standardRelayRoute{
 			groupID:        groupID,
@@ -83,14 +83,6 @@ func standardRelayDefaultRoutes(groupID int64) []standardRelayRoute {
 			upstreamModel:  "gpt-6-astra",
 			priority:       10,
 			notes:          "Primary OpenAI GPT6 execution route",
-		}, standardRelayRoute{
-			groupID:        groupID,
-			publicModel:    model,
-			matchType:      service.CompositeRouteMatchExact,
-			targetPlatform: service.PlatformDeepseek,
-			upstreamModel:  "deepseek-v4-pro",
-			priority:       20,
-			notes:          "DeepSeek requirements preparation fallback",
 		})
 	}
 	return append(routes,

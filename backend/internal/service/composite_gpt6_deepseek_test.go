@@ -80,23 +80,3 @@ func TestCompositeGPT6UsageKeepsRequestedAndActualModelsSeparate(t *testing.T) {
 	require.NotNil(t, usageRepo.lastLog.UpstreamModel)
 	require.Equal(t, "deepseek-v4-pro", *usageRepo.lastLog.UpstreamModel)
 }
-
-func TestGPT6PreparationMultiplierChargesConfiguredRate(t *testing.T) {
-	usageRepo := &openAIRecordUsageLogRepoStub{inserted: true}
-	billingRepo := &openAIRecordUsageBillingRepoStub{result: &UsageBillingApplyResult{Applied: true}}
-	svc := newOpenAIRecordUsageServiceWithBillingRepoForTest(usageRepo, billingRepo,
-		&openAIRecordUsageUserRepoStub{}, &openAIRecordUsageSubRepoStub{}, nil)
-	multiplier := 6.0
-	err := svc.RecordUsage(context.Background(), &OpenAIRecordUsageInput{
-		Result: &OpenAIForwardResult{RequestID: "prep", Model: "deepseek-v4-pro", BillingModel: "deepseek-v4-pro", UpstreamModel: "deepseek-v4-pro", Usage: OpenAIUsage{InputTokens: 10, OutputTokens: 5}},
-		APIKey: &APIKey{ID: 1, Group: &Group{Platform: PlatformComposite, RateMultiplier: 1}},
-		User:   &User{ID: 2}, Account: &Account{ID: 3, Type: AccountTypeAPIKey, Platform: PlatformDeepseek},
-		APIKeyService: &openAIRecordUsageAPIKeyQuotaStub{}, BillingMultiplierOverride: &multiplier,
-		ChannelUsageFields: ChannelUsageFields{OriginalModel: "gpt-6-astra", BillingModelSource: BillingModelSourceUpstream},
-	})
-	require.NoError(t, err)
-	require.NotNil(t, usageRepo.lastLog)
-	require.Equal(t, "gpt-6-astra", usageRepo.lastLog.RequestedModel)
-	require.Equal(t, 6.0, usageRepo.lastLog.RateMultiplier)
-	require.Greater(t, usageRepo.lastLog.ActualCost, usageRepo.lastLog.TotalCost)
-}

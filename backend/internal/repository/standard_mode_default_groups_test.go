@@ -35,20 +35,19 @@ func TestStandardRelayDefaultRoutesKeepGPT6ExecutionOnOpenAI(t *testing.T) {
 			Priority: route.priority, Endpoint: service.CompositeRouteEndpointAny, Enabled: true,
 		})
 	}
-	require.Len(t, repo.routes, 6)
+	require.Len(t, repo.routes, 4)
 	resolver := service.NewCompositeRouteResolver(repo)
 	for _, model := range []string{"gpt-6", "gpt-6-astra", "deepseek-v4-pro"} {
 		for _, endpoint := range []string{service.CompositeRouteEndpointResponses, service.CompositeRouteEndpointChatCompletions, service.CompositeRouteEndpointMessages} {
 			t.Run(model+"/"+endpoint, func(t *testing.T) {
 				candidates, err := resolver.ResolveCandidates(context.Background(), groupID, model, endpoint)
 				require.NoError(t, err)
-				require.Len(t, candidates, 2)
 				if service.IsGPT6Model(model) {
+					require.Len(t, candidates, 1)
 					require.Equal(t, service.PlatformOpenAI, candidates[0].TargetPlatform)
 					require.Equal(t, "gpt-6-astra", candidates[0].UpstreamModel)
-					require.Equal(t, service.PlatformDeepseek, candidates[1].TargetPlatform)
-					require.Equal(t, "deepseek-v4-pro", candidates[1].UpstreamModel)
 				} else {
+					require.Len(t, candidates, 2)
 					require.Equal(t, service.PlatformDeepseek, candidates[0].TargetPlatform)
 					require.Equal(t, "deepseek-v4-pro", candidates[0].UpstreamModel)
 					require.Equal(t, service.PlatformOpenAI, candidates[1].TargetPlatform)

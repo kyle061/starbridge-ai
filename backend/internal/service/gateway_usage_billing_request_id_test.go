@@ -19,14 +19,6 @@ func TestResolveUsageBillingRequestID_ForcedWebSearchBeatsClientID(t *testing.T)
 	require.Equal(t, "web_search:uuid-1", got)
 }
 
-func TestResolveUsageBillingRequestID_GPT6PreparationBeatsServerAndClientIDs(t *testing.T) {
-	t.Parallel()
-	ctx := context.WithValue(context.Background(), ctxkey.ClientRequestID, "client-shared-id")
-	ctx = context.WithValue(ctx, ctxkey.RequestID, "server-request-id")
-	got := resolveUsageBillingRequestID(ctx, "gpt6-prep:upstream-1")
-	require.Equal(t, "gpt6-prep:upstream-1", got)
-}
-
 func TestResolveUsageBillingRequestID_ServerRequestIDWinsOverClientAndUpstream(t *testing.T) {
 	t.Parallel()
 	ctx := context.WithValue(context.Background(), ctxkey.ClientRequestID, "client-shared-id")
@@ -65,7 +57,6 @@ func TestResolveUsageBillingRequestID_ReusedClientIDDoesNotReuseBillingID(t *tes
 func TestIsForcedUsageBillingRequestID(t *testing.T) {
 	t.Parallel()
 	require.True(t, isForcedUsageBillingRequestID("web_search:x"))
-	require.True(t, isForcedUsageBillingRequestID("gpt6-prep:x"))
 	require.True(t, isForcedUsageBillingRequestID("grok-video:task-1"))
 	require.True(t, isForcedUsageBillingRequestID("grok_audio:up-1"))
 	require.True(t, isForcedUsageBillingRequestID("grok_realtime:sess-1"))
