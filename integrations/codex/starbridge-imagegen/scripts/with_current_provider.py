@@ -102,7 +102,7 @@ def run_bundled_cli(cli, cli_args, environment):
     args = list(cli_args)
     if args[0] == "generate-batch" and not any(arg == "--max-attempts" or arg.startswith("--max-attempts=") for arg in args):
         args.extend(["--max-attempts", "1"])
-    if not has_explicit_model(args):
+    if not has_explicit_model(args) and "--dry-run" not in args:
         with patch.dict(os.environ, environment, clear=True):
             models = sync_client(max_retries=0, timeout=15.0).models.list()
         args.extend(["--model", preferred_image_model(model.id for model in models.data)])
