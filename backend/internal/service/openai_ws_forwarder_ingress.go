@@ -344,14 +344,13 @@ func (s *OpenAIGatewayService) ProxyResponsesWebSocketFromClient(
 			return openAIWSClientPayload{}, NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, err.Error(), err)
 		}
 		codexBridgeEnabled := isCodexCLI &&
-			!isOpenAIResponsesLiteWebSocketPayload(normalized) &&
 			imageGenerationAllowed
 		if codexBridgeEnabled {
 			payloadMap := make(map[string]any)
 			if err := decodeOpenAIJSONUseNumber(normalized, &payloadMap); err != nil {
 				return openAIWSClientPayload{}, NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, "invalid websocket request payload", err)
 			}
-			if ensureCodexImageGenerationBridge(payloadMap, account) {
+			if ensureCodexImageGenerationBridge(payloadMap, account, responsesLite) {
 				rebuilt, marshalErr := json.Marshal(payloadMap)
 				if marshalErr != nil {
 					return openAIWSClientPayload{}, NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, "invalid websocket request payload", marshalErr)

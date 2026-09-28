@@ -821,6 +821,7 @@ func TestOpenAIGatewayService_ProxyResponsesWebSocketFromClient_CodexImageBridge
 	require.Equal(t, "900719925474099312345", gjson.Get(nonLitePayload, "sequence").Raw)
 
 	litePayload := requestToJSONString(captureConn.writes[1])
+	require.Contains(t, gjson.Get(litePayload, "instructions").String(), codexImageAPIAvailableMarker)
 	require.False(t, gjson.Get(litePayload, `tools.#(type=="image_generation")`).Exists())
 	require.NotContains(t, gjson.Get(litePayload, "instructions").String(), "image_generation")
 	require.Equal(t, "exec", gjson.Get(litePayload, `input.#(type=="additional_tools").tools.0.name`).String())

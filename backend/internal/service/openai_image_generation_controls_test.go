@@ -95,10 +95,12 @@ func TestOpenAIGatewayServiceForward_CodexImageInjectionRespectsGroupCapability(
 		passthrough    bool
 		modelMapping   map[string]any
 		wantImageModel string
+		wantLiteHint   bool
 	}{
 		{name: "disabled group skips injection", allowImages: false, wantInjected: false},
 		{name: "enabled group provides image tool", allowImages: true, wantInjected: true},
-		{name: "responses lite skips hosted image tool", allowImages: true, responsesLite: true, wantInjected: false},
+		{name: "responses lite exposes existing provider route", allowImages: true, responsesLite: true, wantLiteHint: true},
+		{name: "responses lite disabled group receives no image guidance", responsesLite: true},
 		{name: "legacy account and channel disable cannot block enabled group", allowImages: true, legacyOverride: &legacyDisabled, wantInjected: true},
 		{name: "legacy account and channel enable cannot bypass disabled group", allowImages: false, legacyOverride: &legacyEnabled, wantInjected: false},
 		{name: "legacy strip cannot override enabled group", allowImages: true, stripTools: true, wantInjected: true},
@@ -108,7 +110,8 @@ func TestOpenAIGatewayServiceForward_CodexImageInjectionRespectsGroupCapability(
 		{name: "passthrough enabled group provides image tool", allowImages: true, passthrough: true, wantInjected: true},
 		{name: "passthrough disabled group skips injection", passthrough: true},
 		{name: "passthrough ignores legacy strip", allowImages: true, passthrough: true, stripTools: true, wantInjected: true},
-		{name: "passthrough lite skips injection", allowImages: true, passthrough: true, responsesLite: true},
+		{name: "passthrough lite exposes existing provider route", allowImages: true, passthrough: true, responsesLite: true, wantLiteHint: true},
+		{name: "lite cannot bypass image allowlist", allowImages: true, responsesLite: true, modelMapping: map[string]any{"gpt-5.4": "gpt-5.4"}},
 		{name: "spark skips injection", allowImages: true, model: "gpt-5.3-codex-spark"},
 		{name: "passthrough spark skips injection", allowImages: true, passthrough: true, model: "gpt-5.3-codex-spark"},
 		{name: "enabled group cannot authorize an image model", allowImages: true, modelMapping: map[string]any{"gpt-5.4": "gpt-5.4"}},
@@ -171,6 +174,7 @@ func TestOpenAIGatewayServiceForward_CodexImageInjectionRespectsGroupCapability(
 			}
 			require.Equal(t, expectedLiteHeader, upstream.lastReq.Header.Get(responsesLiteHeader))
 			instructions := gjson.GetBytes(upstream.lastBody, "instructions").String()
+			require.Equal(t, tt.wantLiteHint, strings.Contains(instructions, codexImageAPIAvailableMarker))
 			require.Equal(t, tt.wantInjected, strings.Contains(instructions, "image_generation"))
 			toolChoice := gjson.GetBytes(upstream.lastBody, "tool_choice")
 			require.Equal(t, tt.wantInjected, toolChoice.Exists())

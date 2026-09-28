@@ -353,7 +353,6 @@ func (s *OpenAIGatewayService) forwardResponses(ctx context.Context, c *gin.Cont
 		imageGenerationAllowed = GroupAllowsImageGeneration(apiKey.Group)
 	}
 	codexImageGenerationBridgeEnabled := isCodexCLI &&
-		!isOpenAIResponsesLiteHeader(c.GetHeader(responsesLiteHeader)) &&
 		imageGenerationAllowed
 	imageIntent := resolveOpenAIImageIntentHint(c, reqModel, canonicalImageIntentBody, IsImageGenerationIntent)
 	if imageIntent && !imageGenerationAllowed {
@@ -419,7 +418,7 @@ func (s *OpenAIGatewayService) forwardResponses(ctx context.Context, c *gin.Cont
 		if decodeErr != nil {
 			return nil, decodeErr
 		}
-		if codexImageGenerationBridgeEnabled && ensureCodexImageGenerationBridge(decoded, account) {
+		if codexImageGenerationBridgeEnabled && ensureCodexImageGenerationBridge(decoded, account, responsesLite) {
 			markDecodedModified()
 			logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Applied Codex image_generation bridge for group")
 		}

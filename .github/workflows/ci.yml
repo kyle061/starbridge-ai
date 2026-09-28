@@ -63,6 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: python3 -m unittest discover -s integrations/codex/tests -v
       - uses: actions/setup-go@v5
         with: { go-version-file: backend/go.mod, cache: true, cache-dependency-path: backend/go.sum }
       - run: go test -tags unit ./internal/service ./internal/handler/admin ./internal/server/middleware -run 'TestRevealSecret|TestSecretReveal'
@@ -79,7 +80,7 @@ jobs:
         working-directory: backend
       - run: >-
           go test ./internal/service
-          -run '^TestOpenAIGatewayServiceForward_|^TestOpenAIGatewayService_ProxyResponsesWebSocketFromClient_CodexImageBridgeRespectsResponsesLite$|^TestOpenAIWSHTTPBridgeAcceptsFirstFrameAboveLegacy16MiB$'
+          -run '^TestOpenAIGatewayServiceForward_|^TestCodexImageBridgeLite|^TestOpenAIGatewayService_ProxyResponsesWebSocketFromClient_CodexImageBridgeRespectsResponsesLite$|^TestOpenAIWSHTTPBridgeAcceptsFirstFrameAboveLegacy16MiB$'
           -count=1
         working-directory: backend
       - run: >-
