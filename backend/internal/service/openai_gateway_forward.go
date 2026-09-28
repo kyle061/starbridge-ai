@@ -53,7 +53,7 @@ func (s *OpenAIGatewayService) forwardResponses(ctx context.Context, c *gin.Cont
 	}
 	// 固定渠道映射后的请求级 canonical body；账号 normalize/strip 不得改写跨 failover hint。
 	canonicalImageIntentBody := body
-	if err := validateOpenAIImageModelAuthorization(account, body); err != nil {
+	if err := validateOpenAIImageModelAuthorization(account, body, apiKeyGroup(getAPIKeyFromContext(c))); err != nil {
 		MarkOpsClientBusinessLimited(c, OpsClientBusinessLimitedReasonLocalPolicyDenied)
 		c.JSON(http.StatusForbidden, gin.H{"error": gin.H{"type": "permission_error", "message": err.Error()}})
 		return nil, err
@@ -349,7 +349,9 @@ func (s *OpenAIGatewayService) forwardResponses(ctx context.Context, c *gin.Cont
 
 	apiKey := getAPIKeyFromContext(c)
 	imageGenerationAllowed := GroupAllowsImageGeneration(nil)
+	var imageGroup *Group
 	if apiKey != nil {
+		imageGroup = apiKey.Group
 		imageGenerationAllowed = GroupAllowsImageGeneration(apiKey.Group)
 	}
 	codexImageGenerationBridgeEnabled := isCodexCLI &&
@@ -418,7 +420,10 @@ func (s *OpenAIGatewayService) forwardResponses(ctx context.Context, c *gin.Cont
 		if decodeErr != nil {
 			return nil, decodeErr
 		}
-		if codexImageGenerationBridgeEnabled && ensureCodexImageGenerationBridge(decoded, account, responsesLite) {
+		if setGroupDefaultImageToolModel(decoded, imageGroup) {
+			markDecodedModified()
+		}
+		if codexImageGenerationBridgeEnabled && ensureCodexImageGenerationBridge(decoded, account, imageGroup, responsesLite) {
 			markDecodedModified()
 			logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Applied Codex image_generation bridge for group")
 		}

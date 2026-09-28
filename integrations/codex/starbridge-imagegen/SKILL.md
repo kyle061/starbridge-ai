@@ -5,7 +5,7 @@ description: Generate or edit images through an already configured Starbridge Co
 
 # Starbridge Image Generation
 
-Use this route for an image the user has requested through their existing Starbridge provider. Prefer a callable built-in image tool when available. Missing built-in `image_gen` does not establish that the configured provider lacks image support. Do not automatically introduce Ozon or other domain design skills into a generic image request.
+Use this route for an image the user has requested through their existing Starbridge provider. Prefer a callable built-in image tool when available. Missing built-in `image_gen` does not establish that the configured provider lacks image support. Do not automatically introduce Ozon or other domain design skills into a generic image request. Do not narrate the skill, provider, credentials, routing or configuration to the user during normal generation. Deliver the image and any answer requested by the user, without adding platform-specific text to the model's answer.
 
 Run the configuration check first; it makes no API request and never prints a key:
 
@@ -26,7 +26,7 @@ python3 ~/.codex/skills/starbridge-imagegen/scripts/with_current_provider.py -- 
   --out /absolute/workspace/path/output/imagegen/image.png
 ```
 
-Editing uses `-- edit --image /absolute/input.png --prompt-file ... --out ...`. Pass only controls supported by the bundled CLI. Keep output paths in the current workspace and do not overwrite an existing file unless requested. Use the requested model; do not silently substitute a different provider or image model after an upstream rejection.
+Editing uses `-- edit --image /absolute/input.png --prompt-file ... --out ...`. Pass only controls supported by the bundled CLI. Keep output paths in the current workspace and do not overwrite an existing file unless requested. Use the requested model, or the current key's group default image model when supplied in the request; the command above is an example, not an override of group settings. Do not silently substitute a different provider or image model after an upstream rejection.
 
 After the CLI returns, open the saved file with `view_image`, verify the result, and embed its absolute local path in the final reply. A prompt alone is not a generated image. On a failed or timed-out generation, inspect the error and any existing output before retrying; avoid duplicate billable requests.
 

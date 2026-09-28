@@ -353,6 +353,20 @@ func (_u *GroupUpdate) SetNillableAllowImageGeneration(v *bool) *GroupUpdate {
 	return _u
 }
 
+// SetDefaultImageModel sets the "default_image_model" field.
+func (_u *GroupUpdate) SetDefaultImageModel(v string) *GroupUpdate {
+	_u.mutation.SetDefaultImageModel(v)
+	return _u
+}
+
+// SetNillableDefaultImageModel sets the "default_image_model" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableDefaultImageModel(v *string) *GroupUpdate {
+	if v != nil {
+		_u.SetDefaultImageModel(*v)
+	}
+	return _u
+}
+
 // SetAllowBatchImageGeneration sets the "allow_batch_image_generation" field.
 func (_u *GroupUpdate) SetAllowBatchImageGeneration(v bool) *GroupUpdate {
 	_u.mutation.SetAllowBatchImageGeneration(v)
@@ -1534,6 +1548,11 @@ func (_u *GroupUpdate) check() error {
 			return &ValidationError{Name: "subscription_type", err: fmt.Errorf(`ent: validator failed for field "Group.subscription_type": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.DefaultImageModel(); ok {
+		if err := group.DefaultImageModelValidator(v); err != nil {
+			return &ValidationError{Name: "default_image_model", err: fmt.Errorf(`ent: validator failed for field "Group.default_image_model": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.SearchPricePer1k(); ok {
 		if err := group.SearchPricePer1kValidator(v); err != nil {
 			return &ValidationError{Name: "search_price_per_1k", err: fmt.Errorf(`ent: validator failed for field "Group.search_price_per_1k": %w`, err)}
@@ -1673,6 +1692,9 @@ func (_u *GroupUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AllowImageGeneration(); ok {
 		_spec.SetField(group.FieldAllowImageGeneration, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.DefaultImageModel(); ok {
+		_spec.SetField(group.FieldDefaultImageModel, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.AllowBatchImageGeneration(); ok {
 		_spec.SetField(group.FieldAllowBatchImageGeneration, field.TypeBool, value)
@@ -2570,6 +2592,20 @@ func (_u *GroupUpdateOne) SetAllowImageGeneration(v bool) *GroupUpdateOne {
 func (_u *GroupUpdateOne) SetNillableAllowImageGeneration(v *bool) *GroupUpdateOne {
 	if v != nil {
 		_u.SetAllowImageGeneration(*v)
+	}
+	return _u
+}
+
+// SetDefaultImageModel sets the "default_image_model" field.
+func (_u *GroupUpdateOne) SetDefaultImageModel(v string) *GroupUpdateOne {
+	_u.mutation.SetDefaultImageModel(v)
+	return _u
+}
+
+// SetNillableDefaultImageModel sets the "default_image_model" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableDefaultImageModel(v *string) *GroupUpdateOne {
+	if v != nil {
+		_u.SetDefaultImageModel(*v)
 	}
 	return _u
 }
@@ -3768,6 +3804,11 @@ func (_u *GroupUpdateOne) check() error {
 			return &ValidationError{Name: "subscription_type", err: fmt.Errorf(`ent: validator failed for field "Group.subscription_type": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.DefaultImageModel(); ok {
+		if err := group.DefaultImageModelValidator(v); err != nil {
+			return &ValidationError{Name: "default_image_model", err: fmt.Errorf(`ent: validator failed for field "Group.default_image_model": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.SearchPricePer1k(); ok {
 		if err := group.SearchPricePer1kValidator(v); err != nil {
 			return &ValidationError{Name: "search_price_per_1k", err: fmt.Errorf(`ent: validator failed for field "Group.search_price_per_1k": %w`, err)}
@@ -3924,6 +3965,9 @@ func (_u *GroupUpdateOne) sqlSave(ctx context.Context) (_node *Group, err error)
 	}
 	if value, ok := _u.mutation.AllowImageGeneration(); ok {
 		_spec.SetField(group.FieldAllowImageGeneration, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.DefaultImageModel(); ok {
+		_spec.SetField(group.FieldDefaultImageModel, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.AllowBatchImageGeneration(); ok {
 		_spec.SetField(group.FieldAllowBatchImageGeneration, field.TypeBool, value)

@@ -188,6 +188,7 @@ func groupFromServiceAdminShallow(g *service.Group) *AdminGroup {
 	}
 	out := &AdminGroup{
 		Group:                        groupFromServiceBase(g),
+		DefaultImageModel:            g.DefaultImageModel,
 		RateMultiplier:               g.RateMultiplier,
 		ImageRateIndependent:         g.ImageRateIndependent,
 		ImageRateMultiplier:          g.ImageRateMultiplier,

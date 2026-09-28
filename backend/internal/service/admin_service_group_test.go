@@ -650,6 +650,24 @@ func TestAdminService_CreateGroup_DisablesBatchImageForNonGeminiPlatform(t *test
 	require.False(t, group.AllowBatchImageGeneration)
 }
 
+func TestAdminService_CreateGroup_DefaultImageModel(t *testing.T) {
+	repo := &groupRepoStubForAdmin{}
+	svc := &adminServiceImpl{groupRepo: repo}
+	group, err := svc.CreateGroup(context.Background(), &CreateGroupInput{
+		Name: "openai-image", Platform: PlatformOpenAI, RateMultiplier: 1,
+		AllowImageGeneration: true, DefaultImageModel: "gpt-image-2.5-flare",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "gpt-image-2.5-flare", group.DefaultImageModel)
+	require.Equal(t, group.DefaultImageModel, repo.created.DefaultImageModel)
+
+	_, err = svc.CreateGroup(context.Background(), &CreateGroupInput{
+		Name: "invalid-image", Platform: PlatformGemini, RateMultiplier: 1,
+		DefaultImageModel: "gpt-image-2.5-flare",
+	})
+	require.Error(t, err)
+}
+
 // TestAdminService_UpdateGroup_WithImagePricing 测试更新分组时 ImagePrice 字段正确更新
 func TestAdminService_UpdateGroup_WithImagePricing(t *testing.T) {
 	existingGroup := &Group{

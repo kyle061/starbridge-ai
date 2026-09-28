@@ -489,6 +489,10 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 	}
 
 	allowImageGeneration := input.AllowImageGeneration || defaultAllowImageGenerationForPlatform(platform)
+	defaultImageModel, err := normalizeGroupDefaultImageModel(platform, input.DefaultImageModel)
+	if err != nil {
+		return nil, err
+	}
 	allowBatchImageGeneration := input.AllowBatchImageGeneration && allowImageGeneration && platform == PlatformGemini
 
 	// 如果指定了复制账号的源分组，先获取账号 ID 列表
@@ -543,6 +547,7 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 		LongContextPricingEnabled:       input.LongContextPricingEnabled,
 		ModelPricing:                    modelPricing,
 		AllowImageGeneration:            allowImageGeneration,
+		DefaultImageModel:               defaultImageModel,
 		AllowBatchImageGeneration:       allowBatchImageGeneration,
 		ImageRateIndependent:            input.ImageRateIndependent,
 		ImageRateMultiplier:             imageRateMultiplier,
@@ -586,8 +591,8 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 		ModelAllowlist:                  modelAllowlist,
 		// 固定账号 manifest 配置：账号绑定发生在分组创建之后，创建路径禁止开启，
 		// 成员关系无从校验（前端创建对话框也不展示）。
-		CodexModelsManifestConfig:   normalizeCodexModelsManifestConfig(platform, input.CodexModelsManifestConfig),
-		RPMLimit:                    input.RPMLimit,
+		CodexModelsManifestConfig: normalizeCodexModelsManifestConfig(platform, input.CodexModelsManifestConfig),
+		RPMLimit:                  input.RPMLimit,
 		// Group capacity is derived from schedulable account capacity. Keep the
 		// legacy database field at zero so old clients cannot reintroduce a cap.
 		ConcurrencyLimit:            0,
@@ -789,6 +794,17 @@ func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *Upd
 	// 图片生成计费配置：负数表示清除（使用默认价格）
 	if input.AllowImageGeneration != nil {
 		group.AllowImageGeneration = *input.AllowImageGeneration
+	}
+	if input.DefaultImageModel != nil || input.Platform != "" {
+		model := group.DefaultImageModel
+		if input.DefaultImageModel != nil {
+			model = *input.DefaultImageModel
+		}
+		var err error
+		group.DefaultImageModel, err = normalizeGroupDefaultImageModel(group.Platform, model)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if input.AllowBatchImageGeneration != nil {
 		group.AllowBatchImageGeneration = *input.AllowBatchImageGeneration

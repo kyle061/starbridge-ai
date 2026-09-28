@@ -302,6 +302,20 @@ func (_c *GroupCreate) SetNillableAllowImageGeneration(v *bool) *GroupCreate {
 	return _c
 }
 
+// SetDefaultImageModel sets the "default_image_model" field.
+func (_c *GroupCreate) SetDefaultImageModel(v string) *GroupCreate {
+	_c.mutation.SetDefaultImageModel(v)
+	return _c
+}
+
+// SetNillableDefaultImageModel sets the "default_image_model" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableDefaultImageModel(v *string) *GroupCreate {
+	if v != nil {
+		_c.SetDefaultImageModel(*v)
+	}
+	return _c
+}
+
 // SetAllowBatchImageGeneration sets the "allow_batch_image_generation" field.
 func (_c *GroupCreate) SetAllowBatchImageGeneration(v bool) *GroupCreate {
 	_c.mutation.SetAllowBatchImageGeneration(v)
@@ -1105,6 +1119,10 @@ func (_c *GroupCreate) defaults() error {
 		v := group.DefaultAllowImageGeneration
 		_c.mutation.SetAllowImageGeneration(v)
 	}
+	if _, ok := _c.mutation.DefaultImageModel(); !ok {
+		v := group.DefaultDefaultImageModel
+		_c.mutation.SetDefaultImageModel(v)
+	}
 	if _, ok := _c.mutation.AllowBatchImageGeneration(); !ok {
 		v := group.DefaultAllowBatchImageGeneration
 		_c.mutation.SetAllowBatchImageGeneration(v)
@@ -1310,6 +1328,14 @@ func (_c *GroupCreate) check() error {
 	}
 	if _, ok := _c.mutation.AllowImageGeneration(); !ok {
 		return &ValidationError{Name: "allow_image_generation", err: errors.New(`ent: missing required field "Group.allow_image_generation"`)}
+	}
+	if _, ok := _c.mutation.DefaultImageModel(); !ok {
+		return &ValidationError{Name: "default_image_model", err: errors.New(`ent: missing required field "Group.default_image_model"`)}
+	}
+	if v, ok := _c.mutation.DefaultImageModel(); ok {
+		if err := group.DefaultImageModelValidator(v); err != nil {
+			return &ValidationError{Name: "default_image_model", err: fmt.Errorf(`ent: validator failed for field "Group.default_image_model": %w`, err)}
+		}
 	}
 	if _, ok := _c.mutation.AllowBatchImageGeneration(); !ok {
 		return &ValidationError{Name: "allow_batch_image_generation", err: errors.New(`ent: missing required field "Group.allow_batch_image_generation"`)}
@@ -1545,6 +1571,10 @@ func (_c *GroupCreate) createSpec() (*Group, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.AllowImageGeneration(); ok {
 		_spec.SetField(group.FieldAllowImageGeneration, field.TypeBool, value)
 		_node.AllowImageGeneration = value
+	}
+	if value, ok := _c.mutation.DefaultImageModel(); ok {
+		_spec.SetField(group.FieldDefaultImageModel, field.TypeString, value)
+		_node.DefaultImageModel = value
 	}
 	if value, ok := _c.mutation.AllowBatchImageGeneration(); ok {
 		_spec.SetField(group.FieldAllowBatchImageGeneration, field.TypeBool, value)
@@ -2169,6 +2199,18 @@ func (u *GroupUpsert) SetAllowImageGeneration(v bool) *GroupUpsert {
 // UpdateAllowImageGeneration sets the "allow_image_generation" field to the value that was provided on create.
 func (u *GroupUpsert) UpdateAllowImageGeneration() *GroupUpsert {
 	u.SetExcluded(group.FieldAllowImageGeneration)
+	return u
+}
+
+// SetDefaultImageModel sets the "default_image_model" field.
+func (u *GroupUpsert) SetDefaultImageModel(v string) *GroupUpsert {
+	u.Set(group.FieldDefaultImageModel, v)
+	return u
+}
+
+// UpdateDefaultImageModel sets the "default_image_model" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateDefaultImageModel() *GroupUpsert {
+	u.SetExcluded(group.FieldDefaultImageModel)
 	return u
 }
 
@@ -3338,6 +3380,20 @@ func (u *GroupUpsertOne) SetAllowImageGeneration(v bool) *GroupUpsertOne {
 func (u *GroupUpsertOne) UpdateAllowImageGeneration() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateAllowImageGeneration()
+	})
+}
+
+// SetDefaultImageModel sets the "default_image_model" field.
+func (u *GroupUpsertOne) SetDefaultImageModel(v string) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetDefaultImageModel(v)
+	})
+}
+
+// UpdateDefaultImageModel sets the "default_image_model" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateDefaultImageModel() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateDefaultImageModel()
 	})
 }
 
@@ -4805,6 +4861,20 @@ func (u *GroupUpsertBulk) SetAllowImageGeneration(v bool) *GroupUpsertBulk {
 func (u *GroupUpsertBulk) UpdateAllowImageGeneration() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateAllowImageGeneration()
+	})
+}
+
+// SetDefaultImageModel sets the "default_image_model" field.
+func (u *GroupUpsertBulk) SetDefaultImageModel(v string) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetDefaultImageModel(v)
+	})
+}
+
+// UpdateDefaultImageModel sets the "default_image_model" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateDefaultImageModel() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateDefaultImageModel()
 	})
 }
 

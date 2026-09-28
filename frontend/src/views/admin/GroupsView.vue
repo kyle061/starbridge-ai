@@ -928,6 +928,20 @@
               {{ t(imagePricingI18nKey(createForm.platform, "independentMultiplier")) }}
             </label>
           </div>
+          <div v-if="createForm.platform === 'openai' && createForm.allow_image_generation" class="mb-4">
+            <label class="input-label" for="create-default-image-model">
+              {{ t('admin.groups.imagePricing.defaultImageModel') }}
+            </label>
+            <input id="create-default-image-model" v-model.trim="createForm.default_image_model" list="create-openai-image-models" class="input" placeholder="gpt-image-2" />
+            <datalist id="create-openai-image-models">
+              <option value="gpt-image-2" />
+              <option value="gpt-image-2.5-flare" />
+              <option value="gpt-image-2.5-sunburst" />
+            </datalist>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {{ t('admin.groups.imagePricing.defaultImageModelHint') }}
+            </p>
+          </div>
           <div
             v-if="createForm.image_rate_independent"
             class="mb-4"
@@ -2567,6 +2581,20 @@
               />
               {{ t(imagePricingI18nKey(editForm.platform, "independentMultiplier")) }}
             </label>
+          </div>
+          <div v-if="editForm.platform === 'openai' && editForm.allow_image_generation" class="mb-4">
+            <label class="input-label" for="edit-default-image-model">
+              {{ t('admin.groups.imagePricing.defaultImageModel') }}
+            </label>
+            <input id="edit-default-image-model" v-model.trim="editForm.default_image_model" list="edit-openai-image-models" class="input" placeholder="gpt-image-2" />
+            <datalist id="edit-openai-image-models">
+              <option value="gpt-image-2" />
+              <option value="gpt-image-2.5-flare" />
+              <option value="gpt-image-2.5-sunburst" />
+            </datalist>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {{ t('admin.groups.imagePricing.defaultImageModelHint') }}
+            </p>
           </div>
           <div
             v-if="editForm.image_rate_independent"
@@ -5005,6 +5033,7 @@ const createForm = reactive({
   model_pricing: [] as PricingFormEntry[],
   // 图片生成计费配置
   allow_image_generation: false,
+  default_image_model: "",
   allow_batch_image_generation: false,
   image_rate_independent: false,
   image_rate_multiplier: 1,
@@ -5370,6 +5399,7 @@ const editForm = reactive({
   model_pricing: [] as PricingFormEntry[],
   // 图片生成计费配置
   allow_image_generation: false,
+  default_image_model: "",
   allow_batch_image_generation: false,
   image_rate_independent: false,
   image_rate_multiplier: 1,
@@ -5827,6 +5857,7 @@ const closeCreateModal = () => {
   createForm.weekly_limit_usd = null;
   createForm.monthly_limit_usd = null;
   createForm.allow_image_generation = false;
+  createForm.default_image_model = "";
   createForm.allow_batch_image_generation = false;
   createForm.image_rate_independent = false;
   createForm.image_rate_multiplier = 1;
@@ -5953,6 +5984,8 @@ const handleCreateGroup = async () => {
     // 构建请求数据，包含模型路由配置
     const requestData = {
       ...createGroupForm,
+      default_image_model:
+        createForm.platform === 'openai' ? createForm.default_image_model : '',
       force_openai_fast: normalizeGroupOpenAIFast(
         createForm.platform,
         createForm.force_openai_fast,
@@ -6102,6 +6135,7 @@ const handleEdit = async (group: AdminGroup) => {
   editForm.free_openai_fast = group.free_openai_fast ?? false;
   editForm.model_pricing = groupPricingFromAPI(group.model_pricing);
   editForm.allow_image_generation = group.allow_image_generation ?? false;
+  editForm.default_image_model = group.default_image_model ?? "";
   editForm.allow_batch_image_generation =
     group.allow_batch_image_generation ?? false;
   editForm.image_rate_independent = group.image_rate_independent ?? false;
@@ -6408,6 +6442,8 @@ const handleUpdateGroup = async () => {
     payload.peak_rate_multiplier = normalizeRateMultiplier(
       editForm.peak_rate_multiplier,
     );
+    payload.default_image_model =
+      editForm.platform === 'openai' ? editForm.default_image_model : '';
     const requestData = authStore.isSimpleMode
       ? {
           name: editForm.name,

@@ -1082,7 +1082,8 @@ func TestApplyCodexImageGenerationBridgeInstructions_AppendsBridgeOnce(t *testin
 	require.True(t, ok)
 	require.Contains(t, instructions, "existing instructions")
 	require.Contains(t, instructions, codexImageGenerationBridgeMarker)
-	require.Contains(t, instructions, "Responses native `image_generation` tool")
+	require.Contains(t, instructions, "attached native `image_generation` tool")
+	require.Contains(t, instructions, "without narrating the tool")
 
 	modified = applyCodexImageGenerationBridgeInstructions(reqBody)
 	require.False(t, modified)

@@ -101,6 +101,10 @@ func (Group) Fields() []ent.Field {
 		field.Bool("allow_image_generation").
 			Default(false).
 			Comment("是否允许该分组使用图片生成能力"),
+		field.String("default_image_model").
+			Default("").
+			MaxLen(100).
+			Comment("OpenAI 分组未指定生图模型时使用的默认模型；空值沿用系统默认"),
 		field.Bool("allow_batch_image_generation").
 			Default(false).
 			Comment("是否允许该分组使用批量图片生成能力"),

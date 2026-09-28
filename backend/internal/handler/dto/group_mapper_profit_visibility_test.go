@@ -72,6 +72,16 @@ func TestGroupFromServiceAdminIncludesProfitControl(t *testing.T) {
 	}
 }
 
+func TestGroupDefaultImageModelIsAdminOnly(t *testing.T) {
+	group := &service.Group{ID: 8, Platform: service.PlatformOpenAI, DefaultImageModel: "gpt-image-2.5-flare"}
+	if _, ok := marshalToMap(t, GroupFromService(group))["default_image_model"]; ok {
+		t.Fatal("user group DTO must not expose the internal default image model")
+	}
+	if got := marshalToMap(t, GroupFromServiceAdmin(group))["default_image_model"]; got != group.DefaultImageModel {
+		t.Fatalf("admin group DTO model = %v, want %s", got, group.DefaultImageModel)
+	}
+}
+
 func TestGroupFromServiceAdminKeepsNestedRateWithoutRecursiveGroups(t *testing.T) {
 	group := profitControlServiceGroup()
 	group.AccountGroups = []service.AccountGroup{{AccountID: 9, GroupID: group.ID, Group: group}}

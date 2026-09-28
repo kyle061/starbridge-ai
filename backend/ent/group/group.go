@@ -56,6 +56,8 @@ const (
 	FieldDefaultValidityDays = "default_validity_days"
 	// FieldAllowImageGeneration holds the string denoting the allow_image_generation field in the database.
 	FieldAllowImageGeneration = "allow_image_generation"
+	// FieldDefaultImageModel holds the string denoting the default_image_model field in the database.
+	FieldDefaultImageModel = "default_image_model"
 	// FieldAllowBatchImageGeneration holds the string denoting the allow_batch_image_generation field in the database.
 	FieldAllowBatchImageGeneration = "allow_batch_image_generation"
 	// FieldImageRateIndependent holds the string denoting the image_rate_independent field in the database.
@@ -245,6 +247,7 @@ var Columns = []string{
 	FieldMonthlyLimitUsd,
 	FieldDefaultValidityDays,
 	FieldAllowImageGeneration,
+	FieldDefaultImageModel,
 	FieldAllowBatchImageGeneration,
 	FieldImageRateIndependent,
 	FieldImageRateMultiplier,
@@ -363,6 +366,10 @@ var (
 	DefaultDefaultValidityDays int
 	// DefaultAllowImageGeneration holds the default value on creation for the "allow_image_generation" field.
 	DefaultAllowImageGeneration bool
+	// DefaultDefaultImageModel holds the default value on creation for the "default_image_model" field.
+	DefaultDefaultImageModel string
+	// DefaultImageModelValidator is a validator for the "default_image_model" field. It is called by the builders before save.
+	DefaultImageModelValidator func(string) error
 	// DefaultAllowBatchImageGeneration holds the default value on creation for the "allow_batch_image_generation" field.
 	DefaultAllowBatchImageGeneration bool
 	// DefaultImageRateIndependent holds the default value on creation for the "image_rate_independent" field.
@@ -547,6 +554,11 @@ func ByDefaultValidityDays(opts ...sql.OrderTermOption) OrderOption {
 // ByAllowImageGeneration orders the results by the allow_image_generation field.
 func ByAllowImageGeneration(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAllowImageGeneration, opts...).ToFunc()
+}
+
+// ByDefaultImageModel orders the results by the default_image_model field.
+func ByDefaultImageModel(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDefaultImageModel, opts...).ToFunc()
 }
 
 // ByAllowBatchImageGeneration orders the results by the allow_batch_image_generation field.

@@ -624,6 +624,7 @@ export interface Group {
 }
 
 export interface AdminGroup extends Group {
+  default_image_model?: string
   force_openai_fast: boolean
   free_openai_fast: boolean
   model_pricing: import('@/api/admin/channels').ChannelModelPricing[]
@@ -803,6 +804,7 @@ export interface CreateGroupRequest {
   free_openai_fast?: boolean
   model_pricing?: import('@/api/admin/channels').ChannelModelPricing[]
   allow_image_generation?: boolean
+  default_image_model?: string
   allow_batch_image_generation?: boolean
   image_rate_independent?: boolean
   image_rate_multiplier?: number
@@ -869,6 +871,7 @@ export interface UpdateGroupRequest {
   free_openai_fast?: boolean
   model_pricing?: import('@/api/admin/channels').ChannelModelPricing[]
   allow_image_generation?: boolean
+  default_image_model?: string
   allow_batch_image_generation?: boolean
   image_rate_independent?: boolean
   image_rate_multiplier?: number

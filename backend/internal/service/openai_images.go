@@ -227,6 +227,9 @@ func (s *OpenAIGatewayService) ParseOpenAIImagesRequest(c *gin.Context, body []b
 		}
 	}
 
+	if req.Model == "" {
+		req.Model = groupImageModel(apiKeyGroup(getAPIKeyFromContext(c)))
+	}
 	applyOpenAIImagesDefaults(req)
 	if err := validateOpenAIImagesModel(req.Model); err != nil {
 		return nil, err

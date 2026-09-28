@@ -155,6 +155,11 @@ func AllowImageGeneration(v bool) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldAllowImageGeneration, v))
 }
 
+// DefaultImageModel applies equality check predicate on the "default_image_model" field. It's identical to DefaultImageModelEQ.
+func DefaultImageModel(v string) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldDefaultImageModel, v))
+}
+
 // AllowBatchImageGeneration applies equality check predicate on the "allow_batch_image_generation" field. It's identical to AllowBatchImageGenerationEQ.
 func AllowBatchImageGeneration(v bool) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldAllowBatchImageGeneration, v))
@@ -1318,6 +1323,71 @@ func AllowImageGenerationEQ(v bool) predicate.Group {
 // AllowImageGenerationNEQ applies the NEQ predicate on the "allow_image_generation" field.
 func AllowImageGenerationNEQ(v bool) predicate.Group {
 	return predicate.Group(sql.FieldNEQ(FieldAllowImageGeneration, v))
+}
+
+// DefaultImageModelEQ applies the EQ predicate on the "default_image_model" field.
+func DefaultImageModelEQ(v string) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldDefaultImageModel, v))
+}
+
+// DefaultImageModelNEQ applies the NEQ predicate on the "default_image_model" field.
+func DefaultImageModelNEQ(v string) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldDefaultImageModel, v))
+}
+
+// DefaultImageModelIn applies the In predicate on the "default_image_model" field.
+func DefaultImageModelIn(vs ...string) predicate.Group {
+	return predicate.Group(sql.FieldIn(FieldDefaultImageModel, vs...))
+}
+
+// DefaultImageModelNotIn applies the NotIn predicate on the "default_image_model" field.
+func DefaultImageModelNotIn(vs ...string) predicate.Group {
+	return predicate.Group(sql.FieldNotIn(FieldDefaultImageModel, vs...))
+}
+
+// DefaultImageModelGT applies the GT predicate on the "default_image_model" field.
+func DefaultImageModelGT(v string) predicate.Group {
+	return predicate.Group(sql.FieldGT(FieldDefaultImageModel, v))
+}
+
+// DefaultImageModelGTE applies the GTE predicate on the "default_image_model" field.
+func DefaultImageModelGTE(v string) predicate.Group {
+	return predicate.Group(sql.FieldGTE(FieldDefaultImageModel, v))
+}
+
+// DefaultImageModelLT applies the LT predicate on the "default_image_model" field.
+func DefaultImageModelLT(v string) predicate.Group {
+	return predicate.Group(sql.FieldLT(FieldDefaultImageModel, v))
+}
+
+// DefaultImageModelLTE applies the LTE predicate on the "default_image_model" field.
+func DefaultImageModelLTE(v string) predicate.Group {
+	return predicate.Group(sql.FieldLTE(FieldDefaultImageModel, v))
+}
+
+// DefaultImageModelContains applies the Contains predicate on the "default_image_model" field.
+func DefaultImageModelContains(v string) predicate.Group {
+	return predicate.Group(sql.FieldContains(FieldDefaultImageModel, v))
+}
+
+// DefaultImageModelHasPrefix applies the HasPrefix predicate on the "default_image_model" field.
+func DefaultImageModelHasPrefix(v string) predicate.Group {
+	return predicate.Group(sql.FieldHasPrefix(FieldDefaultImageModel, v))
+}
+
+// DefaultImageModelHasSuffix applies the HasSuffix predicate on the "default_image_model" field.
+func DefaultImageModelHasSuffix(v string) predicate.Group {
+	return predicate.Group(sql.FieldHasSuffix(FieldDefaultImageModel, v))
+}
+
+// DefaultImageModelEqualFold applies the EqualFold predicate on the "default_image_model" field.
+func DefaultImageModelEqualFold(v string) predicate.Group {
+	return predicate.Group(sql.FieldEqualFold(FieldDefaultImageModel, v))
+}
+
+// DefaultImageModelContainsFold applies the ContainsFold predicate on the "default_image_model" field.
+func DefaultImageModelContainsFold(v string) predicate.Group {
+	return predicate.Group(sql.FieldContainsFold(FieldDefaultImageModel, v))
 }
 
 // AllowBatchImageGenerationEQ applies the EQ predicate on the "allow_batch_image_generation" field.

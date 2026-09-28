@@ -269,6 +269,19 @@ func (s *OpenAIGatewayService) ProxyResponsesWebSocketFromClient(
 			normalized = next
 		}
 		responsesLite := isOpenAIResponsesLiteWebSocketPayload(normalized)
+		if group := apiKeyGroup(getAPIKeyFromContext(c)); group != nil && group.DefaultImageModel != "" && openAIRequestBodyHasImageGenerationDeclaration(normalized) {
+			var payload map[string]any
+			if err := decodeOpenAIJSONUseNumber(normalized, &payload); err != nil {
+				return openAIWSClientPayload{}, NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, "invalid image tool request", err)
+			}
+			if setGroupDefaultImageToolModel(payload, group) {
+				var err error
+				normalized, err = marshalOpenAIUpstreamJSON(payload)
+				if err != nil {
+					return openAIWSClientPayload{}, NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, "invalid image tool request", err)
+				}
+			}
+		}
 		if compatibilityBody, compatibilityChanged, compatibilityErr := normalizeOpenAIResponsesWebSocketCompatibilityBody(normalized, account, responsesLite); compatibilityErr != nil {
 			return openAIWSClientPayload{}, NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, "invalid websocket request payload", compatibilityErr)
 		} else if compatibilityChanged {
@@ -340,7 +353,8 @@ func (s *OpenAIGatewayService) ProxyResponsesWebSocketFromClient(
 		}
 		apiKey := getAPIKeyFromContext(c)
 		imageGenerationAllowed := GroupAllowsImageGeneration(apiKeyGroup(apiKey))
-		if err := validateOpenAIImageModelAuthorization(account, normalized); err != nil {
+		imageGroup := apiKeyGroup(apiKey)
+		if err := validateOpenAIImageModelAuthorization(account, normalized, imageGroup); err != nil {
 			return openAIWSClientPayload{}, NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, err.Error(), err)
 		}
 		codexBridgeEnabled := isCodexCLI &&
@@ -350,7 +364,7 @@ func (s *OpenAIGatewayService) ProxyResponsesWebSocketFromClient(
 			if err := decodeOpenAIJSONUseNumber(normalized, &payloadMap); err != nil {
 				return openAIWSClientPayload{}, NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, "invalid websocket request payload", err)
 			}
-			if ensureCodexImageGenerationBridge(payloadMap, account, responsesLite) {
+			if ensureCodexImageGenerationBridge(payloadMap, account, imageGroup, responsesLite) {
 				rebuilt, marshalErr := json.Marshal(payloadMap)
 				if marshalErr != nil {
 					return openAIWSClientPayload{}, NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, "invalid websocket request payload", marshalErr)

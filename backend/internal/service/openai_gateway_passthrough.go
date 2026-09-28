@@ -213,6 +213,19 @@ func (s *OpenAIGatewayService) forwardOpenAIPassthrough(
 		}
 	}
 	if account != nil && account.IsOpenAI() {
+		if group := apiKeyGroup(getAPIKeyFromContext(c)); group != nil && group.DefaultImageModel != "" && openAIRequestBodyHasImageGenerationDeclaration(body) {
+			var payload map[string]any
+			if err := decodeOpenAIJSONUseNumber(body, &payload); err != nil {
+				return nil, fmt.Errorf("decode image tool request: %w", err)
+			}
+			if setGroupDefaultImageToolModel(payload, group) {
+				rebuilt, err := marshalOpenAIUpstreamJSON(payload)
+				if err != nil {
+					return nil, fmt.Errorf("encode image tool request: %w", err)
+				}
+				body = rebuilt
+			}
+		}
 		responsesLite := isOpenAIResponsesLiteHeader(c.GetHeader(responsesLiteHeader)) || isOpenAIResponsesLiteWebSocketPayload(body)
 		normalizedBody, normalized, normalizeErr := normalizeOpenAIResponsesWebSocketCompatibilityBody(body, account, responsesLite)
 		if normalizeErr != nil {
@@ -235,13 +248,14 @@ func (s *OpenAIGatewayService) forwardOpenAIPassthrough(
 
 	isCodexCLI := openai.IsCodexOfficialClientByHeaders(c.GetHeader("User-Agent"), c.GetHeader("originator")) || (s.cfg != nil && s.cfg.Gateway.ForceCodexCLI)
 	responsesLite := isOpenAIResponsesLiteHeader(c.GetHeader(responsesLiteHeader)) || isOpenAIResponsesLiteWebSocketPayload(body)
-	if account.IsOpenAI() && isCodexCLI && GroupAllowsImageGeneration(apiKeyGroup(getAPIKeyFromContext(c))) &&
-		!isOpenAIResponsesCompactPath(c) && (responsesLite || codexImageGenerationModel(account) != "") {
+	imageGroup := apiKeyGroup(getAPIKeyFromContext(c))
+	if account.IsOpenAI() && isCodexCLI && GroupAllowsImageGeneration(imageGroup) &&
+		!isOpenAIResponsesCompactPath(c) && (responsesLite || codexImageGenerationModel(account, imageGroup) != "") {
 		var payload map[string]any
 		if err := decodeOpenAIJSONUseNumber(body, &payload); err != nil {
 			return nil, fmt.Errorf("decode Codex image bridge request: %w", err)
 		}
-		if ensureCodexImageGenerationBridge(payload, account, responsesLite) {
+		if ensureCodexImageGenerationBridge(payload, account, imageGroup, responsesLite) {
 			rebuilt, err := marshalOpenAIUpstreamJSON(payload)
 			if err != nil {
 				return nil, fmt.Errorf("encode Codex image bridge request: %w", err)

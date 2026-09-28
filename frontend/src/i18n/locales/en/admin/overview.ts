@@ -1012,6 +1012,8 @@ export default {
         title: 'Image Generation Pricing',
         description: 'Configure image generation access and base image prices. Leave empty to use default prices.',
         allowImageGeneration: 'Allow image generation for this group',
+        defaultImageModel: 'Default image model',
+        defaultImageModelHint: 'Used only when an OpenAI image request does not specify a model. Leave blank for gpt-image-2. The group must have an account supporting this model.',
         allowBatchImageGeneration: 'Allow batch image generation for this group',
         independentMultiplier: 'Use independent image multiplier',
         imageMultiplier: 'Image multiplier',

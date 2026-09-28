@@ -66,6 +66,29 @@ func TestOpenAIGatewayServiceParseOpenAIImagesRequest_JSON(t *testing.T) {
 	require.False(t, parsed.Multipart)
 }
 
+func TestOpenAIImagesGroupDefaultDoesNotOverrideExplicitModel(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	svc := &OpenAIGatewayService{}
+	group := &Group{Platform: PlatformOpenAI, DefaultImageModel: "gpt-image-2.5-flare"}
+	for _, tt := range []struct {
+		body     string
+		want     string
+		explicit bool
+	}{
+		{`{"prompt":"draw a cat"}`, "gpt-image-2.5-flare", false},
+		{`{"model":"gpt-image-2","prompt":"draw a cat"}`, "gpt-image-2", true},
+	} {
+		c, _ := gin.CreateTestContext(httptest.NewRecorder())
+		c.Request = httptest.NewRequest(http.MethodPost, "/v1/images/generations", strings.NewReader(tt.body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Set("api_key", &APIKey{Group: group})
+		parsed, err := svc.ParseOpenAIImagesRequest(c, []byte(tt.body))
+		require.NoError(t, err)
+		require.Equal(t, tt.want, parsed.Model)
+		require.Equal(t, tt.explicit, parsed.ExplicitModel)
+	}
+}
+
 func TestOpenAIGatewayServiceParseOpenAIImagesRequest_MultipartEdit(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

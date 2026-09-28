@@ -1009,6 +1009,8 @@ export default {
         title: '图片生成计费',
         description: '配置图片生成能力和图片基础单价，留空则使用默认价格',
         allowImageGeneration: '允许当前分组生图',
+        defaultImageModel: '默认生图模型',
+        defaultImageModelHint: '仅用于未指定模型的 OpenAI 生图请求；留空沿用 gpt-image-2。需确保分组内账号支持该模型。',
         allowBatchImageGeneration: '允许当前分组批量生图',
         independentMultiplier: '生图倍率独立',
         imageMultiplier: '生图独立倍率',
