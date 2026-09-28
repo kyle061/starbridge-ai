@@ -367,8 +367,7 @@ func (s *OpenAIGatewayService) forwardResponses(ctx context.Context, c *gin.Cont
 	codexImageGenerationBridgeEnabled := isCodexCLI &&
 		!isOpenAIResponsesLiteHeader(c.GetHeader(responsesLiteHeader)) &&
 		imageGenerationAllowed &&
-		codexImageGenerationExplicitToolPolicy != codexImageGenerationExplicitToolPolicyStrip &&
-		s.isCodexImageGenerationBridgeEnabled(ctx, account, apiKey)
+		codexImageGenerationExplicitToolPolicy != codexImageGenerationExplicitToolPolicyStrip
 	var imageIntent bool
 	canonicalImageIntent := resolveOpenAIImageIntentHint(c, reqModel, canonicalImageIntentBody, IsImageGenerationIntent)
 	if isCodexCLI && codexImageGenerationExplicitToolPolicy == codexImageGenerationExplicitToolPolicyStrip {
@@ -447,8 +446,10 @@ func (s *OpenAIGatewayService) forwardResponses(ctx context.Context, c *gin.Cont
 		if decodeErr != nil {
 			return nil, decodeErr
 		}
+		codexImageGenerationToolInjected := false
 		if codexImageGenerationBridgeEnabled && ensureOpenAIResponsesImageGenerationTool(decoded) {
 			markDecodedModified()
+			codexImageGenerationToolInjected = true
 			logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Injected /responses image_generation tool for Codex client")
 		}
 		if codexImageGenerationBridgeEnabled && ensureOpenAIResponsesImageGenerationToolChoiceAuto(decoded) {
@@ -475,7 +476,7 @@ func (s *OpenAIGatewayService) forwardResponses(ctx context.Context, c *gin.Cont
 			imageIntent = true
 			logger.LegacyPrintf("service.openai_gateway", "[OpenAI] /responses image_generation request inbound_model=%s mapped_model=%s account_type=%s", requestView.Model, upstreamModel, account.Type)
 		}
-		if codexImageGenerationBridgeEnabled && applyCodexImageGenerationBridgeInstructions(decoded) {
+		if codexImageGenerationToolInjected && applyCodexImageGenerationBridgeInstructions(decoded) {
 			markDecodedModified()
 			logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Added Codex image_generation bridge instructions")
 		}

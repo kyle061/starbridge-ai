@@ -1852,6 +1852,8 @@ func TestOpenAIWSHTTPBridgeAcceptsFirstFrameAboveLegacy16MiB(t *testing.T) {
 		req.Header = req.Header.Clone()
 		req.Header.Set("User-Agent", "codex_cli_rs/0.135.0")
 		ginCtx.Request = req
+		// Keep this frame-size boundary independent of optional image tool injection.
+		ginCtx.Set("api_key", &APIKey{Group: &Group{AllowImageGeneration: false}})
 
 		proxyCtx, cancelProxy := context.WithTimeout(r.Context(), 20*time.Second)
 		defer cancelProxy()

@@ -3546,7 +3546,7 @@ const codexCLIOnlyEnabled = ref(false)
 const codexCLIOnlyAppServerEnabled = ref(false)
 type CodexFingerprintMode = 'off' | 'device' | 'session' | 'full'
 const codexFingerprintMode = ref<CodexFingerprintMode>('off')
-type CodexImageToolMode = 'inherit' | 'enabled' | 'disabled' | 'block'
+type CodexImageToolMode = 'inherit' | 'block'
 const codexImageToolMode = ref<CodexImageToolMode>('inherit')
 type AnthropicAPIKeyAuthScheme = 'x_api_key' | 'authorization_bearer'
 const anthropicPassthroughEnabled = ref(false)
@@ -3623,20 +3623,6 @@ const codexImageToolOptions = computed<Array<{
     selectedDotClass: 'border-sky-500 bg-sky-500 text-white'
   },
   {
-    value: 'enabled',
-    label: t('admin.accounts.openai.codexImageToolEnabled'),
-    description: t('admin.accounts.openai.codexImageToolEnabledDesc'),
-    selectedCardClass: 'border-emerald-300 bg-emerald-50 text-emerald-900 shadow-sm ring-1 ring-emerald-200 dark:border-emerald-700 dark:bg-emerald-900/25 dark:text-emerald-100 dark:ring-emerald-800',
-    selectedDotClass: 'border-emerald-500 bg-emerald-500 text-white'
-  },
-  {
-    value: 'disabled',
-    label: t('admin.accounts.openai.codexImageToolDisabled'),
-    description: t('admin.accounts.openai.codexImageToolDisabledDesc'),
-    selectedCardClass: 'border-amber-300 bg-amber-50 text-amber-900 shadow-sm ring-1 ring-amber-200 dark:border-amber-700 dark:bg-amber-900/25 dark:text-amber-100 dark:ring-amber-800',
-    selectedDotClass: 'border-amber-500 bg-amber-500 text-white'
-  },
-  {
     value: 'block',
     label: t('admin.accounts.openai.codexImageToolBlock'),
     description: t('admin.accounts.openai.codexImageToolBlockDesc'),
@@ -3645,28 +3631,14 @@ const codexImageToolOptions = computed<Array<{
   }
 ])
 const codexImageToolBadgeLabel = computed(() => {
-  switch (codexImageToolMode.value) {
-    case 'enabled':
-      return t('admin.accounts.openai.codexImageToolBadgeEnabled')
-    case 'disabled':
-      return t('admin.accounts.openai.codexImageToolBadgeDisabled')
-    case 'block':
-      return t('admin.accounts.openai.codexImageToolBadgeBlock')
-    default:
-      return t('admin.accounts.openai.codexImageToolBadgeInherit')
-  }
+  return codexImageToolMode.value === 'block'
+    ? t('admin.accounts.openai.codexImageToolBadgeBlock')
+    : t('admin.accounts.openai.codexImageToolBadgeInherit')
 })
 const codexImageToolBadgeClass = computed(() => {
-  switch (codexImageToolMode.value) {
-    case 'enabled':
-      return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
-    case 'disabled':
-      return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-    case 'block':
-      return 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'
-    default:
-      return 'bg-slate-100 text-slate-600 dark:bg-dark-600 dark:text-slate-300'
-  }
+  return codexImageToolMode.value === 'block'
+    ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'
+    : 'bg-slate-100 text-slate-600 dark:bg-dark-600 dark:text-slate-300'
 })
 const openAICompactModeOptions = computed(() => [
   { value: 'auto', label: t('admin.accounts.openai.compactModeAuto') },
@@ -4052,16 +4024,7 @@ const syncFormFromAccount = (newAccount: Account | null) => {
         openAIResponsesMode.value = 'auto'
       }
     }
-    const codexImageGenerationBridgeValue = typeof extra?.codex_image_generation_bridge === 'boolean'
-      ? extra.codex_image_generation_bridge
-      : extra?.codex_image_generation_bridge_enabled
-    if (extra?.codex_image_generation_explicit_tool_policy === 'strip') {
-      codexImageToolMode.value = 'block'
-    } else if (codexImageGenerationBridgeValue === true) {
-      codexImageToolMode.value = 'enabled'
-    } else if (codexImageGenerationBridgeValue === false) {
-      codexImageToolMode.value = 'disabled'
-    }
+    codexImageToolMode.value = extra?.codex_image_generation_explicit_tool_policy === 'strip' ? 'block' : 'inherit'
     openaiOAuthResponsesWebSocketV2Mode.value = resolveOpenAIWSModeFromExtra(extra, {
       modeKey: 'openai_oauth_responses_websockets_v2_mode',
       enabledKey: 'openai_oauth_responses_websockets_v2_enabled',
@@ -5582,21 +5545,13 @@ const handleSubmit = async () => {
 		// 运行态只允许后端服务更新，账号编辑不得回写旧状态。
 		delete newExtra.codex_auto_reset_credit_state
 
+		delete newExtra.codex_image_generation_bridge
 		delete newExtra.codex_image_generation_bridge_enabled
-      switch (codexImageToolMode.value) {
-        case 'enabled':
-        case 'disabled':
-          newExtra.codex_image_generation_bridge = codexImageToolMode.value === 'enabled'
-          delete newExtra.codex_image_generation_explicit_tool_policy
-          break
-        case 'block':
-          newExtra.codex_image_generation_explicit_tool_policy = 'strip'
-          delete newExtra.codex_image_generation_bridge
-          break
-        default:
-          delete newExtra.codex_image_generation_bridge
-          delete newExtra.codex_image_generation_explicit_tool_policy
-      }
+		if (codexImageToolMode.value === 'block') {
+			newExtra.codex_image_generation_explicit_tool_policy = 'strip'
+		} else {
+			delete newExtra.codex_image_generation_explicit_tool_policy
+		}
 
       if (props.account.type === 'oauth' || props.account.type === 'setup-token') {
         if (codexCLIOnlyEnabled.value) {

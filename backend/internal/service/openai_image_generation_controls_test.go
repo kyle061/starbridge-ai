@@ -82,18 +82,26 @@ func TestOpenAIGatewayServiceForward_DisabledGroupAllowsTextOnlyResponses(t *tes
 
 func TestOpenAIGatewayServiceForward_CodexImageInjectionRespectsGroupCapability(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	legacyDisabled, legacyEnabled := false, true
 
 	tests := []struct {
-		name          string
-		allowImages   bool
-		bridgeEnabled bool
-		responsesLite bool
-		wantInjected  bool
+		name           string
+		allowImages    bool
+		responsesLite  bool
+		wantInjected   bool
+		legacyOverride *bool
+		stripTools     bool
+		model          string
 	}{
-		{name: "disabled group skips injection", allowImages: false, bridgeEnabled: true, wantInjected: false},
-		{name: "enabled group skips injection by default", allowImages: true, bridgeEnabled: false, wantInjected: false},
-		{name: "enabled group injects image tool when bridge enabled", allowImages: true, bridgeEnabled: true, wantInjected: true},
-		{name: "responses lite skips hosted image bridge", allowImages: true, bridgeEnabled: true, responsesLite: true, wantInjected: false},
+		{name: "disabled group skips injection", allowImages: false, wantInjected: false},
+		{name: "enabled group provides image tool", allowImages: true, wantInjected: true},
+		{name: "responses lite skips hosted image tool", allowImages: true, responsesLite: true, wantInjected: false},
+		{name: "legacy account and channel disable cannot block enabled group", allowImages: true, legacyOverride: &legacyDisabled, wantInjected: true},
+		{name: "legacy account and channel enable cannot bypass disabled group", allowImages: false, legacyOverride: &legacyEnabled, wantInjected: false},
+		{name: "explicit account strip policy still applies", allowImages: true, stripTools: true, wantInjected: false},
+		{name: "gpt6 luna uses group permission", allowImages: true, model: "gpt-6-luna", wantInjected: true},
+		{name: "gpt6 sol uses group permission", allowImages: true, model: "gpt-6-sol", wantInjected: true},
+		{name: "gpt5 uses group permission", allowImages: true, model: "gpt-5.5", wantInjected: true},
 	}
 
 	for _, tt := range tests {
@@ -106,17 +114,36 @@ func TestOpenAIGatewayServiceForward_CodexImageInjectionRespectsGroupCapability(
 				},
 			}
 			svc := newOpenAIImageGenerationControlTestService(upstream)
-			svc.cfg.Gateway.CodexImageGenerationBridgeEnabled = tt.bridgeEnabled
 			c, _ := newOpenAIImageGenerationControlTestContext(tt.allowImages, "codex_cli_rs/0.98.0")
 			if tt.responsesLite {
 				c.Request.Header.Set(responsesLiteHeader, "true")
 			}
 			account := newOpenAIImageGenerationControlTestAccount()
+			if account.Extra == nil {
+				account.Extra = make(map[string]any)
+			}
+			if tt.legacyOverride != nil {
+				account.Extra["codex_image_generation_bridge"] = *tt.legacyOverride
+				account.Extra["codex_image_generation_bridge_enabled"] = *tt.legacyOverride
+				account.Extra[PlatformOpenAI] = map[string]any{"codex_image_generation_bridge_enabled": *tt.legacyOverride}
+				svc.channelService = newOpenAIImageGenerationControlChannelService(4242, &Channel{
+					ID: 9001, Status: StatusActive,
+					FeaturesConfig: map[string]any{"codex_image_generation_bridge": map[string]any{PlatformOpenAI: *tt.legacyOverride}},
+				})
+			}
+			if tt.stripTools {
+				account.Extra[featureKeyCodexImageGenerationExplicitToolPolicy] = codexImageGenerationExplicitToolPolicyStrip
+			}
+			model := tt.model
+			if model == "" {
+				model = "gpt-5.4"
+			}
 
-			result, err := svc.Forward(context.Background(), c, account, []byte(`{"model":"gpt-5.4","input":"write code","stream":false}`))
+			result, err := svc.Forward(context.Background(), c, account, []byte(`{"model":"`+model+`","input":"write code","stream":false}`))
 
 			require.NoError(t, err)
 			require.NotNil(t, result)
+			require.Zero(t, result.ImageCount, "tool availability must not bill a text response as an image")
 			require.NotNil(t, upstream.lastReq)
 			hasImageTool := gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation")`).Exists()
 			require.Equal(t, tt.wantInjected, hasImageTool)
@@ -154,7 +181,7 @@ func TestOpenAIBuildUpstreamRequestOpenAIPassthroughForwardsResponsesLiteHeader(
 	require.Equal(t, "true", req.Header.Get(responsesLiteHeader))
 }
 
-func TestOpenAIGatewayServiceForward_ExplicitImageToolWorksWithBridgeDisabled(t *testing.T) {
+func TestOpenAIGatewayServiceForward_ExplicitImageToolUsesGroupPermission(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	upstream := &httpUpstreamRecorder{
@@ -284,39 +311,6 @@ func TestOpenAIGatewayServiceForward_AccountPolicyStripsImageNamespaceTools(t *t
 	}
 }
 
-func TestOpenAIGatewayServiceForward_ChannelBridgeOverrideEnablesCodexInjection(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	upstream := &httpUpstreamRecorder{
-		resp: &http.Response{
-			StatusCode: http.StatusOK,
-			Header:     http.Header{"Content-Type": []string{"application/json"}},
-			Body:       io.NopCloser(strings.NewReader(`{"id":"resp_channel_bridge","model":"gpt-5.4","usage":{"input_tokens":1,"output_tokens":1}}`)),
-		},
-	}
-	svc := newOpenAIImageGenerationControlTestService(upstream)
-	groupID := int64(4242)
-	svc.channelService = newOpenAIImageGenerationControlChannelService(groupID, &Channel{
-		ID:     9001,
-		Status: StatusActive,
-		FeaturesConfig: map[string]any{
-			featureKeyCodexImageGenerationBridge: map[string]any{PlatformOpenAI: true},
-		},
-	})
-	c, _ := newOpenAIImageGenerationControlTestContext(true, "codex_cli_rs/0.98.0")
-	account := newOpenAIImageGenerationControlTestAccount()
-
-	result, err := svc.Forward(context.Background(), c, account, []byte(`{"model":"gpt-5.4","input":"write code","stream":false}`))
-
-	require.NoError(t, err)
-	require.NotNil(t, result)
-	require.NotNil(t, upstream.lastReq)
-	require.True(t, gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation")`).Exists())
-	require.Equal(t, "auto", gjson.GetBytes(upstream.lastBody, "tool_choice").String())
-	instructions := gjson.GetBytes(upstream.lastBody, "instructions").String()
-	require.Contains(t, instructions, "image_generation")
-}
-
 func TestOpenAIGatewayServiceForward_CodexBridgeDoesNotInjectHostedToolAlongsideImageGenNamespace(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -328,7 +322,6 @@ func TestOpenAIGatewayServiceForward_CodexBridgeDoesNotInjectHostedToolAlongside
 		},
 	}
 	svc := newOpenAIImageGenerationControlTestService(upstream)
-	svc.cfg.Gateway.CodexImageGenerationBridgeEnabled = true
 	c, _ := newOpenAIImageGenerationControlTestContext(true, "codex_cli_rs/0.144.1")
 	account := newOpenAIImageGenerationControlTestAccount()
 	body := []byte(`{
@@ -382,7 +375,6 @@ func TestOpenAIGatewayServiceForward_CodexBridgePreservesImageGenFunction(t *tes
 				},
 			}
 			svc := newOpenAIImageGenerationControlTestService(upstream)
-			svc.cfg.Gateway.CodexImageGenerationBridgeEnabled = true
 			c, _ := newOpenAIImageGenerationControlTestContext(true, "codex_cli_rs/0.144.1")
 			account := newOpenAIImageGenerationControlTestAccount()
 			body := []byte(`{"model":"gpt-5.5","input":"draw a cat","stream":false,"tools":[` + tt.tool + `]}`)
@@ -414,7 +406,6 @@ func TestOpenAIGatewayServiceForward_CodexBridgePreservesExistingToolChoice(t *t
 		},
 	}
 	svc := newOpenAIImageGenerationControlTestService(upstream)
-	svc.cfg.Gateway.CodexImageGenerationBridgeEnabled = true
 	c, _ := newOpenAIImageGenerationControlTestContext(true, "codex_cli_rs/0.98.0")
 	account := newOpenAIImageGenerationControlTestAccount()
 
@@ -437,7 +428,6 @@ func TestOpenAIGatewayServiceForward_CodexBridgeSkipsCompactRequests(t *testing.
 		},
 	}
 	svc := newOpenAIImageGenerationControlTestService(upstream)
-	svc.cfg.Gateway.CodexImageGenerationBridgeEnabled = true
 	c, _ := newOpenAIImageGenerationControlTestContext(true, "codex_cli_rs/0.98.0")
 	c.Request = httptest.NewRequest(http.MethodPost, "/openai/v1/responses/compact", nil)
 	c.Request.Header.Set("User-Agent", "codex_cli_rs/0.98.0")
@@ -453,95 +443,6 @@ func TestOpenAIGatewayServiceForward_CodexBridgeSkipsCompactRequests(t *testing.
 	require.False(t, gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation")`).Exists())
 	instructions := gjson.GetBytes(upstream.lastBody, "instructions").String()
 	require.NotContains(t, instructions, "image_generation")
-}
-
-func TestOpenAIGatewayService_CodexImageGenerationBridgeOverridePrecedence(t *testing.T) {
-	groupID := int64(4242)
-
-	tests := []struct {
-		name    string
-		global  bool
-		channel *Channel
-		account *Account
-		want    bool
-	}{
-		{
-			name:   "global default enables bridge",
-			global: true,
-			account: &Account{
-				Platform: PlatformOpenAI,
-			},
-			want: true,
-		},
-		{
-			name:   "channel true overrides disabled global",
-			global: false,
-			channel: &Channel{ID: 1, Status: StatusActive, FeaturesConfig: map[string]any{
-				featureKeyCodexImageGenerationBridge: map[string]any{PlatformOpenAI: true},
-			}},
-			account: &Account{Platform: PlatformOpenAI},
-			want:    true,
-		},
-		{
-			name:   "channel false overrides enabled global",
-			global: true,
-			channel: &Channel{ID: 1, Status: StatusActive, FeaturesConfig: map[string]any{
-				featureKeyCodexImageGenerationBridge: map[string]any{PlatformOpenAI: false},
-			}},
-			account: &Account{Platform: PlatformOpenAI},
-			want:    false,
-		},
-		{
-			name:   "account false overrides channel and global true",
-			global: true,
-			channel: &Channel{ID: 1, Status: StatusActive, FeaturesConfig: map[string]any{
-				featureKeyCodexImageGenerationBridge: map[string]any{PlatformOpenAI: true},
-			}},
-			account: &Account{
-				Platform: PlatformOpenAI,
-				Extra:    map[string]any{featureKeyCodexImageGenerationBridge: false},
-			},
-			want: false,
-		},
-		{
-			name:   "nested account true overrides channel false",
-			global: false,
-			channel: &Channel{ID: 1, Status: StatusActive, FeaturesConfig: map[string]any{
-				featureKeyCodexImageGenerationBridge: map[string]any{PlatformOpenAI: false},
-			}},
-			account: &Account{
-				Platform: PlatformOpenAI,
-				Extra: map[string]any{
-					PlatformOpenAI: map[string]any{"codex_image_generation_bridge_enabled": true},
-				},
-			},
-			want: true,
-		},
-		{
-			name:   "non openai account extra is ignored",
-			global: false,
-			account: &Account{
-				Platform: PlatformAnthropic,
-				Extra:    map[string]any{featureKeyCodexImageGenerationBridge: true},
-			},
-			want: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			svc := newOpenAIImageGenerationControlTestService(&httpUpstreamRecorder{})
-			svc.cfg.Gateway.CodexImageGenerationBridgeEnabled = tt.global
-			if tt.channel != nil {
-				svc.channelService = newOpenAIImageGenerationControlChannelService(groupID, tt.channel)
-			}
-			apiKey := &APIKey{GroupID: &groupID}
-
-			got := svc.isCodexImageGenerationBridgeEnabled(context.Background(), tt.account, apiKey)
-
-			require.Equal(t, tt.want, got)
-		})
-	}
 }
 
 func TestOpenAIGatewayServiceHandleResponsesImageOutputs_NonStreaming(t *testing.T) {

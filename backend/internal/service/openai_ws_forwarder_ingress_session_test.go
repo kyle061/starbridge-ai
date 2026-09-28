@@ -682,7 +682,6 @@ func TestOpenAIGatewayService_ProxyResponsesWebSocketFromClient_CodexImageBridge
 		},
 		Extra: map[string]any{
 			"openai_oauth_responses_websockets_v2_enabled": true,
-			"codex_image_generation_bridge":                true,
 		},
 	}
 
