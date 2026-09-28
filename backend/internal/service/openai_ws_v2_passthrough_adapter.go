@@ -20,6 +20,7 @@ import (
 )
 
 type openAIWSClientFrameConn struct {
+	imageDelivery        *CodexImageDelivery
 	conn                 *coderws.Conn
 	controlCtx           context.Context
 	interTurnIdleTimeout time.Duration
@@ -651,6 +652,11 @@ func (c *openAIWSClientFrameConn) WriteFrame(ctx context.Context, msgType coderw
 			payload = c.restoreToolNames(payload)
 		}
 	}
+	if msgType == coderws.MessageText {
+		return c.imageDelivery.WriteEvent(payload, func(message []byte) error {
+			return c.conn.Write(ctx, msgType, message)
+		})
+	}
 	return c.conn.Write(ctx, msgType, payload)
 }
 
@@ -954,6 +960,7 @@ func (s *OpenAIGatewayService) proxyResponsesWebSocketV2Passthrough(
 	turnLifecycle := newOpenAIWSPassthroughTurnLifecycle(true)
 	var acceptedTurnStartedAt atomic.Pointer[time.Time]
 	clientFrameConn := &openAIWSClientFrameConn{
+		imageDelivery:        codexImageDeliveryFromContext(c),
 		conn:                 clientConn,
 		controlCtx:           ctx,
 		interTurnIdleTimeout: s.openAIWSIngressInterTurnIdleTimeout(),

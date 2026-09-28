@@ -3,6 +3,7 @@ package routes
 import (
 	"errors"
 	"net/http"
+	"path/filepath"
 	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
@@ -11,6 +12,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/pkg/requestmodel"
 	"github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
+	"github.com/Wei-Shaw/sub2api/internal/setup"
 
 	"github.com/gin-gonic/gin"
 	"github.com/tidwall/gjson"
@@ -29,6 +31,10 @@ func RegisterGatewayRoutes(
 	compositeResolver *service.CompositeRouteResolver,
 	cfg *config.Config,
 ) {
+	imageStore := service.NewCodexImageStore(filepath.Join(setup.GetDataDir(), "generated-images"))
+	r.GET(service.CodexImageDownloadPath+":name", handler.CodexImageDownload(imageStore))
+	r.HEAD(service.CodexImageDownloadPath+":name", handler.CodexImageDownload(imageStore))
+	r.Use(handler.CodexImageDeliveryMiddleware(imageStore, cfg))
 	bodyLimit := middleware.RequestBodyLimit(cfg.Gateway.MaxBodySize)
 	textBodyLimit := middleware.RequestBodyLimit(cfg.Gateway.TextMaxBodySize)
 	clientRequestID := middleware.ClientRequestID()
