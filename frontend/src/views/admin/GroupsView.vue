@@ -928,11 +928,11 @@
               {{ t(imagePricingI18nKey(createForm.platform, "independentMultiplier")) }}
             </label>
           </div>
-          <div v-if="createForm.platform === 'openai' && createForm.allow_image_generation" class="mb-4">
+          <div v-if="(createForm.platform === 'openai' || createForm.platform === 'composite') && createForm.allow_image_generation" class="mb-4">
             <label class="input-label" for="create-default-image-model">
               {{ t('admin.groups.imagePricing.defaultImageModel') }}
             </label>
-            <input id="create-default-image-model" v-model.trim="createForm.default_image_model" list="create-openai-image-models" class="input" placeholder="gpt-image-2" />
+            <input id="create-default-image-model" v-model.trim="createForm.default_image_model" list="create-openai-image-models" class="input" :placeholder="t('admin.groups.imagePricing.defaultImageModelAuto')" />
             <datalist id="create-openai-image-models">
               <option value="gpt-image-2" />
               <option value="gpt-image-2.5-flare" />
@@ -2582,11 +2582,11 @@
               {{ t(imagePricingI18nKey(editForm.platform, "independentMultiplier")) }}
             </label>
           </div>
-          <div v-if="editForm.platform === 'openai' && editForm.allow_image_generation" class="mb-4">
+          <div v-if="(editForm.platform === 'openai' || editForm.platform === 'composite') && editForm.allow_image_generation" class="mb-4">
             <label class="input-label" for="edit-default-image-model">
               {{ t('admin.groups.imagePricing.defaultImageModel') }}
             </label>
-            <input id="edit-default-image-model" v-model.trim="editForm.default_image_model" list="edit-openai-image-models" class="input" placeholder="gpt-image-2" />
+            <input id="edit-default-image-model" v-model.trim="editForm.default_image_model" list="edit-openai-image-models" class="input" :placeholder="t('admin.groups.imagePricing.defaultImageModelAuto')" />
             <datalist id="edit-openai-image-models">
               <option value="gpt-image-2" />
               <option value="gpt-image-2.5-flare" />
@@ -5985,7 +5985,7 @@ const handleCreateGroup = async () => {
     const requestData = {
       ...createGroupForm,
       default_image_model:
-        createForm.platform === 'openai' ? createForm.default_image_model : '',
+        createForm.platform === 'openai' || createForm.platform === 'composite' ? createForm.default_image_model : '',
       force_openai_fast: normalizeGroupOpenAIFast(
         createForm.platform,
         createForm.force_openai_fast,
@@ -6443,7 +6443,7 @@ const handleUpdateGroup = async () => {
       editForm.peak_rate_multiplier,
     );
     payload.default_image_model =
-      editForm.platform === 'openai' ? editForm.default_image_model : '';
+      editForm.platform === 'openai' || editForm.platform === 'composite' ? editForm.default_image_model : '';
     const requestData = authStore.isSimpleMode
       ? {
           name: editForm.name,

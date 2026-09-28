@@ -6,6 +6,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import re
 import runpy
 import sys
 from urllib.parse import urlsplit
@@ -65,6 +66,24 @@ def provider_environment(config_path, environment, profile=None):
     return child, {"provider": name, "base_url": child["OPENAI_BASE_URL"], "credential_configured": True}
 
 
+def preferred_image_model(model_ids):
+    candidates = []
+    for model in model_ids:
+        if not isinstance(model, str) or not model.startswith("gpt-image-"):
+            continue
+        version = re.match(r"^gpt-image-(\d+)(?:\.(\d+))?(?:-|$)", model)
+        major, minor = (int(version[1]), int(version[2] or 0)) if version else (-1, -1)
+        candidates.append((major, minor, model))
+    if not candidates:
+        raise ValueError("This Starbridge key has no available GPT image model; check its group and account model permissions.")
+    candidates.sort(key=lambda item: (-item[0], -item[1], item[2]))
+    return candidates[0][2]
+
+
+def has_explicit_model(args):
+    return any(arg == "--model" or arg.startswith("--model=") for arg in args)
+
+
 def run_bundled_cli(cli, cli_args, environment):
     import openai
 
@@ -83,6 +102,10 @@ def run_bundled_cli(cli, cli_args, environment):
     args = list(cli_args)
     if args[0] == "generate-batch" and not any(arg == "--max-attempts" or arg.startswith("--max-attempts=") for arg in args):
         args.extend(["--max-attempts", "1"])
+    if not has_explicit_model(args):
+        with patch.dict(os.environ, environment, clear=True):
+            models = sync_client(max_retries=0, timeout=15.0).models.list()
+        args.extend(["--model", preferred_image_model(model.id for model in models.data)])
     # These overrides live only in the launcher process; the bundled source is untouched.
     with contextlib.ExitStack() as stack:
         stack.enter_context(patch.dict(os.environ, environment, clear=True))

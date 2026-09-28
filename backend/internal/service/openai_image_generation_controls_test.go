@@ -119,6 +119,8 @@ func TestOpenAIGatewayServiceForward_CodexImageInjectionRespectsGroupCapability(
 		{name: "passthrough cannot bypass image allowlist", allowImages: true, passthrough: true, modelMapping: map[string]any{"gpt-5.4": "gpt-5.4"}},
 		{name: "authorized image model is offered", allowImages: true, modelMapping: map[string]any{"gpt-5.4": "gpt-5.4", "gpt-image-2": "gpt-image-2"}, wantInjected: true},
 		{name: "only authorized image variant is offered", allowImages: true, modelMapping: map[string]any{"gpt-5.4": "gpt-5.4", "gpt-image-2.5-flare": "gpt-image-2.5-flare"}, wantInjected: true, wantImageModel: "gpt-image-2.5-flare"},
+		{name: "both versions select 2.5", allowImages: true, modelMapping: map[string]any{"gpt-5.4": "gpt-5.4", "gpt-image-2": "gpt-image-2", "gpt-image-2.5-flare": "gpt-image-2.5-flare"}, wantInjected: true, wantImageModel: "gpt-image-2.5-flare"},
+		{name: "passthrough selects 2.5", allowImages: true, passthrough: true, modelMapping: map[string]any{"gpt-5.4": "gpt-5.4", "gpt-image-2": "gpt-image-2", "gpt-image-2.5-flare": "gpt-image-2.5-flare"}, wantInjected: true, wantImageModel: "gpt-image-2.5-flare"},
 	}
 
 	for _, tt := range tests {

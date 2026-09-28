@@ -660,6 +660,12 @@ func TestAdminService_CreateGroup_DefaultImageModel(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "gpt-image-2.5-flare", group.DefaultImageModel)
 	require.Equal(t, group.DefaultImageModel, repo.created.DefaultImageModel)
+	composite, err := svc.CreateGroup(context.Background(), &CreateGroupInput{
+		Name: "composite-image", Platform: PlatformComposite, RateMultiplier: 1,
+		AllowImageGeneration: true, DefaultImageModel: "gpt-image-2",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "gpt-image-2", composite.DefaultImageModel)
 
 	_, err = svc.CreateGroup(context.Background(), &CreateGroupInput{
 		Name: "invalid-image", Platform: PlatformGemini, RateMultiplier: 1,

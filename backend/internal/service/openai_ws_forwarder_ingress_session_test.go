@@ -679,7 +679,7 @@ func TestOpenAIGatewayService_ProxyResponsesWebSocketFromClient_CodexImageBridge
 		Concurrency: 1,
 		Credentials: map[string]any{
 			"access_token":  "test-token",
-			"model_mapping": map[string]any{"gpt-5.5": "gpt-5.5", "gpt-image-2": "gpt-image-2"},
+			"model_mapping": map[string]any{"gpt-5.5": "gpt-5.5", "gpt-image-2": "gpt-image-2", "gpt-image-2.5-flare": "gpt-image-2.5-flare"},
 		},
 		Extra: map[string]any{
 			"openai_oauth_responses_websockets_v2_enabled": true,
@@ -813,6 +813,7 @@ func TestOpenAIGatewayService_ProxyResponsesWebSocketFromClient_CodexImageBridge
 	require.Len(t, captureConn.writes, 3)
 	nonLitePayload := requestToJSONString(captureConn.writes[0])
 	require.True(t, gjson.Get(nonLitePayload, `tools.#(type=="image_generation")`).Exists())
+	require.Equal(t, "gpt-image-2.5-flare", gjson.Get(nonLitePayload, `tools.#(type=="image_generation").model`).String())
 	require.Equal(t, "png", gjson.Get(nonLitePayload, `tools.#(type=="image_generation").output_format`).String())
 	require.Equal(t, "auto", gjson.Get(nonLitePayload, "tool_choice").String())
 	require.Contains(t, gjson.Get(nonLitePayload, "instructions").String(), "image_generation")

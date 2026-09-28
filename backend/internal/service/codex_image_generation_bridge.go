@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/tidwall/gjson"
@@ -16,24 +17,23 @@ func normalizeGroupDefaultImageModel(platform, model string) (string, error) {
 	if model == "" {
 		return "", nil
 	}
-	if platform != PlatformOpenAI || len(model) > 100 || !groupImageModelID.MatchString(model) {
-		return "", fmt.Errorf("default_image_model requires an OpenAI group and a gpt-image model ID")
+	if (platform != PlatformOpenAI && platform != PlatformComposite) || len(model) > 100 || !groupImageModelID.MatchString(model) {
+		return "", fmt.Errorf("default_image_model requires an OpenAI or composite group and a gpt-image model ID")
 	}
 	return model, nil
 }
 
 func groupImageModel(group *Group) string {
-	if group != nil && group.Platform == PlatformOpenAI && groupImageModelID.MatchString(group.DefaultImageModel) {
+	if group != nil && (group.Platform == PlatformOpenAI || group.Platform == PlatformComposite) && groupImageModelID.MatchString(group.DefaultImageModel) {
 		return group.DefaultImageModel
 	}
 	return openAIImagesDefaultModel
 }
 
-func setGroupDefaultImageToolModel(body map[string]any, group *Group) bool {
-	if group == nil || group.DefaultImageModel == "" || !GroupAllowsImageGeneration(group) {
+func setMissingImageToolModel(body map[string]any, model string) bool {
+	if model == "" {
 		return false
 	}
-	model := groupImageModel(group)
 	changed := false
 	var visit func(any)
 	visit = func(raw any) {
@@ -64,6 +64,13 @@ func setGroupDefaultImageToolModel(body map[string]any, group *Group) bool {
 	return changed
 }
 
+func setGroupDefaultImageToolModel(body map[string]any, group *Group) bool {
+	if group == nil || group.DefaultImageModel == "" || !GroupAllowsImageGeneration(group) {
+		return false
+	}
+	return setMissingImageToolModel(body, groupImageModel(group))
+}
+
 // Validate hosted image tools as well as the top-level model: the scheduler's
 // text-model check alone cannot authorize a second model inside tools.
 func validateOpenAIImageModelAuthorization(account *Account, body []byte, group *Group) error {
@@ -78,6 +85,11 @@ func validateOpenAIImageModelAuthorization(account *Account, body []byte, group 
 		if mappingSupportsRequestedModel(mapping, model) {
 			return nil
 		}
+		for _, upstreamModel := range mapping {
+			if upstreamModel == model {
+				return nil
+			}
+		}
 		return fmt.Errorf("image model %q is not authorized for this account", model)
 	}
 	if model := strings.TrimSpace(gjson.GetBytes(body, "model").String()); isOpenAIImageGenerationModel(model) {
@@ -91,7 +103,10 @@ func validateOpenAIImageModelAuthorization(account *Account, body []byte, group 
 			if tool.Get("type").String() == "image_generation" {
 				model := strings.TrimSpace(tool.Get("model").String())
 				if !isOpenAIImageGenerationModel(model) {
-					model = groupImageModel(group)
+					model = codexImageGenerationModel(account, group)
+					if model == "" {
+						return fmt.Errorf("image generation is not authorized for this account")
+					}
 				}
 				if err := check(model); err != nil {
 					return err
@@ -116,6 +131,23 @@ func validateOpenAIImageModelAuthorization(account *Account, body []byte, group 
 	return nil
 }
 
+func imageModelVersion(model string) (int, int) {
+	parts := strings.Split(strings.TrimPrefix(model, "gpt-image-"), "-")
+	version := strings.SplitN(parts[0], ".", 3)
+	major, err := strconv.Atoi(version[0])
+	if err != nil {
+		return -1, -1
+	}
+	if len(version) < 2 {
+		return major, 0
+	}
+	minor, err := strconv.Atoi(version[1])
+	if err != nil {
+		return major, 0
+	}
+	return major, minor
+}
+
 // The group enables the feature; account model authorization still limits
 // which image model can be offered. Passthrough must not bypass this check.
 func codexImageGenerationModel(account *Account, group *Group) string {
@@ -127,19 +159,34 @@ func codexImageGenerationModel(account *Account, group *Group) string {
 	if len(mapping) == 0 {
 		return preferred
 	}
-	if mapped, ok := resolveRequestedModelInMapping(mapping, preferred); ok && isOpenAIImageGenerationModel(mapped) {
-		return mapped
-	}
 	if group != nil && group.DefaultImageModel != "" {
+		if mapped, ok := resolveRequestedModelInMapping(mapping, preferred); ok && isOpenAIImageGenerationModel(mapped) {
+			return mapped
+		}
 		return "" // A configured model must not silently fall back to a different one.
 	}
 	models := make([]string, 0, len(mapping))
 	for _, model := range mapping {
-		if isOpenAIImageGenerationModel(model) && !strings.Contains(model, "*") {
+		if IsGPTImageGenerationModel(model) && !strings.Contains(model, "*") {
 			models = append(models, model)
 		}
 	}
-	sort.Strings(models)
+	for _, candidate := range []string{"gpt-image-2.5-flare", "gpt-image-2.5-sunburst", openAIImagesDefaultModel} {
+		if mapped, ok := resolveRequestedModelInMapping(mapping, candidate); ok && IsGPTImageGenerationModel(mapped) && !strings.Contains(mapped, "*") {
+			models = append(models, mapped)
+		}
+	}
+	sort.Slice(models, func(i, j int) bool {
+		majorI, minorI := imageModelVersion(models[i])
+		majorJ, minorJ := imageModelVersion(models[j])
+		if majorI != majorJ {
+			return majorI > majorJ
+		}
+		if minorI != minorJ {
+			return minorI > minorJ
+		}
+		return models[i] < models[j]
+	})
 	if len(models) > 0 {
 		return models[0]
 	}
@@ -165,12 +212,19 @@ func ensureCodexImageGenerationBridge(body map[string]any, account *Account, gro
 		if strings.Contains(existing, codexImageAPIAvailableMarker) {
 			return defaultSet
 		}
-		body["instructions"] = strings.TrimSpace(existing + "\n\n" + codexImageAPIAvailableInstructions + "\nUse image model " + groupImageModel(group) + " when the user has not chosen one.")
+		modelGuidance := "If no image model was requested, choose an authorized image model from this key's /v1/models listing; prefer gpt-image-2.5, then gpt-image-2. Never guess a model that the key cannot use."
+		if group != nil && group.DefaultImageModel != "" {
+			modelGuidance = "If no image model was requested, use the group's configured image model " + groupImageModel(group) + "."
+		}
+		body["instructions"] = strings.TrimSpace(existing + "\n\n" + codexImageAPIAvailableInstructions + "\n" + modelGuidance)
 		return true
 	}
 	model := codexImageGenerationModel(account, group)
 	if model == "" {
 		return defaultSet
+	}
+	if setMissingImageToolModel(body, model) {
+		defaultSet = true
 	}
 	injected := ensureOpenAIResponsesImageGenerationTool(body)
 	modified := injected || defaultSet

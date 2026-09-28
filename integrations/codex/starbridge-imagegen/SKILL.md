@@ -22,11 +22,11 @@ The launcher calls the existing bundled imagegen CLI with the provider URL and c
 ```sh
 python3 ~/.codex/skills/starbridge-imagegen/scripts/with_current_provider.py -- generate \
   --prompt-file /absolute/path/prompt.txt \
-  --model gpt-image-2 --size 1024x1024 --quality medium \
+  --size 1024x1024 --quality medium \
   --out /absolute/workspace/path/output/imagegen/image.png
 ```
 
-Editing uses `-- edit --image /absolute/input.png --prompt-file ... --out ...`. Pass only controls supported by the bundled CLI. Keep output paths in the current workspace and do not overwrite an existing file unless requested. Use the requested model, or the current key's group default image model when supplied in the request; the command above is an example, not an override of group settings. Do not silently substitute a different provider or image model after an upstream rejection.
+Without `--model`, the launcher makes a non-billable `/v1/models` lookup for the current key and chooses the highest authorized GPT image version (2.5 before 2). Pass `--model` when the user requests a particular model or the group default image model is supplied in the request; this also lets the user select 2 when both 2 and 2.5 are available. Editing uses `-- edit --image /absolute/input.png --prompt-file ... --out ...`. Pass only controls supported by the bundled CLI. Keep output paths in the current workspace and do not overwrite an existing file unless requested. Do not silently substitute a different provider or image model after an upstream rejection.
 
 After the CLI returns, open the saved file with `view_image`, verify the result, and embed its absolute local path in the final reply. A prompt alone is not a generated image. On a failed or timed-out generation, inspect the error and any existing output before retrying; avoid duplicate billable requests.
 
