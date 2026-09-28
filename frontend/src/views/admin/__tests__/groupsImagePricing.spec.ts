@@ -23,8 +23,10 @@ describe("groups image pricing platform support", () => {
     expect(supportsVideoPricingPlatform("openai")).toBe(false);
   });
 
-  it("keeps non-media group platforms out of the image pricing controls", () => {
-    expect(supportsImagePricingPlatform("anthropic")).toBe(false);
+  it("shows the image gate for every group platform", () => {
+    for (const platform of ["anthropic", "openai", "gemini", "antigravity", "grok", "kimi", "zhipu", "deepseek", "minimax", "opencode_go", "composite"]) {
+      expect(supportsImagePricingPlatform(platform)).toBe(true);
+    }
   });
 
   it("includes Composite groups in image pricing controls", () => {

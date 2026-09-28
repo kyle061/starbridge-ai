@@ -130,6 +130,23 @@ func (s *OpsService) GetConcurrencyStats(
 
 	collectedAt := time.Now()
 	loadMap := s.getAccountsLoadMapBestEffort(ctx, accounts)
+	var groupRepo GroupRepository
+	if s.gatewayService != nil {
+		groupRepo = s.gatewayService.groupRepo
+	}
+	groupIDs := make([]int64, 0)
+	seenGroupIDs := make(map[int64]struct{})
+	for _, acc := range accounts {
+		for _, grp := range acc.Groups {
+			if grp != nil && grp.ID > 0 {
+				if _, seen := seenGroupIDs[grp.ID]; !seen {
+					seenGroupIDs[grp.ID] = struct{}{}
+					groupIDs = append(groupIDs, grp.ID)
+				}
+			}
+		}
+	}
+	groupUsed := groupConcurrencyUsage(ctx, groupRepo, s.concurrencyService, groupIDs)
 
 	platform := make(map[string]*PlatformConcurrencyInfo)
 	group := make(map[int64]*GroupConcurrencyInfo)
@@ -225,8 +242,6 @@ func (s *OpsService) GetConcurrencyStats(
 				g.Platform = ""
 			}
 			g.MaxCapacity += int64(acc.Concurrency)
-			g.CurrentInUse += currentInUse
-			g.WaitingInQueue += waiting
 		} else {
 			for _, grp := range acc.Groups {
 				if grp == nil || grp.ID <= 0 {
@@ -248,8 +263,6 @@ func (s *OpsService) GetConcurrencyStats(
 					g.Platform = ""
 				}
 				g.MaxCapacity += int64(acc.Concurrency)
-				g.CurrentInUse += currentInUse
-				g.WaitingInQueue += waiting
 			}
 		}
 	}
@@ -260,6 +273,7 @@ func (s *OpsService) GetConcurrencyStats(
 		}
 	}
 	for _, info := range group {
+		info.CurrentInUse = int64(groupUsed[info.GroupID])
 		if info.MaxCapacity > 0 {
 			info.LoadPercentage = float64(info.CurrentInUse) / float64(info.MaxCapacity) * 100
 		}

@@ -13,6 +13,35 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type groupImageAccountRepoStub struct {
+	AccountRepository
+	accounts []*Account
+}
+
+func (s *groupImageAccountRepoStub) GetByIDs(_ context.Context, _ []int64) ([]*Account, error) {
+	return s.accounts, nil
+}
+
+func (s *groupImageAccountRepoStub) ListByGroup(_ context.Context, _ int64) ([]Account, error) {
+	result := make([]Account, 0, len(s.accounts))
+	for _, account := range s.accounts {
+		result = append(result, *account)
+	}
+	return result, nil
+}
+
+func imageReadyGroupTestRepositories() (*groupRepoStubForAdmin, *groupImageAccountRepoStub) {
+	groupRepo := &groupRepoStubForAdmin{
+		getByIDByID:               map[int64]*Group{99: {ID: 99, Platform: PlatformOpenAI}},
+		getAccountIDsByGroupIDsFn: func([]int64) ([]int64, error) { return []int64{1}, nil },
+		bindAccountsToGroupFn:     func(int64, []int64) error { return nil },
+	}
+	accountRepo := &groupImageAccountRepoStub{accounts: []*Account{{ID: 1, Platform: PlatformOpenAI, Type: AccountTypeAPIKey, Credentials: map[string]any{
+		"model_mapping": map[string]any{"gpt-image-2": "gpt-image-2"},
+	}}}}
+	return groupRepo, accountRepo
+}
+
 func ptrString[T ~string](v T) *string {
 	s := string(v)
 	return &s
@@ -576,7 +605,7 @@ func TestAdminService_CreateGroup_NilImagePricing(t *testing.T) {
 	require.Nil(t, repo.created.ImagePrice4K)
 }
 
-func TestAdminService_CreateGroup_DefaultsGrokMediaGenerationEnabled(t *testing.T) {
+func TestAdminService_CreateGroup_EmptyGrokGroupDoesNotEnableImages(t *testing.T) {
 	repo := &groupRepoStubForAdmin{}
 	svc := &adminServiceImpl{groupRepo: repo}
 
@@ -589,8 +618,8 @@ func TestAdminService_CreateGroup_DefaultsGrokMediaGenerationEnabled(t *testing.
 	require.NoError(t, err)
 	require.NotNil(t, group)
 	require.NotNil(t, repo.created)
-	require.True(t, repo.created.AllowImageGeneration)
-	require.True(t, group.AllowImageGeneration)
+	require.False(t, repo.created.AllowImageGeneration)
+	require.False(t, group.AllowImageGeneration)
 }
 
 func TestAdminService_CreateGroup_PreservesNonGrokImageGenerationDisabled(t *testing.T) {
@@ -631,8 +660,8 @@ func TestAdminService_CreateGroup_DisablesBatchImageWhenImageGenerationDisabled(
 }
 
 func TestAdminService_CreateGroup_DisablesBatchImageForNonGeminiPlatform(t *testing.T) {
-	repo := &groupRepoStubForAdmin{}
-	svc := &adminServiceImpl{groupRepo: repo}
+	repo, accounts := imageReadyGroupTestRepositories()
+	svc := &adminServiceImpl{groupRepo: repo, accountRepo: accounts}
 
 	group, err := svc.CreateGroup(context.Background(), &CreateGroupInput{
 		Name:                      "openai-image",
@@ -641,6 +670,7 @@ func TestAdminService_CreateGroup_DisablesBatchImageForNonGeminiPlatform(t *test
 		RateMultiplier:            1.0,
 		AllowImageGeneration:      true,
 		AllowBatchImageGeneration: true,
+		CopyAccountsFromGroupIDs:  []int64{99},
 	})
 	require.NoError(t, err)
 	require.NotNil(t, group)
@@ -651,18 +681,18 @@ func TestAdminService_CreateGroup_DisablesBatchImageForNonGeminiPlatform(t *test
 }
 
 func TestAdminService_CreateGroup_DefaultImageModel(t *testing.T) {
-	repo := &groupRepoStubForAdmin{}
-	svc := &adminServiceImpl{groupRepo: repo}
+	repo, accounts := imageReadyGroupTestRepositories()
+	svc := &adminServiceImpl{groupRepo: repo, accountRepo: accounts}
 	group, err := svc.CreateGroup(context.Background(), &CreateGroupInput{
 		Name: "openai-image", Platform: PlatformOpenAI, RateMultiplier: 1,
-		AllowImageGeneration: true, DefaultImageModel: "gpt-image-2.5-flare",
+		AllowImageGeneration: true, DefaultImageModel: "gpt-image-2.5-flare", CopyAccountsFromGroupIDs: []int64{99},
 	})
 	require.NoError(t, err)
 	require.Equal(t, "gpt-image-2.5-flare", group.DefaultImageModel)
 	require.Equal(t, group.DefaultImageModel, repo.created.DefaultImageModel)
 	composite, err := svc.CreateGroup(context.Background(), &CreateGroupInput{
 		Name: "composite-image", Platform: PlatformComposite, RateMultiplier: 1,
-		AllowImageGeneration: true, DefaultImageModel: "gpt-image-2",
+		AllowImageGeneration: true, DefaultImageModel: "gpt-image-2", CopyAccountsFromGroupIDs: []int64{99},
 	})
 	require.NoError(t, err)
 	require.Equal(t, "gpt-image-2", composite.DefaultImageModel)
@@ -672,6 +702,52 @@ func TestAdminService_CreateGroup_DefaultImageModel(t *testing.T) {
 		DefaultImageModel: "gpt-image-2.5-flare",
 	})
 	require.Error(t, err)
+}
+
+func TestAdminService_GroupImageGateRequiresBoundImageAccount(t *testing.T) {
+	repo, accounts := imageReadyGroupTestRepositories()
+	svc := &adminServiceImpl{groupRepo: repo, accountRepo: accounts}
+
+	_, err := svc.CreateGroup(context.Background(), &CreateGroupInput{
+		Name: "empty", Platform: PlatformOpenAI, RateMultiplier: 1, AllowImageGeneration: true,
+	})
+	require.ErrorContains(t, err, "Bind an account")
+
+	accounts.accounts = []*Account{{ID: 1, Platform: PlatformOpenAI, Type: AccountTypeAPIKey, Credentials: map[string]any{
+		"model_mapping": map[string]any{"gpt-6-luna": "gpt-6-luna"},
+	}}}
+	_, err = svc.CreateGroup(context.Background(), &CreateGroupInput{
+		Name: "text-only", Platform: PlatformComposite, RateMultiplier: 1,
+		AllowImageGeneration: true, CopyAccountsFromGroupIDs: []int64{99},
+	})
+	require.ErrorContains(t, err, "No bound account supports")
+
+	repo.getByIDByID[10] = &Group{ID: 10, Platform: PlatformOpenAI, Status: StatusActive}
+	on := true
+	_, err = svc.UpdateGroup(context.Background(), 10, &UpdateGroupInput{AllowImageGeneration: &on})
+	require.ErrorContains(t, err, "No bound account supports")
+	accounts.accounts[0].Credentials["model_mapping"] = map[string]any{"gpt-image-2": "gpt-image-2"}
+	updated, err := svc.UpdateGroup(context.Background(), 10, &UpdateGroupInput{AllowImageGeneration: &on})
+	require.NoError(t, err)
+	require.True(t, updated.AllowImageGeneration)
+}
+
+func TestAccountSupportsGroupImageGenerationAcrossPlatforms(t *testing.T) {
+	for _, tt := range []struct {
+		platform string
+		models   map[string]any
+		want     bool
+	}{
+		{PlatformAnthropic, nil, false},
+		{PlatformOpenAI, map[string]any{"gpt-6-luna": "gpt-6-luna"}, false},
+		{PlatformOpenAI, map[string]any{"gpt-image-2": "gpt-image-2"}, true},
+		{PlatformGemini, map[string]any{"gemini-3.1-flash-image": "gemini-3.1-flash-image"}, true},
+		{PlatformDeepseek, map[string]any{"deepseek-chat": "deepseek-chat"}, false},
+		{PlatformZhipu, map[string]any{"gpt-image-2": "gpt-image-2"}, true},
+	} {
+		acc := &Account{Platform: tt.platform, Type: AccountTypeAPIKey, Credentials: map[string]any{"model_mapping": tt.models}}
+		require.Equal(t, tt.want, accountSupportsGroupImageGeneration(acc, tt.platform), tt.platform)
+	}
 }
 
 // TestAdminService_UpdateGroup_WithImagePricing 测试更新分组时 ImagePrice 字段正确更新
@@ -874,7 +950,10 @@ func TestAdminService_UpdateGroup_DisablesBatchImageWhenPlatformChangesFromGemin
 		AllowBatchImageGeneration: true,
 	}
 	repo := &groupRepoStubForAdmin{getByID: existingGroup}
-	svc := &adminServiceImpl{groupRepo: repo}
+	svc := &adminServiceImpl{groupRepo: repo, accountRepo: &groupImageAccountRepoStub{accounts: []*Account{{
+		ID: 2, Platform: PlatformOpenAI, Type: AccountTypeAPIKey,
+		Credentials: map[string]any{"model_mapping": map[string]any{"gpt-image-2": "gpt-image-2"}},
+	}}}}
 
 	group, err := svc.UpdateGroup(context.Background(), 1, &UpdateGroupInput{
 		Platform: PlatformOpenAI,

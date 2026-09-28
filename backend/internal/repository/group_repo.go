@@ -29,6 +29,29 @@ type groupRepository struct {
 	sql    sqlExecutor
 }
 
+func (r *groupRepository) ListActiveAPIKeyIDsByGroupIDs(ctx context.Context, groupIDs []int64) ([]service.GroupCapacityAPIKeyRow, error) {
+	result := make([]service.GroupCapacityAPIKeyRow, 0)
+	if len(groupIDs) == 0 || r.sql == nil {
+		return result, nil
+	}
+	rows, err := r.sql.QueryContext(ctx, `
+		SELECT group_id, id FROM api_keys
+		WHERE group_id = ANY($1) AND deleted_at IS NULL AND status = $2
+	`, pq.Array(groupIDs), service.StatusActive)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var row service.GroupCapacityAPIKeyRow
+		if err := rows.Scan(&row.GroupID, &row.APIKeyID); err != nil {
+			return nil, err
+		}
+		result = append(result, row)
+	}
+	return result, rows.Err()
+}
+
 // lockLiveGroups makes account-group inserts participate in the same row-lock
 // protocol as guarded group deletion. FOR SHARE conflicts with the deleter's
 // FOR UPDATE lock, and READ COMMITTED rechecks deleted_at after any wait.

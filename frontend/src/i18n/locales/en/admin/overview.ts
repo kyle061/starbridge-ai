@@ -1010,7 +1010,7 @@ export default {
       },
       imagePricing: {
         title: 'Image Generation Pricing',
-        description: 'Configure image generation access and base image prices. Leave empty to use default prices.',
+        description: 'Any group may enable images after binding an account with an image model. Leave base image prices empty for defaults.',
         allowImageGeneration: 'Allow image generation for this group',
         defaultImageModel: 'Default image model',
         defaultImageModelAuto: 'Automatic selection',

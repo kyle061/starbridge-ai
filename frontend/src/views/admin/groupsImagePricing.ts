@@ -1,9 +1,15 @@
 export const imagePricingPlatforms = new Set([
   "antigravity",
+  "anthropic",
   "composite",
+  "deepseek",
   "gemini",
   "grok",
+  "kimi",
+  "minimax",
   "openai",
+  "opencode_go",
+  "zhipu",
 ]);
 
 export const supportsImagePricingPlatform = (platform: string): boolean =>

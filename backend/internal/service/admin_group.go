@@ -284,12 +284,6 @@ func defaultModelsListCandidateIDs(platform string) []string {
 	return modelcatalog.ModelsForPlatform(platform)
 }
 
-func defaultAllowImageGenerationForPlatform(platform string) bool {
-	// Grok image and video generation routes share the legacy image-generation gate.
-	// Older clients send the false zero value, so Grok groups must default enabled.
-	return platform == PlatformGrok
-}
-
 func compositeDefaultModelsListCandidateIDs() []string {
 	seen := make(map[string]struct{})
 	ids := make([]string, 0)
@@ -488,7 +482,7 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 		mcpXMLInject = *input.MCPXMLInject
 	}
 
-	allowImageGeneration := input.AllowImageGeneration || defaultAllowImageGenerationForPlatform(platform)
+	allowImageGeneration := input.AllowImageGeneration
 	defaultImageModel, err := normalizeGroupDefaultImageModel(platform, input.DefaultImageModel)
 	if err != nil {
 		return nil, err
@@ -524,6 +518,11 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 		accountIDsToCopy, err = s.groupRepo.GetAccountIDsByGroupIDs(ctx, uniqueSourceGroupIDs)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get accounts from source groups: %w", err)
+		}
+	}
+	if allowImageGeneration {
+		if err := s.validateGroupImageAccounts(ctx, platform, accountIDsToCopy, input.RequireOAuthOnly); err != nil {
+			return nil, err
 		}
 	}
 
@@ -793,7 +792,17 @@ func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *Upd
 	}
 	// 图片生成计费配置：负数表示清除（使用默认价格）
 	if input.AllowImageGeneration != nil {
+		if *input.AllowImageGeneration && !group.AllowImageGeneration {
+			if err := s.validateExistingGroupImageAccounts(ctx, group); err != nil {
+				return nil, err
+			}
+		}
 		group.AllowImageGeneration = *input.AllowImageGeneration
+	}
+	if group.AllowImageGeneration && input.Platform != "" && group.Platform != previousPlatform {
+		if err := s.validateExistingGroupImageAccounts(ctx, group); err != nil {
+			return nil, err
+		}
 	}
 	if input.DefaultImageModel != nil || input.Platform != "" {
 		model := group.DefaultImageModel
@@ -1097,6 +1106,11 @@ func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *Upd
 		accountIDsToCopy, err := s.groupRepo.GetAccountIDsByGroupIDs(ctx, uniqueSourceGroupIDs)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get accounts from source groups: %w", err)
+		}
+		if group.AllowImageGeneration {
+			if err := s.validateGroupImageAccounts(ctx, group.Platform, accountIDsToCopy, group.RequireOAuthOnly); err != nil {
+				return nil, err
+			}
 		}
 
 		// 先清空当前分组的所有账号绑定

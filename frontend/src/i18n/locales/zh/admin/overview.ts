@@ -1007,7 +1007,7 @@ export default {
       },
       imagePricing: {
         title: '图片生成计费',
-        description: '配置图片生成能力和图片基础单价，留空则使用默认价格',
+        description: '任意分组可配置生图；开启前须绑定声明了生图模型的账号。图片基础单价留空使用默认价格。',
         allowImageGeneration: '允许当前分组生图',
         defaultImageModel: '默认生图模型',
         defaultImageModelAuto: '自动选择',

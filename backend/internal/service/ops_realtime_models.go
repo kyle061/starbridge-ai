@@ -13,7 +13,8 @@ type PlatformConcurrencyInfo struct {
 
 // GroupConcurrencyInfo aggregates concurrency usage by group.
 //
-// Note: one account can belong to multiple groups; group totals are therefore not additive across groups.
+// Capacity can appear in multiple groups when accounts are shared. CurrentInUse
+// counts only requests made with keys belonging to this group.
 type GroupConcurrencyInfo struct {
 	GroupID        int64   `json:"group_id"`
 	GroupName      string  `json:"group_name"`

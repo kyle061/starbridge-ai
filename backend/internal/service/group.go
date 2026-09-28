@@ -40,7 +40,7 @@ type Group struct {
 	MonthlyLimitUSD     *float64
 	DefaultValidityDays int
 
-	// 图片生成计费配置（antigravity 和 gemini 平台使用）
+	// 图片生成权限与计费配置（适用于绑定了生图账号的分组）
 	AllowImageGeneration         bool
 	DefaultImageModel            string
 	AllowBatchImageGeneration    bool

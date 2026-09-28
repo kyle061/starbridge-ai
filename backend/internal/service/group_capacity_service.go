@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// GroupCapacitySummary holds aggregated capacity for a single group.
+// GroupCapacitySummary holds shared-account capacity and this group's own key usage.
 type GroupCapacitySummary struct {
 	GroupID         int64 `json:"group_id"`
 	ConcurrencyUsed int   `json:"concurrency_used"`
@@ -34,6 +34,59 @@ type groupCapacityActiveGroupIDLister interface {
 
 type groupCapacityAccountLister interface {
 	ListSchedulableCapacityByGroupIDs(ctx context.Context, groupIDs []int64) ([]GroupAccountCapacityRow, error)
+}
+
+type GroupCapacityAPIKeyRow struct {
+	GroupID  int64
+	APIKeyID int64
+}
+
+type groupCapacityAPIKeyLister interface {
+	ListActiveAPIKeyIDsByGroupIDs(ctx context.Context, groupIDs []int64) ([]GroupCapacityAPIKeyRow, error)
+}
+
+// Group usage comes from the group's keys, not from the global load of its
+// shared accounts. Account slots remain shared for actual admission control.
+func groupConcurrencyUsage(ctx context.Context, groups GroupRepository, concurrency *ConcurrencyService, groupIDs []int64) map[int64]int {
+	used := make(map[int64]int, len(groupIDs))
+	lister, ok := groups.(groupCapacityAPIKeyLister)
+	if !ok || concurrency == nil || len(groupIDs) == 0 {
+		return used
+	}
+	rows, err := lister.ListActiveAPIKeyIDsByGroupIDs(ctx, groupIDs)
+	if err != nil {
+		return used
+	}
+	ids := make([]int64, 0, len(rows))
+	seen := make(map[int64]struct{}, len(rows))
+	for _, row := range rows {
+		if row.APIKeyID <= 0 {
+			continue
+		}
+		if _, ok := seen[row.APIKeyID]; !ok {
+			seen[row.APIKeyID] = struct{}{}
+			ids = append(ids, row.APIKeyID)
+		}
+	}
+	const batchSize = 200
+	counts := make(map[int64]int, len(ids))
+	for i := 0; i < len(ids); i += batchSize {
+		end := i + batchSize
+		if end > len(ids) {
+			end = len(ids)
+		}
+		batch, err := concurrency.GetAPIKeyConcurrencyBatch(ctx, ids[i:end])
+		if err != nil {
+			return used
+		}
+		for id, count := range batch {
+			counts[id] = count
+		}
+	}
+	for _, row := range rows {
+		used[row.GroupID] += counts[row.APIKeyID]
+	}
+	return used
 }
 
 // GroupCapacityService aggregates per-group capacity from runtime data.
@@ -93,6 +146,7 @@ func (s *GroupCapacityService) listActiveGroupIDs(ctx context.Context) ([]int64,
 }
 
 func (s *GroupCapacityService) getGroupCapacitiesSequential(ctx context.Context, groupIDs []int64) []GroupCapacitySummary {
+	used := groupConcurrencyUsage(ctx, s.groupRepo, s.concurrencyService, groupIDs)
 	results := make([]GroupCapacitySummary, 0, len(groupIDs))
 	for _, groupID := range groupIDs {
 		cap, err := s.getGroupCapacity(ctx, groupID)
@@ -101,6 +155,7 @@ func (s *GroupCapacityService) getGroupCapacitiesSequential(ctx context.Context,
 			continue
 		}
 		cap.GroupID = groupID
+		cap.ConcurrencyUsed = used[groupID]
 		results = append(results, cap)
 	}
 	return results
@@ -120,6 +175,10 @@ func (s *GroupCapacityService) getGroupCapacitiesBatch(ctx context.Context, grou
 	}
 	if len(groupIDs) == 0 {
 		return results, nil
+	}
+	groupUsed := groupConcurrencyUsage(ctx, s.groupRepo, s.concurrencyService, groupIDs)
+	for i := range results {
+		results[i].ConcurrencyUsed = groupUsed[results[i].GroupID]
 	}
 
 	rows, err := lister.ListSchedulableCapacityByGroupIDs(ctx, groupIDs)
@@ -181,11 +240,6 @@ func (s *GroupCapacityService) getGroupCapacitiesBatch(ctx context.Context, grou
 		return results, nil
 	}
 
-	concurrencyMap := map[int64]int{}
-	if s.concurrencyService != nil {
-		concurrencyMap, _ = s.concurrencyService.GetAccountConcurrencyBatch(ctx, accountIDs)
-	}
-
 	sessionAccountIDs := accountIDsForGroupsWithLimit(refs, groupIndex, results, func(summary GroupCapacitySummary) bool {
 		return summary.SessionsMax > 0
 	})
@@ -204,7 +258,6 @@ func (s *GroupCapacityService) getGroupCapacitiesBatch(ctx context.Context, grou
 
 	for _, ref := range refs {
 		idx := groupIndex[ref.groupID]
-		results[idx].ConcurrencyUsed += concurrencyMap[ref.accountID]
 		if sessionsMap != nil && results[idx].SessionsMax > 0 {
 			results[idx].SessionsUsed += sessionsMap[ref.accountID]
 		}
@@ -265,8 +318,6 @@ func (s *GroupCapacityService) getGroupCapacity(ctx context.Context, groupID int
 		}
 	}
 	// Batch query runtime data from Redis
-	concurrencyMap, _ := s.concurrencyService.GetAccountConcurrencyBatch(ctx, accountIDs)
-
 	var sessionsMap map[int64]int
 	if sessionsMax > 0 && s.sessionLimitCache != nil {
 		sessionsMap, _ = s.sessionLimitCache.GetActiveSessionCountBatch(ctx, accountIDs, sessionTimeouts)
@@ -278,9 +329,8 @@ func (s *GroupCapacityService) getGroupCapacity(ctx context.Context, groupID int
 	}
 
 	// Aggregate
-	var concurrencyUsed, sessionsUsed, rpmUsed int
+	var sessionsUsed, rpmUsed int
 	for _, id := range accountIDs {
-		concurrencyUsed += concurrencyMap[id]
 		if sessionsMap != nil {
 			sessionsUsed += sessionsMap[id]
 		}
@@ -290,7 +340,7 @@ func (s *GroupCapacityService) getGroupCapacity(ctx context.Context, groupID int
 	}
 
 	return GroupCapacitySummary{
-		ConcurrencyUsed: concurrencyUsed,
+		ConcurrencyUsed: 0,
 		ConcurrencyMax:  concurrencyMax,
 		SessionsUsed:    sessionsUsed,
 		SessionsMax:     sessionsMax,

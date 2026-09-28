@@ -193,7 +193,7 @@ type CreateGroupRequest struct {
 	MonthlyLimitUSD           optionalLimitField            `json:"monthly_limit_usd"`
 	LongContextPricingEnabled bool                          `json:"long_context_pricing_enabled"`
 	ModelPricing              []service.ChannelModelPricing `json:"model_pricing"`
-	// 图片生成计费配置（antigravity 和 gemini 平台使用，负数表示清除配置）
+	// 图片生成权限与计费配置（负数表示清除价格配置）
 	AllowImageGeneration            bool                          `json:"allow_image_generation"`
 	DefaultImageModel               string                        `json:"default_image_model"`
 	AllowBatchImageGeneration       bool                          `json:"allow_batch_image_generation"`
