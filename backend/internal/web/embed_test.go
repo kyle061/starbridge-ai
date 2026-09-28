@@ -565,6 +565,7 @@ func TestFrontendServer_Middleware(t *testing.T) {
 
 		apiPaths := []string{
 			"/api/v1/users",
+			"/images/generated/test.png",
 			"/models",
 			"/v1/models",
 			"/v1beta/chat",
@@ -827,6 +828,7 @@ func TestServeEmbeddedFrontend(t *testing.T) {
 
 		apiPaths := []string{
 			"/api/users",
+			"/images/generated/test.png",
 			"/models",
 			"/v1/models",
 			"/v1beta/chat",

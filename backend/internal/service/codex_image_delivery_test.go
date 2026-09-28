@@ -64,7 +64,7 @@ func TestCodexImageDeliveryPreservesPayloadAndDeduplicatesAcrossEvents(t *testin
 	require.Equal(t, "assistant", gjson.GetBytes(final, "response.output.1.role").String())
 	require.Equal(t, "final_answer", gjson.GetBytes(final, "response.output.1.phase").String())
 	text := gjson.GetBytes(final, "response.output.1.content.0.text").String()
-	require.Contains(t, text, "![Generated image 1](https://gateway.test/generated-images/")
+	require.Contains(t, text, "![Generated image 1](https://gateway.test/images/generated/")
 	require.Equal(t, text, gjson.GetBytes(events[3], "delta").String())
 	require.NoError(t, d.WriteEvent(terminal, write))
 	files, err := os.ReadDir(store.directory)

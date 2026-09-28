@@ -89,7 +89,7 @@ func replayCodexImageDelivery(t *testing.T, picture []byte, stream bool, prefix 
 		text = gjson.GetBytes(recorder.Body.Bytes(), "output.1.content.0.text").String()
 		require.Equal(t, base64.StdEncoding.EncodeToString(picture), gjson.GetBytes(recorder.Body.Bytes(), "output.0.result").String())
 	}
-	match := regexp.MustCompile(`!\[Generated image 1\]\((https://gateway\.test/generated-images/[a-f0-9]+\.png)\)`).FindStringSubmatch(text)
+	match := regexp.MustCompile(`!\[Generated image 1\]\((https://gateway\.test/images/generated/[a-f0-9]+\.png)\)`).FindStringSubmatch(text)
 	require.Len(t, match, 2)
 	link, err := url.Parse(match[1])
 	require.NoError(t, err)
@@ -111,7 +111,7 @@ func replayCodexImageDelivery(t *testing.T, picture []byte, stream bool, prefix 
 	r.ServeHTTP(download, httptest.NewRequest(http.MethodGet, link.String()+"?download=1", nil))
 	require.Contains(t, download.Header().Get("Content-Disposition"), "attachment")
 	missing := httptest.NewRecorder()
-	r.ServeHTTP(missing, httptest.NewRequest(http.MethodGet, "https://gateway.test/generated-images/"+strings.Repeat("0", 64)+".png", nil))
+	r.ServeHTTP(missing, httptest.NewRequest(http.MethodGet, "https://gateway.test/images/generated/"+strings.Repeat("0", 64)+".png", nil))
 	require.Equal(t, http.StatusNotFound, missing.Code)
 }
 

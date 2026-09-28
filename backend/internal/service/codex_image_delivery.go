@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	CodexImageDownloadPath       = "/generated-images/"
+	CodexImageDownloadPath       = "/images/generated/"
 	codexImageDeliveryContextKey = "codex_image_delivery"
 	codexImageMaxBytes           = 32 << 20
 )

@@ -20,7 +20,7 @@ save. When storage is unavailable/full, the original API image remains intact an
 the assistant message explicitly reports the missing download file. It does not
 request another generation. Multiple gateway replicas must share this data
 directory or route image downloads to the same replica. The public reverse proxy
-must forward `/generated-images/*` to the gateway.
+must forward `/images/generated/*` to the gateway.
 
 `server.frontend_url` is used as the public URL when configured; otherwise the
 request host and HTTPS forwarding information are used. A client that restricts
