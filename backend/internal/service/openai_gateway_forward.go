@@ -53,6 +53,11 @@ func (s *OpenAIGatewayService) forwardResponses(ctx context.Context, c *gin.Cont
 	}
 	// 固定渠道映射后的请求级 canonical body；账号 normalize/strip 不得改写跨 failover hint。
 	canonicalImageIntentBody := body
+	if err := validateOpenAIImageModelAuthorization(account, body); err != nil {
+		MarkOpsClientBusinessLimited(c, OpsClientBusinessLimitedReasonLocalPolicyDenied)
+		c.JSON(http.StatusForbidden, gin.H{"error": gin.H{"type": "permission_error", "message": err.Error()}})
+		return nil, err
+	}
 
 	restrictionResult := s.detectCodexClientRestriction(c, account, body)
 	apiKeyID := getAPIKeyIDFromContext(c)
@@ -242,10 +247,6 @@ func (s *OpenAIGatewayService) forwardResponses(ctx context.Context, c *gin.Cont
 	setOpenAICompatMessagesBridgeContext(c, compatMessagesBridge)
 
 	isCodexCLI := openai.IsCodexOfficialClientByHeaders(c.GetHeader("User-Agent"), c.GetHeader("originator")) || (s.cfg != nil && s.cfg.Gateway.ForceCodexCLI)
-	codexImageGenerationExplicitToolPolicy := codexImageGenerationExplicitToolPolicyAllow
-	if isCodexCLI {
-		codexImageGenerationExplicitToolPolicy = account.CodexImageGenerationExplicitToolPolicy()
-	}
 	if c != nil {
 		c.Set("openai_ws_transport_decision", string(wsDecision.Transport))
 		c.Set("openai_ws_transport_reason", wsDecision.Reason)
@@ -275,19 +276,6 @@ func (s *OpenAIGatewayService) forwardResponses(ctx context.Context, c *gin.Cont
 		return nil, errors.New("openai ws v1 is temporarily unsupported; use ws v2")
 	}
 	if passthroughEnabled {
-		attemptImageIntentInvalidated := false
-		if isCodexCLI && codexImageGenerationExplicitToolPolicy == codexImageGenerationExplicitToolPolicyStrip {
-			strippedBody, changed, stripErr := stripOpenAIImageGenerationToolsFromRawPayload(body)
-			if stripErr != nil {
-				return nil, stripErr
-			}
-			if changed {
-				body = strippedBody
-				originalBody = strippedBody
-				attemptImageIntentInvalidated = true
-				logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Stripped /responses image_generation tool for Codex client by account policy")
-			}
-		}
 		// 透传分支只需要轻量提取字段，避免热路径全量 Unmarshal。
 		mappedModel := account.GetMappedModel(reqModel)
 		reasoningEffort := extractOpenAIReasoningEffortFromBody(body, mappedModel)
@@ -300,7 +288,7 @@ func (s *OpenAIGatewayService) forwardResponses(ctx context.Context, c *gin.Cont
 			originalBody,
 			canonicalImageIntentBody,
 			reqModel,
-			attemptImageIntentInvalidated,
+			false,
 			reasoningEffort,
 			reqStream,
 			startTime,
@@ -366,23 +354,8 @@ func (s *OpenAIGatewayService) forwardResponses(ctx context.Context, c *gin.Cont
 	}
 	codexImageGenerationBridgeEnabled := isCodexCLI &&
 		!isOpenAIResponsesLiteHeader(c.GetHeader(responsesLiteHeader)) &&
-		imageGenerationAllowed &&
-		codexImageGenerationExplicitToolPolicy != codexImageGenerationExplicitToolPolicyStrip
-	var imageIntent bool
-	canonicalImageIntent := resolveOpenAIImageIntentHint(c, reqModel, canonicalImageIntentBody, IsImageGenerationIntent)
-	if isCodexCLI && codexImageGenerationExplicitToolPolicy == codexImageGenerationExplicitToolPolicyStrip {
-		decoded, decodeErr := ensureReqBody()
-		if decodeErr != nil {
-			return nil, decodeErr
-		}
-		if stripOpenAIImageGenerationTools(decoded) {
-			markDecodedModified()
-			logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Stripped /responses image_generation tool for Codex client by account policy")
-		}
-		imageIntent = IsImageGenerationIntentMap(openAIResponsesEndpoint, reqModel, decoded)
-	} else {
-		imageIntent = canonicalImageIntent
-	}
+		imageGenerationAllowed
+	imageIntent := resolveOpenAIImageIntentHint(c, reqModel, canonicalImageIntentBody, IsImageGenerationIntent)
 	if imageIntent && !imageGenerationAllowed {
 		MarkOpsClientBusinessLimited(c, OpsClientBusinessLimitedReasonLocalFeatureGate)
 		c.JSON(http.StatusForbidden, gin.H{"error": gin.H{"type": "permission_error", "message": ImageGenerationPermissionMessage()}})
@@ -446,15 +419,9 @@ func (s *OpenAIGatewayService) forwardResponses(ctx context.Context, c *gin.Cont
 		if decodeErr != nil {
 			return nil, decodeErr
 		}
-		codexImageGenerationToolInjected := false
-		if codexImageGenerationBridgeEnabled && ensureOpenAIResponsesImageGenerationTool(decoded) {
+		if codexImageGenerationBridgeEnabled && ensureCodexImageGenerationBridge(decoded, account) {
 			markDecodedModified()
-			codexImageGenerationToolInjected = true
-			logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Injected /responses image_generation tool for Codex client")
-		}
-		if codexImageGenerationBridgeEnabled && ensureOpenAIResponsesImageGenerationToolChoiceAuto(decoded) {
-			markDecodedModified()
-			logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Set /responses image_generation tool_choice=auto for Codex client")
+			logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Applied Codex image_generation bridge for group")
 		}
 		if normalizeOpenAIResponsesImageGenerationTools(decoded) {
 			markDecodedModified()
@@ -475,10 +442,6 @@ func (s *OpenAIGatewayService) forwardResponses(ctx context.Context, c *gin.Cont
 		if hasOpenAIImageGenerationTool(decoded) {
 			imageIntent = true
 			logger.LegacyPrintf("service.openai_gateway", "[OpenAI] /responses image_generation request inbound_model=%s mapped_model=%s account_type=%s", requestView.Model, upstreamModel, account.Type)
-		}
-		if codexImageGenerationToolInjected && applyCodexImageGenerationBridgeInstructions(decoded) {
-			markDecodedModified()
-			logger.LegacyPrintf("service.openai_gateway", "[OpenAI] Added Codex image_generation bridge instructions")
 		}
 	} else if imageGenerationAllowed && imageIntent && openAIRequestBodyHasImageGenerationDeclaration(body) {
 		// 完整 image_generation tool 只做 raw 计费读取，校验/桥接/旧字段迁移命中时才展开大 input map。

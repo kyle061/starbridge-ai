@@ -755,15 +755,9 @@ export default {
         codexFingerprintDevice: '仅设备',
         codexFingerprintSession: '设备+会话',
         codexFingerprintFull: '完全收敛',
-        codexImageTool: 'Codex 图片工具策略',
+        codexImageTool: '图片生成权限',
         codexImageToolDesc:
-          '默认遵循当前 API key 分组的生图权限；可额外移除客户端显式声明的图片工具，不影响独立图片生成接口。',
-        codexImageToolInherit: '遵循分组权限',
-        codexImageToolInheritDesc: '客户端生图工具按当前 API key 分组权限放行；允许生图的分组可使用图片生成能力。',
-        codexImageToolBlock: '移除客户端图片工具',
-        codexImageToolBlockDesc: '移除客户端显式携带的 hosted image_generation 工具、本地 image_gen 声明及相关 tool_choice；image-only 模型路由不受影响。',
-        codexImageToolBadgeInherit: '遵循分组权限',
-        codexImageToolBadgeBlock: '客户端图片工具已移除',
+          '由当前 API key 的分组生图开关控制，同时受本账号的模型白名单限制。分组允许生图且账号授权对应图片模型后才可使用。',
         compactMode: 'Compact 模式',
         compactModeDesc:
           '控制本账号在 /responses/compact 调度中的参与方式。Auto 跟随探测结果，Force On 强制允许，Force Off 强制排除。',

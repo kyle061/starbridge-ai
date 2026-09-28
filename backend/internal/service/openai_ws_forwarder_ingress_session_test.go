@@ -678,10 +678,12 @@ func TestOpenAIGatewayService_ProxyResponsesWebSocketFromClient_CodexImageBridge
 		Schedulable: true,
 		Concurrency: 1,
 		Credentials: map[string]any{
-			"access_token": "test-token",
+			"access_token":  "test-token",
+			"model_mapping": map[string]any{"gpt-5.5": "gpt-5.5", "gpt-image-2": "gpt-image-2"},
 		},
 		Extra: map[string]any{
 			"openai_oauth_responses_websockets_v2_enabled": true,
+			"codex_image_generation_explicit_tool_policy":  "strip",
 		},
 	}
 

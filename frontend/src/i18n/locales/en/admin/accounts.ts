@@ -677,15 +677,9 @@ export default {
         codexFingerprintDevice: 'Device only',
         codexFingerprintSession: 'Device + Session',
         codexFingerprintFull: 'Full convergence',
-        codexImageTool: 'Codex image tool policy',
+        codexImageTool: 'Image generation permission',
         codexImageToolDesc:
-          'Follows the current API key group image-generation permission by default. You can additionally strip client-declared image tools; standalone image-generation endpoints are unaffected.',
-        codexImageToolInherit: 'Follow group permission',
-        codexImageToolInheritDesc: 'Client image tools follow the current API key group permission. Groups that allow image generation can use image-generation capabilities.',
-        codexImageToolBlock: 'Strip client image tools',
-        codexImageToolBlockDesc: 'Remove client-provided hosted image_generation tools, local image_gen declarations, and matching tool_choice. Image-only model routing remains unaffected.',
-        codexImageToolBadgeInherit: 'Group permission',
-        codexImageToolBadgeBlock: 'Client image tools stripped',
+          'Controlled by the current API key group image-generation permission and this account\'s model allowlist. Both the group and the image model must be authorized.',
         compactMode: 'Compact mode',
         compactModeDesc:
           'Controls how this account participates in /responses/compact routing. Auto follows probe results, Force On always allows, Force Off always excludes.',

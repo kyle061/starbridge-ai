@@ -1383,7 +1383,8 @@ describe('EditAccountModal', () => {
     const account = buildAccount()
     account.extra = {
       codex_image_generation_bridge: false,
-      codex_image_generation_bridge_enabled: true
+      codex_image_generation_bridge_enabled: true,
+      codex_image_generation_explicit_tool_policy: 'strip'
     }
     updateAccountMock.mockReset()
     checkMixedChannelRiskMock.mockReset()
@@ -1393,8 +1394,8 @@ describe('EditAccountModal', () => {
     const wrapper = mountModal(account)
 
     expect(wrapper.text()).toContain('admin.accounts.openai.codexImageTool')
-    expect(wrapper.find('button[data-testid="codex-image-tool-inherit"]').exists()).toBe(true)
-    expect(wrapper.find('button[data-testid="codex-image-tool-block"]').exists()).toBe(true)
+    expect(wrapper.find('button[data-testid="codex-image-tool-inherit"]').exists()).toBe(false)
+    expect(wrapper.find('button[data-testid="codex-image-tool-block"]').exists()).toBe(false)
     expect(wrapper.find('button[data-testid="codex-image-tool-enabled"]').exists()).toBe(false)
     expect(wrapper.find('button[data-testid="codex-image-tool-disabled"]').exists()).toBe(false)
     await wrapper.get('form#edit-account-form').trigger('submit.prevent')
@@ -1405,29 +1406,12 @@ describe('EditAccountModal', () => {
     expect(updateAccountMock.mock.calls[0]?.[1]?.extra).not.toHaveProperty('codex_image_generation_explicit_tool_policy')
   })
 
-  it('keeps explicit client image-tool blocking as an account policy', async () => {
+  it('preserves the model allowlist when clearing the legacy image policy', async () => {
     const account = buildAccount()
-    account.extra = {
-      codex_image_generation_bridge: true
+    account.credentials = {
+      ...account.credentials,
+      model_mapping: { 'gpt-6-luna': 'gpt-6-luna', 'gpt-image-2': 'gpt-image-2' }
     }
-    updateAccountMock.mockReset()
-    checkMixedChannelRiskMock.mockReset()
-    checkMixedChannelRiskMock.mockResolvedValue({ has_risk: false })
-    updateAccountMock.mockResolvedValue(account)
-
-    const wrapper = mountModal(account)
-
-    await wrapper.get('button[data-testid="codex-image-tool-block"]').trigger('click')
-    await wrapper.get('form#edit-account-form').trigger('submit.prevent')
-
-    expect(updateAccountMock).toHaveBeenCalledTimes(1)
-    expect(updateAccountMock.mock.calls[0]?.[1]?.extra?.codex_image_generation_explicit_tool_policy).toBe('strip')
-    expect(updateAccountMock.mock.calls[0]?.[1]?.extra).not.toHaveProperty('codex_image_generation_bridge')
-    expect(updateAccountMock.mock.calls[0]?.[1]?.extra).not.toHaveProperty('codex_image_generation_bridge_enabled')
-  })
-
-  it('loads strip policy as block mode and clears both keys when reset to inherit', async () => {
-    const account = buildAccount()
     account.extra = {
       codex_image_generation_explicit_tool_policy: 'strip'
     }
@@ -1438,13 +1422,13 @@ describe('EditAccountModal', () => {
 
     const wrapper = mountModal(account)
 
-    await wrapper.get('button[data-testid="codex-image-tool-inherit"]').trigger('click')
     await wrapper.get('form#edit-account-form').trigger('submit.prevent')
 
     expect(updateAccountMock).toHaveBeenCalledTimes(1)
     expect(updateAccountMock.mock.calls[0]?.[1]?.extra).not.toHaveProperty('codex_image_generation_explicit_tool_policy')
     expect(updateAccountMock.mock.calls[0]?.[1]?.extra).not.toHaveProperty('codex_image_generation_bridge')
     expect(updateAccountMock.mock.calls[0]?.[1]?.extra).not.toHaveProperty('codex_image_generation_bridge_enabled')
+    expect(updateAccountMock.mock.calls[0]?.[1]?.credentials?.model_mapping).toEqual(account.credentials.model_mapping)
   })
 
   it('setup-token account can select and submit OAuth WS mode', async () => {

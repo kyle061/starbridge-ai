@@ -340,38 +340,18 @@ func (s *OpenAIGatewayService) ProxyResponsesWebSocketFromClient(
 		}
 		apiKey := getAPIKeyFromContext(c)
 		imageGenerationAllowed := GroupAllowsImageGeneration(apiKeyGroup(apiKey))
-		codexImageGenerationExplicitToolPolicy := codexImageGenerationExplicitToolPolicyAllow
-		if isCodexCLI {
-			codexImageGenerationExplicitToolPolicy = account.CodexImageGenerationExplicitToolPolicy()
+		if err := validateOpenAIImageModelAuthorization(account, normalized); err != nil {
+			return openAIWSClientPayload{}, NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, err.Error(), err)
 		}
 		codexBridgeEnabled := isCodexCLI &&
 			!isOpenAIResponsesLiteWebSocketPayload(normalized) &&
-			imageGenerationAllowed &&
-			codexImageGenerationExplicitToolPolicy != codexImageGenerationExplicitToolPolicyStrip
+			imageGenerationAllowed
 		if codexBridgeEnabled {
 			payloadMap := make(map[string]any)
 			if err := decodeOpenAIJSONUseNumber(normalized, &payloadMap); err != nil {
 				return openAIWSClientPayload{}, NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, "invalid websocket request payload", err)
 			}
-			bridgeModified := false
-			imageGenerationToolInjected := false
-			if ensureOpenAIResponsesImageGenerationTool(payloadMap) {
-				bridgeModified = true
-				imageGenerationToolInjected = true
-				logOpenAIWSModeInfo("ingress_ws_codex_image_tool_injected account_id=%d", account.ID)
-			}
-			if ensureOpenAIResponsesImageGenerationToolChoiceAuto(payloadMap) {
-				bridgeModified = true
-				logOpenAIWSModeInfo("ingress_ws_codex_image_tool_choice_auto account_id=%d", account.ID)
-			}
-			if normalizeOpenAIResponsesImageGenerationTools(payloadMap) {
-				bridgeModified = true
-			}
-			if imageGenerationToolInjected && applyCodexImageGenerationBridgeInstructions(payloadMap) {
-				bridgeModified = true
-				logOpenAIWSModeInfo("ingress_ws_codex_image_bridge_instructions_added account_id=%d", account.ID)
-			}
-			if bridgeModified {
+			if ensureCodexImageGenerationBridge(payloadMap, account) {
 				rebuilt, marshalErr := json.Marshal(payloadMap)
 				if marshalErr != nil {
 					return openAIWSClientPayload{}, NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, "invalid websocket request payload", marshalErr)
@@ -398,14 +378,6 @@ func (s *OpenAIGatewayService) ProxyResponsesWebSocketFromClient(
 			normalized = next
 		}
 		SetOpsUpstreamModel(c, upstreamModel)
-		if isCodexCLI && codexImageGenerationExplicitToolPolicy == codexImageGenerationExplicitToolPolicyStrip {
-			if stripped, changed, stripErr := stripOpenAIImageGenerationToolsFromRawPayload(normalized); stripErr != nil {
-				return openAIWSClientPayload{}, NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, "invalid websocket request payload", stripErr)
-			} else if changed {
-				normalized = stripped
-				logOpenAIWSModeInfo("ingress_ws_codex_image_tool_stripped_by_policy account_id=%d", account.ID)
-			}
-		}
 		if stripped, changed, stripErr := stripCodexSparkImageGenerationToolFromRawPayload(normalized, upstreamModel); stripErr != nil {
 			return openAIWSClientPayload{}, NewOpenAIWSClientCloseError(coderws.StatusPolicyViolation, "invalid websocket request payload", stripErr)
 		} else if changed {

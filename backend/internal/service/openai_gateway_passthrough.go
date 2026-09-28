@@ -18,6 +18,7 @@ import (
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/apicompat"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	"github.com/Wei-Shaw/sub2api/internal/util/responseheaders"
 	"github.com/gin-gonic/gin"
 	"github.com/tidwall/gjson"
@@ -229,6 +230,24 @@ func (s *OpenAIGatewayService) forwardOpenAIPassthrough(
 			if aliased {
 				body = aliasedBody
 			}
+		}
+	}
+
+	isCodexCLI := openai.IsCodexOfficialClientByHeaders(c.GetHeader("User-Agent"), c.GetHeader("originator")) || (s.cfg != nil && s.cfg.Gateway.ForceCodexCLI)
+	if account.IsOpenAI() && isCodexCLI && GroupAllowsImageGeneration(apiKeyGroup(getAPIKeyFromContext(c))) &&
+		!isOpenAIResponsesCompactPath(c) && !isOpenAIResponsesLiteHeader(c.GetHeader(responsesLiteHeader)) &&
+		!isOpenAIResponsesLiteWebSocketPayload(body) && codexImageGenerationModel(account) != "" {
+		var payload map[string]any
+		if err := decodeOpenAIJSONUseNumber(body, &payload); err != nil {
+			return nil, fmt.Errorf("decode Codex image bridge request: %w", err)
+		}
+		if ensureCodexImageGenerationBridge(payload, account) {
+			rebuilt, err := marshalOpenAIUpstreamJSON(payload)
+			if err != nil {
+				return nil, fmt.Errorf("encode Codex image bridge request: %w", err)
+			}
+			body = rebuilt
+			attemptImageIntentInvalidated = true
 		}
 	}
 

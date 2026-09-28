@@ -92,16 +92,29 @@ func TestOpenAIGatewayServiceForward_CodexImageInjectionRespectsGroupCapability(
 		legacyOverride *bool
 		stripTools     bool
 		model          string
+		passthrough    bool
+		modelMapping   map[string]any
+		wantImageModel string
 	}{
 		{name: "disabled group skips injection", allowImages: false, wantInjected: false},
 		{name: "enabled group provides image tool", allowImages: true, wantInjected: true},
 		{name: "responses lite skips hosted image tool", allowImages: true, responsesLite: true, wantInjected: false},
 		{name: "legacy account and channel disable cannot block enabled group", allowImages: true, legacyOverride: &legacyDisabled, wantInjected: true},
 		{name: "legacy account and channel enable cannot bypass disabled group", allowImages: false, legacyOverride: &legacyEnabled, wantInjected: false},
-		{name: "explicit account strip policy still applies", allowImages: true, stripTools: true, wantInjected: false},
+		{name: "legacy strip cannot override enabled group", allowImages: true, stripTools: true, wantInjected: true},
 		{name: "gpt6 luna uses group permission", allowImages: true, model: "gpt-6-luna", wantInjected: true},
 		{name: "gpt6 sol uses group permission", allowImages: true, model: "gpt-6-sol", wantInjected: true},
 		{name: "gpt5 uses group permission", allowImages: true, model: "gpt-5.5", wantInjected: true},
+		{name: "passthrough enabled group provides image tool", allowImages: true, passthrough: true, wantInjected: true},
+		{name: "passthrough disabled group skips injection", passthrough: true},
+		{name: "passthrough ignores legacy strip", allowImages: true, passthrough: true, stripTools: true, wantInjected: true},
+		{name: "passthrough lite skips injection", allowImages: true, passthrough: true, responsesLite: true},
+		{name: "spark skips injection", allowImages: true, model: "gpt-5.3-codex-spark"},
+		{name: "passthrough spark skips injection", allowImages: true, passthrough: true, model: "gpt-5.3-codex-spark"},
+		{name: "enabled group cannot authorize an image model", allowImages: true, modelMapping: map[string]any{"gpt-5.4": "gpt-5.4"}},
+		{name: "passthrough cannot bypass image allowlist", allowImages: true, passthrough: true, modelMapping: map[string]any{"gpt-5.4": "gpt-5.4"}},
+		{name: "authorized image model is offered", allowImages: true, modelMapping: map[string]any{"gpt-5.4": "gpt-5.4", "gpt-image-2": "gpt-image-2"}, wantInjected: true},
+		{name: "only authorized image variant is offered", allowImages: true, modelMapping: map[string]any{"gpt-5.4": "gpt-5.4", "gpt-image-2.5-flare": "gpt-image-2.5-flare"}, wantInjected: true, wantImageModel: "gpt-image-2.5-flare"},
 	}
 
 	for _, tt := range tests {
@@ -132,7 +145,12 @@ func TestOpenAIGatewayServiceForward_CodexImageInjectionRespectsGroupCapability(
 				})
 			}
 			if tt.stripTools {
-				account.Extra[featureKeyCodexImageGenerationExplicitToolPolicy] = codexImageGenerationExplicitToolPolicyStrip
+				account.Extra["codex_image_generation_explicit_tool_policy"] = "strip"
+				account.Extra[PlatformOpenAI] = map[string]any{"codex_image_generation_explicit_tool_policy": "strip"}
+			}
+			account.Extra["openai_passthrough"] = tt.passthrough
+			if tt.modelMapping != nil {
+				account.Credentials["model_mapping"] = tt.modelMapping
 			}
 			model := tt.model
 			if model == "" {
@@ -158,6 +176,11 @@ func TestOpenAIGatewayServiceForward_CodexImageInjectionRespectsGroupCapability(
 			require.Equal(t, tt.wantInjected, toolChoice.Exists())
 			if tt.wantInjected {
 				require.Equal(t, "auto", toolChoice.String())
+				wantModel := tt.wantImageModel
+				if wantModel == "" {
+					wantModel = openAIImagesDefaultModel
+				}
+				require.Equal(t, wantModel, gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation").model`).String())
 			}
 		})
 	}
@@ -179,6 +202,30 @@ func TestOpenAIBuildUpstreamRequestOpenAIPassthroughForwardsResponsesLiteHeader(
 
 	require.NoError(t, err)
 	require.Equal(t, "true", req.Header.Get(responsesLiteHeader))
+}
+
+func TestOpenAIGatewayServiceForward_ImageModelRequiresAccountAuthorization(t *testing.T) {
+	for _, passthrough := range []bool{false, true} {
+		for _, body := range []string{
+			`{"model":"gpt-image-2","input":"draw"}`,
+			`{"model":"gpt-6-luna","tools":[{"type":"image_generation"}]}`,
+			`{"model":"gpt-6-luna","tools":[{"type":"image_generation","model":"gpt-image-2.5-flare"}]}`,
+			`{"model":"gpt-6-luna","tools":[{"type":"image_generation","model":"gpt-image-2"},{"type":"image_generation","model":"gpt-image-2.5-flare"}]}`,
+			`{"model":"gpt-6-luna","input":[{"type":"additional_tools","tools":[{"type":"image_generation"}]}]}`,
+		} {
+			upstream := &httpUpstreamRecorder{}
+			svc := newOpenAIImageGenerationControlTestService(upstream)
+			c, recorder := newOpenAIImageGenerationControlTestContext(true, "codex_cli_rs/0.144.1")
+			account := newOpenAIImageGenerationControlTestAccount()
+			account.Credentials["model_mapping"] = map[string]any{"gpt-6-luna": "gpt-6-luna"}
+			account.Extra = map[string]any{"openai_passthrough": passthrough}
+			result, err := svc.Forward(context.Background(), c, account, []byte(body))
+			require.ErrorContains(t, err, "not authorized")
+			require.Nil(t, result)
+			require.Equal(t, http.StatusForbidden, recorder.Code)
+			require.Nil(t, upstream.lastReq)
+		}
+	}
 }
 
 func TestOpenAIGatewayServiceForward_ExplicitImageToolUsesGroupPermission(t *testing.T) {
@@ -210,7 +257,7 @@ func TestOpenAIGatewayServiceForward_ExplicitImageToolUsesGroupPermission(t *tes
 	require.NotContains(t, instructions, "image_generation")
 }
 
-func TestOpenAIGatewayServiceForward_AccountPolicyStripsExplicitImageTool(t *testing.T) {
+func TestOpenAIGatewayServiceForward_LegacyPolicyCannotStripAuthorizedImageTool(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	upstream := &httpUpstreamRecorder{
@@ -224,7 +271,7 @@ func TestOpenAIGatewayServiceForward_AccountPolicyStripsExplicitImageTool(t *tes
 	c, _ := newOpenAIImageGenerationControlTestContext(true, "codex_cli_rs/0.98.0")
 	account := newOpenAIImageGenerationControlTestAccount()
 	account.Extra = map[string]any{
-		featureKeyCodexImageGenerationExplicitToolPolicy: codexImageGenerationExplicitToolPolicyStrip,
+		"codex_image_generation_explicit_tool_policy": "strip",
 	}
 	body := []byte(`{
 		"model":"gpt-5.4",
@@ -242,14 +289,14 @@ func TestOpenAIGatewayServiceForward_AccountPolicyStripsExplicitImageTool(t *tes
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	require.NotNil(t, upstream.lastReq)
-	require.False(t, gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation")`).Exists())
+	require.True(t, gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation")`).Exists())
 	require.True(t, gjson.GetBytes(upstream.lastBody, `tools.#(type=="function")`).Exists())
-	require.False(t, gjson.GetBytes(upstream.lastBody, "tool_choice").Exists())
+	require.Equal(t, "image_generation", gjson.GetBytes(upstream.lastBody, "tool_choice.type").String())
 	instructions := gjson.GetBytes(upstream.lastBody, "instructions").String()
 	require.NotContains(t, instructions, "image_generation")
 }
 
-func TestOpenAIGatewayServiceForward_AccountPolicyStripsImageNamespaceTools(t *testing.T) {
+func TestOpenAIGatewayServiceForward_DisabledGroupRejectsImageNamespaceDespiteLegacyPolicy(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	tests := []struct {
@@ -270,12 +317,12 @@ func TestOpenAIGatewayServiceForward_AccountPolicyStripsImageNamespaceTools(t *t
 				},
 			}
 			svc := newOpenAIImageGenerationControlTestService(upstream)
-			c, _ := newOpenAIImageGenerationControlTestContext(false, "codex_cli_rs/0.144.1")
+			c, recorder := newOpenAIImageGenerationControlTestContext(false, "codex_cli_rs/0.144.1")
 			SetOpenAIClientTransport(c, OpenAIClientTransportHTTP)
 			account := newOpenAIImageGenerationControlTestAccount()
 			account.Extra = map[string]any{
-				featureKeyCodexImageGenerationExplicitToolPolicy: codexImageGenerationExplicitToolPolicyStrip,
-				"openai_passthrough":                             tt.passthrough,
+				"codex_image_generation_explicit_tool_policy": "strip",
+				"openai_passthrough":                          tt.passthrough,
 			}
 			body := []byte(`{
 				"model":"gpt-5.5",
@@ -294,19 +341,10 @@ func TestOpenAIGatewayServiceForward_AccountPolicyStripsImageNamespaceTools(t *t
 
 			result, err := svc.Forward(context.Background(), c, account, body)
 
-			require.NoError(t, err)
-			require.NotNil(t, result)
-			require.NotNil(t, upstream.lastReq)
-			var forwarded map[string]any
-			require.NoError(t, json.Unmarshal(upstream.lastBody, &forwarded))
-			require.False(t, hasOpenAIImageGenerationTool(forwarded))
-			require.Equal(t, "auto", forwarded["tool_choice"])
-			require.True(t, gjson.GetBytes(upstream.lastBody, `tools.#(name=="shell")`).Exists())
-			require.True(t, gjson.GetBytes(upstream.lastBody, `tools.#(name=="code_tools")`).Exists())
-			require.Equal(t, "write code", gjson.GetBytes(upstream.lastBody, "input.0.content.0.text").String())
-			cached, known := getOpenAIImageIntentHint(c)
-			require.True(t, known)
-			require.True(t, cached)
+			require.Error(t, err)
+			require.Nil(t, result)
+			require.Equal(t, http.StatusForbidden, recorder.Code)
+			require.Nil(t, upstream.lastReq)
 		})
 	}
 }

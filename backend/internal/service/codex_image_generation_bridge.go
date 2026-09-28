@@ -1,48 +1,110 @@
 package service
 
-import "strings"
+import (
+	"fmt"
+	"sort"
+	"strings"
 
-const (
-	featureKeyCodexImageGenerationExplicitToolPolicy = "codex_image_generation_explicit_tool_policy"
-
-	codexImageGenerationExplicitToolPolicyAllow = "allow"
-	codexImageGenerationExplicitToolPolicyStrip = "strip"
+	"github.com/tidwall/gjson"
 )
 
-func stringOverrideFromMap(values map[string]any, keys ...string) (string, bool) {
-	if values == nil {
-		return "", false
+// Validate hosted image tools as well as the top-level model: the scheduler's
+// text-model check alone cannot authorize a second model inside tools.
+func validateOpenAIImageModelAuthorization(account *Account, body []byte) error {
+	if account == nil || !account.IsOpenAI() {
+		return nil
 	}
-	for _, key := range keys {
-		if v, ok := values[key].(string); ok {
-			return v, true
+	mapping := account.GetModelMapping()
+	if len(mapping) == 0 {
+		return nil
+	}
+	check := func(model string) error {
+		if mappingSupportsRequestedModel(mapping, model) {
+			return nil
+		}
+		return fmt.Errorf("image model %q is not authorized for this account", model)
+	}
+	if model := strings.TrimSpace(gjson.GetBytes(body, "model").String()); isOpenAIImageGenerationModel(model) {
+		if err := check(model); err != nil {
+			return err
 		}
 	}
-	return "", false
+	var visitTools func(gjson.Result) error
+	visitTools = func(tools gjson.Result) error {
+		for _, tool := range tools.Array() {
+			if tool.Get("type").String() == "image_generation" {
+				model := strings.TrimSpace(tool.Get("model").String())
+				if !isOpenAIImageGenerationModel(model) {
+					model = openAIImagesDefaultModel
+				}
+				if err := check(model); err != nil {
+					return err
+				}
+			}
+			if err := visitTools(tool.Get("tools")); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err := visitTools(gjson.GetBytes(body, "tools")); err != nil {
+		return err
+	}
+	for _, item := range gjson.GetBytes(body, "input").Array() {
+		if item.Get("type").String() == "additional_tools" {
+			if err := visitTools(item.Get("tools")); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
-func normalizeCodexImageGenerationExplicitToolPolicy(value string) string {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case codexImageGenerationExplicitToolPolicyStrip, "remove", "drop":
-		return codexImageGenerationExplicitToolPolicyStrip
-	default:
-		return codexImageGenerationExplicitToolPolicyAllow
+// The group enables the feature; account model authorization still limits
+// which image model can be offered. Passthrough must not bypass this check.
+func codexImageGenerationModel(account *Account) string {
+	if account == nil || !account.IsOpenAI() {
+		return ""
 	}
+	mapping := account.GetModelMapping()
+	if len(mapping) == 0 {
+		return openAIImagesDefaultModel
+	}
+	if mapped, ok := resolveRequestedModelInMapping(mapping, openAIImagesDefaultModel); ok && isOpenAIImageGenerationModel(mapped) {
+		return mapped
+	}
+	models := make([]string, 0, len(mapping))
+	for _, model := range mapping {
+		if isOpenAIImageGenerationModel(model) && !strings.Contains(model, "*") {
+			models = append(models, model)
+		}
+	}
+	sort.Strings(models)
+	if len(models) > 0 {
+		return models[0]
+	}
+	return ""
 }
 
-// CodexImageGenerationExplicitToolPolicy returns the account-level policy for
-// client-provided Codex /responses image_generation tools. Unknown or unset
-// values default to allow to preserve existing behavior.
-func (a *Account) CodexImageGenerationExplicitToolPolicy() string {
-	if a == nil || a.Platform != PlatformOpenAI || a.Extra == nil {
-		return codexImageGenerationExplicitToolPolicyAllow
+func ensureCodexImageGenerationBridge(body map[string]any, account *Account) bool {
+	model := codexImageGenerationModel(account)
+	if model == "" {
+		return false
 	}
-	if policy, ok := stringOverrideFromMap(a.Extra, featureKeyCodexImageGenerationExplicitToolPolicy); ok {
-		return normalizeCodexImageGenerationExplicitToolPolicy(policy)
+	injected := ensureOpenAIResponsesImageGenerationTool(body)
+	modified := injected
+	if injected {
+		tools := body["tools"].([]any)
+		tools[len(tools)-1].(map[string]any)["model"] = model
 	}
-	openaiConfig, _ := a.Extra[PlatformOpenAI].(map[string]any)
-	if policy, ok := stringOverrideFromMap(openaiConfig, featureKeyCodexImageGenerationExplicitToolPolicy); ok {
-		return normalizeCodexImageGenerationExplicitToolPolicy(policy)
+	if ensureOpenAIResponsesImageGenerationToolChoiceAuto(body) {
+		modified = true
 	}
-	return codexImageGenerationExplicitToolPolicyAllow
+	if normalizeOpenAIResponsesImageGenerationTools(body) {
+		modified = true
+	}
+	if injected && applyCodexImageGenerationBridgeInstructions(body) {
+		modified = true
+	}
+	return modified
 }

@@ -1807,7 +1807,7 @@
         </div>
       </div>
 
-      <!-- OpenAI Codex hosted image_generation bridge policy -->
+      <!-- Image permission is managed by the group and model allowlist. -->
       <div
         v-if="account?.platform === 'openai' && (account?.type === 'oauth' || account?.type === 'setup-token' || account?.type === 'apikey')"
         class="border-t border-gray-200 pt-4 dark:border-dark-600"
@@ -1820,48 +1820,10 @@
             <div class="min-w-0 flex-1">
               <div class="flex flex-wrap items-center gap-2">
                 <label class="input-label mb-0">{{ t('admin.accounts.openai.codexImageTool') }}</label>
-                <span
-                  class="rounded-full px-2 py-0.5 text-[11px] font-medium"
-                  :class="codexImageToolBadgeClass"
-                >
-                  {{ codexImageToolBadgeLabel }}
-                </span>
               </div>
               <p class="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">
                 {{ t('admin.accounts.openai.codexImageToolDesc') }}
               </p>
-            </div>
-          </div>
-          <div class="border-t border-sky-100 bg-white/70 p-2 dark:border-sky-900/50 dark:bg-dark-800/70">
-            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <button
-                v-for="option in codexImageToolOptions"
-                :key="option.value"
-                type="button"
-                :data-testid="`codex-image-tool-${option.value}`"
-                @click="codexImageToolMode = option.value"
-                :class="[
-                  'group flex min-h-[62px] items-start gap-2 rounded-md border px-3 py-2 text-left transition-all',
-                  codexImageToolMode === option.value
-                    ? option.selectedCardClass
-                    : 'border-transparent bg-transparent text-slate-600 hover:border-gray-200 hover:bg-gray-50 dark:text-slate-300 dark:hover:border-dark-500 dark:hover:bg-dark-700'
-                ]"
-              >
-                <span
-                  :class="[
-                    'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors',
-                    codexImageToolMode === option.value
-                      ? option.selectedDotClass
-                      : 'border-gray-300 text-transparent group-hover:border-gray-400 dark:border-dark-500'
-                  ]"
-                >
-                  <Icon name="check" size="xs" :stroke-width="2" />
-                </span>
-                <span class="min-w-0">
-                  <span class="block text-sm font-medium">{{ option.label }}</span>
-                  <span class="mt-0.5 block text-xs leading-4 text-slate-500 dark:text-slate-400">{{ option.description }}</span>
-                </span>
-              </button>
             </div>
           </div>
         </div>
@@ -3546,8 +3508,6 @@ const codexCLIOnlyEnabled = ref(false)
 const codexCLIOnlyAppServerEnabled = ref(false)
 type CodexFingerprintMode = 'off' | 'device' | 'session' | 'full'
 const codexFingerprintMode = ref<CodexFingerprintMode>('off')
-type CodexImageToolMode = 'inherit' | 'block'
-const codexImageToolMode = ref<CodexImageToolMode>('inherit')
 type AnthropicAPIKeyAuthScheme = 'x_api_key' | 'authorization_bearer'
 const anthropicPassthroughEnabled = ref(false)
 const anthropicAPIKeyAuthScheme = ref<AnthropicAPIKeyAuthScheme>('x_api_key')
@@ -3608,38 +3568,6 @@ const openaiResponsesWebSocketV2Mode = computed({
 const openAIWSModeHintKey = computed(() =>
   resolveOpenAIWSModeHintKey(openaiResponsesWebSocketV2Mode.value)
 )
-const codexImageToolOptions = computed<Array<{
-  value: CodexImageToolMode
-  label: string
-  description: string
-  selectedCardClass: string
-  selectedDotClass: string
-}>>(() => [
-  {
-    value: 'inherit',
-    label: t('admin.accounts.openai.codexImageToolInherit'),
-    description: t('admin.accounts.openai.codexImageToolInheritDesc'),
-    selectedCardClass: 'border-sky-300 bg-sky-50 text-sky-900 shadow-sm ring-1 ring-sky-200 dark:border-sky-700 dark:bg-sky-900/25 dark:text-sky-100 dark:ring-sky-800',
-    selectedDotClass: 'border-sky-500 bg-sky-500 text-white'
-  },
-  {
-    value: 'block',
-    label: t('admin.accounts.openai.codexImageToolBlock'),
-    description: t('admin.accounts.openai.codexImageToolBlockDesc'),
-    selectedCardClass: 'border-rose-300 bg-rose-50 text-rose-900 shadow-sm ring-1 ring-rose-200 dark:border-rose-700 dark:bg-rose-900/25 dark:text-rose-100 dark:ring-rose-800',
-    selectedDotClass: 'border-rose-500 bg-rose-500 text-white'
-  }
-])
-const codexImageToolBadgeLabel = computed(() => {
-  return codexImageToolMode.value === 'block'
-    ? t('admin.accounts.openai.codexImageToolBadgeBlock')
-    : t('admin.accounts.openai.codexImageToolBadgeInherit')
-})
-const codexImageToolBadgeClass = computed(() => {
-  return codexImageToolMode.value === 'block'
-    ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300'
-    : 'bg-slate-100 text-slate-600 dark:bg-dark-600 dark:text-slate-300'
-})
 const openAICompactModeOptions = computed(() => [
   { value: 'auto', label: t('admin.accounts.openai.compactModeAuto') },
   { value: 'force_on', label: t('admin.accounts.openai.compactModeForceOn') },
@@ -4000,7 +3928,6 @@ const syncFormFromAccount = (newAccount: Account | null) => {
   codexCLIOnlyEnabled.value = false
   codexCLIOnlyAppServerEnabled.value = false
   codexFingerprintMode.value = 'off'
-  codexImageToolMode.value = 'inherit'
   anthropicPassthroughEnabled.value = false
   anthropicAPIKeyAuthScheme.value = 'x_api_key'
   webSearchEmulationMode.value = 'default'
@@ -4024,7 +3951,6 @@ const syncFormFromAccount = (newAccount: Account | null) => {
         openAIResponsesMode.value = 'auto'
       }
     }
-    codexImageToolMode.value = extra?.codex_image_generation_explicit_tool_policy === 'strip' ? 'block' : 'inherit'
     openaiOAuthResponsesWebSocketV2Mode.value = resolveOpenAIWSModeFromExtra(extra, {
       modeKey: 'openai_oauth_responses_websockets_v2_mode',
       enabledKey: 'openai_oauth_responses_websockets_v2_enabled',
@@ -5547,11 +5473,7 @@ const handleSubmit = async () => {
 
 		delete newExtra.codex_image_generation_bridge
 		delete newExtra.codex_image_generation_bridge_enabled
-		if (codexImageToolMode.value === 'block') {
-			newExtra.codex_image_generation_explicit_tool_policy = 'strip'
-		} else {
-			delete newExtra.codex_image_generation_explicit_tool_policy
-		}
+		delete newExtra.codex_image_generation_explicit_tool_policy
 
       if (props.account.type === 'oauth' || props.account.type === 'setup-token') {
         if (codexCLIOnlyEnabled.value) {
