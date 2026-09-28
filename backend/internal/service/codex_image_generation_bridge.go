@@ -89,16 +89,12 @@ func codexImageGenerationModel(account *Account) string {
 const codexImageAPIAvailableMarker = "<starbridge-image-api-available>"
 
 const codexImageAPIAvailableInstructions = codexImageAPIAvailableMarker + `
-This key's group permits image generation through the current Starbridge provider. Responses Lite cannot attach a hosted image tool. For an image the user requested, use a callable local image_gen tool if present; otherwise use the installed starbridge-imagegen skill with the selected provider's existing credential. Do not require OpenArt or a new OPENAI_API_KEY because a built-in tool is missing. Respect the account's allowed image models, never print credentials, and save and inspect the image before reporting completion. Do not generate for text-only requests.
+This key's group permits image generation through the current Starbridge provider. Responses Lite cannot attach a hosted image tool. For an image the user requested, use a callable local image_gen tool if present; otherwise use the installed starbridge-imagegen skill with the selected provider's existing credential. The gateway can select an image-capable account within the group when the text account cannot generate images. Do not require OpenArt or a new OPENAI_API_KEY because a built-in tool is missing. Never print credentials; save and inspect the image before reporting completion. Do not generate for text-only requests.
 </starbridge-image-api-available>`
 
 func ensureCodexImageGenerationBridge(body map[string]any, account *Account, responsesLite bool) bool {
-	model := codexImageGenerationModel(account)
-	if model == "" {
-		return false
-	}
 	if responsesLite {
-		if isCodexSparkModel(firstNonEmptyString(body["model"])) || hasCodexImageGenerationFunctionTool(body) {
+		if account == nil || !account.IsOpenAI() || isCodexSparkModel(firstNonEmptyString(body["model"])) || hasCodexImageGenerationFunctionTool(body) {
 			return false
 		}
 		existing, ok := body["instructions"].(string)
@@ -110,6 +106,10 @@ func ensureCodexImageGenerationBridge(body map[string]any, account *Account, res
 		}
 		body["instructions"] = strings.TrimSpace(existing + "\n\n" + codexImageAPIAvailableInstructions)
 		return true
+	}
+	model := codexImageGenerationModel(account)
+	if model == "" {
+		return false
 	}
 	injected := ensureOpenAIResponsesImageGenerationTool(body)
 	modified := injected

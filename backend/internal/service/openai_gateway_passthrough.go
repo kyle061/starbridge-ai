@@ -234,13 +234,13 @@ func (s *OpenAIGatewayService) forwardOpenAIPassthrough(
 	}
 
 	isCodexCLI := openai.IsCodexOfficialClientByHeaders(c.GetHeader("User-Agent"), c.GetHeader("originator")) || (s.cfg != nil && s.cfg.Gateway.ForceCodexCLI)
+	responsesLite := isOpenAIResponsesLiteHeader(c.GetHeader(responsesLiteHeader)) || isOpenAIResponsesLiteWebSocketPayload(body)
 	if account.IsOpenAI() && isCodexCLI && GroupAllowsImageGeneration(apiKeyGroup(getAPIKeyFromContext(c))) &&
-		!isOpenAIResponsesCompactPath(c) && codexImageGenerationModel(account) != "" {
+		!isOpenAIResponsesCompactPath(c) && (responsesLite || codexImageGenerationModel(account) != "") {
 		var payload map[string]any
 		if err := decodeOpenAIJSONUseNumber(body, &payload); err != nil {
 			return nil, fmt.Errorf("decode Codex image bridge request: %w", err)
 		}
-		responsesLite := isOpenAIResponsesLiteHeader(c.GetHeader(responsesLiteHeader)) || isOpenAIResponsesLiteWebSocketPayload(body)
 		if ensureCodexImageGenerationBridge(payload, account, responsesLite) {
 			rebuilt, err := marshalOpenAIUpstreamJSON(payload)
 			if err != nil {

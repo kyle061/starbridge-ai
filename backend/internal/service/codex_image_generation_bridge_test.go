@@ -25,3 +25,17 @@ func TestCodexImageBridgeLitePreservesClientImageTool(t *testing.T) {
 	require.False(t, ensureCodexImageGenerationBridge(body, account, true))
 	require.Equal(t, "Use the client's image tool.", body["instructions"])
 }
+
+func TestCodexImageBridgeLiteUsesGroupRouteWithTextOnlyAccount(t *testing.T) {
+	account := &Account{
+		Platform:    PlatformOpenAI,
+		Type:        AccountTypeAPIKey,
+		Credentials: map[string]any{"model_mapping": map[string]any{"gpt-5.4": "gpt-5.4"}},
+	}
+	require.Empty(t, codexImageGenerationModel(account))
+	body := map[string]any{"model": "gpt-5.4", "input": "Generate a landscape image"}
+	require.True(t, ensureCodexImageGenerationBridge(body, account, true))
+	require.Contains(t, body["instructions"], codexImageAPIAvailableMarker)
+	require.False(t, hasOpenAIImageGenerationTool(body))
+	require.False(t, ensureCodexImageGenerationBridge(body, account, false), "text account cannot offer the hosted tool")
+}
