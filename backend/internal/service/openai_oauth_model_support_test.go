@@ -114,6 +114,29 @@ func TestIsModelSupported_OpenAIAPIKeyEmptyMappingAllowsAll(t *testing.T) {
 	require.True(t, account.IsModelSupported("gpt-5.4"))
 }
 
+func TestIsModelSupported_OpenAIPassthroughPreservesImageAuthorization(t *testing.T) {
+	for _, accountType := range []string{AccountTypeOAuth, AccountTypeAPIKey} {
+		t.Run(accountType, func(t *testing.T) {
+			account := &Account{
+				Platform: PlatformOpenAI,
+				Type:     accountType,
+				Extra:    map[string]any{"openai_passthrough": true},
+				Credentials: map[string]any{"model_mapping": map[string]any{
+					"gpt-6-luna":  "gpt-6-luna",
+					"gpt-image-2": "gpt-image-2",
+				}},
+			}
+			require.True(t, account.IsModelSupported("gpt-image-2"))
+			require.False(t, account.IsModelSupported("gpt-image-2.5-flare"))
+			require.False(t, account.IsModelSupported("gpt-image-future"))
+			account.Credentials["model_mapping"] = map[string]any{"gpt-image-*": "gpt-image-*"}
+			require.True(t, account.IsModelSupported("gpt-image-future"))
+			delete(account.Credentials, "model_mapping")
+			require.True(t, account.IsModelSupported("gpt-image-future"), "an unset allowlist remains unrestricted")
+		})
+	}
+}
+
 func TestIsModelSupported_NonOpenAIPlatformsUnchanged(t *testing.T) {
 	anthropic := &Account{ID: 3, Platform: PlatformAnthropic, Type: AccountTypeOAuth}
 	require.True(t, anthropic.IsModelSupported("claude-sonnet-4-6"))
