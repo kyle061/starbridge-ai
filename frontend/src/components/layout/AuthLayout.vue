@@ -30,13 +30,8 @@
       <div class="mb-6 text-center sm:mb-8">
         <!-- Custom Logo or Default Logo -->
         <template v-if="settingsLoaded">
-          <div
-            class="mb-4 inline-flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl shadow-lg shadow-primary-500/30"
-          >
-            <img :src="siteLogo || '/logo.svg'" alt="Logo" class="h-full w-full object-contain" />
-          </div>
-          <h1 class="text-gradient mb-2 text-3xl font-bold">
-            {{ siteName }}
+          <h1 class="mb-4">
+            <BrandLogo :logo="siteLogo" :name="siteName" style="width: 17rem; height: 3rem" />
           </h1>
           <p class="text-sm text-gray-500 dark:text-dark-400">
             {{ siteSubtitle }}
@@ -65,6 +60,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useAppStore } from '@/stores'
+import BrandLogo from '@/components/common/BrandLogo.vue'
 import { sanitizeUrl } from '@/utils/url'
 
 const appStore = useAppStore()
@@ -80,9 +76,3 @@ onMounted(() => {
   appStore.fetchPublicSettings()
 })
 </script>
-
-<style scoped>
-.text-gradient {
-  @apply bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent;
-}
-</style>

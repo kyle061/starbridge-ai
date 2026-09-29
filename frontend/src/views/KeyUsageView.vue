@@ -3,13 +3,10 @@
     <!-- Header (same pattern as HomeView) -->
     <header class="relative z-20 px-6 py-4">
       <nav class="mx-auto flex max-w-6xl items-center justify-between">
-        <router-link to="/home" class="flex items-center gap-3">
-          <div class="h-10 w-10 overflow-hidden rounded-xl shadow-md">
-            <img :src="siteLogo || '/logo.svg'" alt="Logo" class="h-full w-full object-contain" />
-          </div>
-          <span class="text-lg font-semibold tracking-tight text-gray-900 dark:text-white">{{ siteName }}</span>
+        <router-link to="/home" class="flex min-w-0 items-center">
+          <BrandLogo :logo="siteLogo" :name="siteName" />
         </router-link>
-        <div class="flex items-center gap-3">
+        <div class="flex shrink-0 items-center gap-3">
           <LocaleSwitcher />
           <a
             v-if="docUrl"
@@ -419,6 +416,7 @@
 
 <script setup lang="ts">
 import SupportContact from '@/components/common/SupportContact.vue'
+import BrandLogo from '@/components/common/BrandLogo.vue'
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores'

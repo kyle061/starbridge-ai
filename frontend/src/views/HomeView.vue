@@ -21,12 +21,7 @@
     <header class="border-b border-gray-200 px-4 py-4 sm:px-6 dark:border-dark-800">
       <nav class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 sm:gap-4">
         <div class="flex min-w-0 flex-1 items-center gap-3">
-          <img
-            :src="siteLogo || '/logo.svg'"
-            alt="Logo"
-            class="h-9 w-9 shrink-0 rounded-lg object-contain"
-          />
-          <span class="min-w-0 truncate text-base font-semibold">{{ siteName }}</span>
+          <BrandLogo :logo="siteLogo" :name="siteName" />
         </div>
         <div class="flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
           <LocaleSwitcher />
@@ -87,7 +82,7 @@
     <main class="flex min-w-0 flex-1 items-center justify-center px-4 py-16 sm:px-6">
       <div class="min-w-0 max-w-2xl text-center">
         <img
-          :src="siteLogo || '/logo.svg'"
+          :src="siteLogo || '/logo-mark.png'"
           alt="Logo"
           class="mx-auto mb-6 h-20 w-20 rounded-2xl object-contain"
         />
@@ -125,8 +120,7 @@
     <header class="border-b border-gray-200 bg-white dark:border-dark-800 dark:bg-dark-900" @keydown.esc="closeMobileMenu">
       <nav class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6" :aria-label="t('home.navigation')">
         <router-link to="/home" class="flex min-w-0 items-center gap-2.5">
-          <img :src="siteLogo || '/logo.svg'" alt="" class="h-9 w-9 shrink-0 rounded-xl object-contain" />
-          <span class="truncate text-base font-semibold">{{ siteName }}</span>
+          <BrandLogo :logo="siteLogo" :name="siteName" />
         </router-link>
         <div class="hidden items-center gap-4 lg:flex">
           <router-link v-if="showModelPlazaEntry" to="/model-plaza" class="home-nav-link">{{ t('home.modelPricing') }}</router-link>
@@ -248,6 +242,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore, useAppStore } from '@/stores'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
+import BrandLogo from '@/components/common/BrandLogo.vue'
 import Icon from '@/components/icons/Icon.vue'
 import SupportContact from '@/components/common/SupportContact.vue'
 import { useClipboard } from '@/composables/useClipboard'
