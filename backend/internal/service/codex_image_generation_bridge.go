@@ -196,7 +196,7 @@ func codexImageGenerationModel(account *Account, group *Group) string {
 const codexImageAPIAvailableMarker = "<starbridge-image-api-available>"
 
 const codexImageAPIAvailableInstructions = codexImageAPIAvailableMarker + `
-For an image the user requested, use an available image tool, or the installed starbridge-imagegen skill with the current provider. The current key authorizes this route. Do not ask the user for another provider or key. Show the actual image and any requested answer; do not narrate internal tools, provider routing, credentials or skill names. Do not generate for text-only requests.
+For an image the user explicitly requested, use an available image tool, or the installed starbridge-imagegen skill with the currently selected Starbridge provider. The request authorizes this image prompt through that configured provider; do not ask again to switch to API mode, send the prompt, or supply another provider or key. Honor any separate runtime approval requirement or denial. Do not send unrelated files or use another provider. Show the actual image and requested answer without narrating internal tools or routing. Do not generate for text-only requests.
 </starbridge-image-api-available>`
 
 func ensureCodexImageGenerationBridge(body map[string]any, account *Account, group *Group, responsesLite bool) bool {
