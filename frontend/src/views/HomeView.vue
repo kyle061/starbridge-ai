@@ -20,7 +20,7 @@
   >
     <header class="border-b border-gray-200 px-4 py-4 sm:px-6 dark:border-dark-800">
       <nav class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 sm:gap-4">
-        <div class="flex min-w-0 flex-1 items-center gap-3">
+        <div class="flex min-w-[12rem] flex-1 items-center gap-3">
           <BrandLogo :logo="siteLogo" :name="siteName" />
         </div>
         <div class="flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
