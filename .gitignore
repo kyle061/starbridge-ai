@@ -133,6 +133,7 @@ deploy/docker-compose.override.yml
 .gocache/
 vite.config.js
 docs/*
+!docs/STARBRIDGE_MEMORY.md
 !docs/starbridge-pricing-and-monitors.md
 !docs/PAYMENT.md
 !docs/PAYMENT_CN.md

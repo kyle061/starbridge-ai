@@ -35,7 +35,7 @@ bash install-restricted-ssh.sh /path/to/actions.pub 19090
 
 安装器创建 `starbridge-deploy` 账号，将部署配置安装为 root 所有，并添加只允许执行固定部署脚本的 sudo 规则。部署账号不能登录普通 Shell、执行任意 Docker 命令、修改 Compose 文件或访问其他项目。SSH 私钥只保存在本机和 GitHub Secrets。容器镜像导入前会校验标签，避免覆盖其他项目的镜像。
 
-自动更新只替换星桥镜像。需要修改 Compose、资源上限或受限部署脚本时，由管理员检查后重新运行安装器。默认内存上限为 gateway 512 MiB、PostgreSQL 256 MiB、Redis 128 MiB，并分别限制 CPU，避免镜像编译和应用过载争抢已有服务的资源。
+自动更新只替换星桥镜像。需要修改 Compose 或受限部署脚本时，由管理员检查后重新运行安装器。新版 Compose 的默认内存上限为 gateway 1 GiB、PostgreSQL 256 MiB、Redis 128 MiB，并分别限制 CPU。gateway 可在 `.env` 中通过 `GATEWAY_MEMORY_LIMIT` 调整硬上限，`GOMEMLIMIT` 调整 Go 内存软目标（默认 384 MiB）；必须为请求缓冲区、数据库和宿主机保留余量。旧版写死 512 MiB 的服务器 Compose 需要先更新，单独修改 `.env` 不会生效。OOM 排查和现有部署的更新步骤见 [网关内存限制](STARBRIDGE_MEMORY.md)。
 
 在 GitHub 仓库 **Settings → Secrets and variables → Actions → New repository secret** 中添加：
 

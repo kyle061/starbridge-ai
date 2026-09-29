@@ -11,7 +11,8 @@ services:
       args:
         VERSION: starbridge-0.1.0
     restart: unless-stopped
-    mem_limit: 512m
+    # Keep headroom above Go's soft limit for request buffers and memory spikes.
+    mem_limit: ${GATEWAY_MEMORY_LIMIT:-1g}
     cpus: 0.8
     pids_limit: 256
     ports:
@@ -24,7 +25,7 @@ services:
       SERVER_PORT: "8080"
       SERVER_MODE: release
       RUN_MODE: standard
-      GOMEMLIMIT: 384MiB
+      GOMEMLIMIT: ${GOMEMLIMIT:-384MiB}
       DATABASE_HOST: postgres
       DATABASE_PORT: "5432"
       DATABASE_USER: starbridge

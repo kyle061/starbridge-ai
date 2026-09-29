@@ -128,7 +128,7 @@ elif args[0] == "compose" and "up" in args and os.environ.get("FAIL_UP"):
         directory = self.root / "deploy/starbridge"
         for name in [".env.example", "init-env.py", "compose.yaml"]:
             shutil.copyfile(SOURCE / name, directory / name)
-        (directory / ".env").write_text("# custom settings\nADMIN_PASSWORD=keep-me\nJWT_SECRET=keep-jwt\nUPSTREAM_HOSTS=custom.example\nAPP_PORT=9999\nBIND_HOST=127.0.0.1\nSERVER_TRUSTED_PROXIES=172.19.0.5/32\n")
+        (directory / ".env").write_text("# custom settings\nADMIN_PASSWORD=keep-me\nJWT_SECRET=keep-jwt\nUPSTREAM_HOSTS=custom.example\nAPP_PORT=9999\nBIND_HOST=127.0.0.1\nSERVER_TRUSTED_PROXIES=172.19.0.5/32\nGATEWAY_MEMORY_LIMIT=768m\nGOMEMLIMIT=384MiB\n")
         (self.root / "starbridge-image.tar.gz").write_bytes(b"mock image")
         return directory
 
@@ -140,7 +140,8 @@ elif args[0] == "compose" and "up" in args and os.environ.get("FAIL_UP"):
         contents = (directory / ".env").read_text()
         for value in ["# custom settings", "ADMIN_PASSWORD=keep-me", "JWT_SECRET=keep-jwt",
                       "UPSTREAM_HOSTS=custom.example", "BIND_HOST=127.0.0.1",
-                      "SERVER_TRUSTED_PROXIES=172.19.0.5/32", f"APP_PORT={chosen_port}",
+                      "SERVER_TRUSTED_PROXIES=172.19.0.5/32", "GATEWAY_MEMORY_LIMIT=768m",
+                      "GOMEMLIMIT=384MiB", f"APP_PORT={chosen_port}",
                       f"STARBRIDGE_IMAGE={IMAGE}"]:
             self.assertIn(value, contents)
         self.assertEqual((directory / ".env").stat().st_mode & 0o777, 0o600)
