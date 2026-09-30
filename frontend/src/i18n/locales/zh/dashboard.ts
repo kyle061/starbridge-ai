@@ -270,7 +270,7 @@ export default {
         description: '通过当前 Composite 路由分组配置受支持的客户端。',
         codexDescription: '使用当前 API Key 配置 Codex，并选择 Composite 分组支持的模型。',
         codexConfigTomlHint: '配置内已包含 API Key；保存为 config.toml 后重启 Codex，model 可改为当前分组支持的模型。',
-        codexNote: 'config.toml 含明文 API Key，请勿提交；分组会根据 model 中填写的模型路由请求。'
+        codexNote: '默认 GPT/Codex 模型使用 WebSocket。若改用 DeepSeek 等仅支持 HTTP 的模型，请将 supports_websockets 和 responses_websockets_v2 都设为 false。config.toml 含明文 API Key，请勿提交。'
       },
       routedCodex: {
         description: '使用当前 API Key 和路由分组支持的模型配置 Codex。',
