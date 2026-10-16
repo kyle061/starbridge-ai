@@ -49,6 +49,7 @@ jobs:
           src/views/__tests__/KeyUsageView.spec.ts
           src/views/user/__tests__/PaymentView.spec.ts
           src/components/payment/__tests__/SubscriptionPlanCard.spec.ts
+          src/views/admin/ops/components/__tests__/OpsDashboardHeader.health.spec.ts
           src/views/admin/orders/__tests__/PlanModelsDialog.spec.ts
           src/views/admin/orders/__tests__/PlanEditDialog.spec.ts
           src/views/admin/orders/__tests__/AdminPaymentPlansView.spec.ts
@@ -66,6 +67,8 @@ jobs:
       - run: python3 -m unittest discover -s integrations/codex/tests -v
       - uses: actions/setup-go@v5
         with: { go-version-file: backend/go.mod, cache: true, cache-dependency-path: backend/go.sum }
+      - run: go test -tags unit ./internal/service -run '^Test(ComputeDashboardHealthScore|ComputeBusinessHealth|ComputeInfraHealth|OpsJobStale|PopulateJobStaleness|OpsDashboardConfiguredThreshold|OpenAITokenProvider_)' -count=1
+        working-directory: backend
       - run: go test -tags unit ./internal/service ./internal/handler/admin ./internal/server/middleware -run 'TestRevealSecret|TestSecretReveal'
         working-directory: backend
       - run: >-

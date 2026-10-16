@@ -525,7 +525,7 @@ const SettingKeyOpsMetricThresholds = "ops_metric_thresholds"
 
 func defaultOpsMetricThresholds() *OpsMetricThresholds {
 	slaMin := 99.5
-	ttftMax := 500.0
+	ttftMax := 10_000.0
 	reqErrMax := 5.0
 	upstreamErrMax := 5.0
 	return &OpsMetricThresholds{

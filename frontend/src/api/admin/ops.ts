@@ -275,6 +275,7 @@ export interface OpsSystemMetricsSnapshot {
 }
 
 export interface OpsJobHeartbeat {
+  stale?: boolean
   job_name: string
   last_run_at?: string | null
   last_success_at?: string | null

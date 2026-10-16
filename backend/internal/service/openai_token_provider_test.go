@@ -3,13 +3,17 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 )
 
@@ -965,4 +969,38 @@ func TestOpenAITokenProvider_NoRefreshTokenExpired_DisablesAccount(t *testing.T)
 	require.Len(t, blocker.accounts, 1)
 	require.Equal(t, account.ID, blocker.accounts[0].ID)
 	require.Equal(t, "missing_refresh_token", blocker.reasons[0])
+}
+
+func TestOpenAITokenProvider_CacheMissIsNotWarning(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		cacheErr error
+		warning  bool
+	}{
+		{"cache miss", redis.Nil, false},
+		{"wrapped cache miss", fmt.Errorf("cache lookup: %w", redis.Nil), false},
+		{"cache unavailable", errors.New("connection refused"), true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var logs bytes.Buffer
+			previous := slog.Default()
+			slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+			defer slog.SetDefault(previous)
+			cache := newOpenAITokenCacheStub()
+			cache.getErr = tc.cacheErr
+			provider := NewOpenAITokenProvider(nil, cache, nil)
+			account := &Account{ID: 123, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Credentials: map[string]any{
+				"access_token": "test-valid-access-token",
+				"expires_at":   time.Now().Add(time.Hour).Format(time.RFC3339),
+			}}
+			token, err := provider.GetAccessToken(context.Background(), account)
+			require.NoError(t, err)
+			require.Equal(t, "test-valid-access-token", token)
+			if tc.warning {
+				require.Contains(t, logs.String(), "openai_token_cache_get_failed")
+			} else {
+				require.NotContains(t, logs.String(), "openai_token_cache_get_failed")
+			}
+		})
+	}
 }
