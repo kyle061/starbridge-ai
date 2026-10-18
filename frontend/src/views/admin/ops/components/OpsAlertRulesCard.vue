@@ -10,6 +10,7 @@ import { adminAPI } from '@/api'
 import { opsAPI } from '@/api/admin/ops'
 import type { AlertRule, MetricType, Operator } from '../types'
 import type { OpsSeverity } from '@/api/admin/ops'
+import { DURATION_THRESHOLDS_MS } from '@/utils/latencyHealth'
 import { formatDateTime } from '../utils/opsFormatters'
 
 const { t } = useI18n()
@@ -143,6 +144,24 @@ const metricDefinitions = computed(() => {
       recommendedOperator: '>',
       recommendedThreshold: 1,
       unit: '%'
+    },
+    {
+      type: 'p95_latency_ms',
+      group: 'system',
+      label: t('admin.ops.alertRules.metrics.p95'),
+      description: t('admin.ops.alertRules.metricDescriptions.p95'),
+      recommendedOperator: '>',
+      recommendedThreshold: DURATION_THRESHOLDS_MS.warn,
+      unit: 'ms'
+    },
+    {
+      type: 'p99_latency_ms',
+      group: 'system',
+      label: t('admin.ops.alertRules.metrics.p99'),
+      description: t('admin.ops.alertRules.metricDescriptions.p99'),
+      recommendedOperator: '>',
+      recommendedThreshold: DURATION_THRESHOLDS_MS.slow,
+      unit: 'ms'
     },
     {
       type: 'cpu_usage_percent',
@@ -534,7 +553,7 @@ function cancelDelete() {
 
           <div>
             <label class="input-label">{{ t('admin.ops.alertRules.form.metric') }}</label>
-            <Select v-model="draft!.metric_type" :options="metricOptions" />
+            <Select v-model="draft!.metric_type" :options="metricOptions" :aria-label="t('admin.ops.alertRules.form.metric')" />
             <div v-if="selectedMetricDefinition" class="mt-1 space-y-0.5 text-xs text-gray-500 dark:text-gray-400">
               <p>{{ selectedMetricDefinition.description }}</p>
               <p>

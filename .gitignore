@@ -134,6 +134,7 @@ deploy/docker-compose.override.yml
 vite.config.js
 docs/*
 !docs/STARBRIDGE_MEMORY.md
+!docs/OPENAI_MODEL_DISCOVERY.md
 !docs/starbridge-pricing-and-monitors.md
 !docs/PAYMENT.md
 !docs/PAYMENT_CN.md

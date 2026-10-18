@@ -275,6 +275,7 @@ export interface OpsSystemMetricsSnapshot {
 }
 
 export interface OpsJobHeartbeat {
+  stale?: boolean
   job_name: string
   last_run_at?: string | null
   last_success_at?: string | null
@@ -678,6 +679,8 @@ export type MetricType =
   | 'success_rate'
   | 'error_rate'
   | 'upstream_error_rate'
+  | 'p95_latency_ms'
+  | 'p99_latency_ms'
   | 'cpu_usage_percent'
   | 'memory_usage_percent'
   | 'concurrency_queue_depth'

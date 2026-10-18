@@ -3,13 +3,16 @@
 // accepts explicitly configured custom model IDs.
 package modelcatalog
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 var catalogs = map[string][]string{
 	"openai": {
 		// Keep gpt-5.6 and gpt-6 aliases routable, but list their concrete models only.
 		"gpt-5.5", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna",
-		"gpt-6-astra", "gpt-6-sol", "gpt-6-luna",
+		"gpt-6-astra", "gpt-6.1-sol", "gpt-6-sol", "gpt-6-luna",
 		"gpt-image-2", "gpt-image-2.5-flare", "gpt-image-2.5-sunburst",
 	},
 	"anthropic": {
@@ -137,9 +140,18 @@ func IsSupported(platform, model string) bool {
 	return false
 }
 
-// IsVisibleOpenAIModel keeps the public OpenAI family on the curated list,
-// while leaving explicitly configured compatible-provider IDs alone. This is
-// a discovery policy only; legacy IDs can still be routed by existing keys.
+// New numbered GPT releases may be discovered from an upstream catalog before
+// this deployment's static fallback is updated. This predicate neither invents
+// catalog entries nor grants account/group access or supplies a guessed price.
+var discoverableGPTRelease = regexp.MustCompile(`^gpt-(?:[6-9]|[1-9][0-9]+)(?:\.[0-9]+)?(?:-[a-z0-9]+)*$`)
+
+func IsDiscoverableGPTRelease(model string) bool {
+	return model != "gpt-6" && discoverableGPTRelease.MatchString(model)
+}
+
+// IsVisibleOpenAIModel hides legacy entries while retaining new GPT releases
+// returned by the upstream. Static fallbacks remain curated; authorization and
+// billing checks still apply independently.
 func IsVisibleOpenAIModel(model string) bool {
 	model = strings.TrimSpace(model)
 	if model == "" {
@@ -149,6 +161,9 @@ func IsVisibleOpenAIModel(model string) bool {
 		if model == id {
 			return true
 		}
+	}
+	if IsDiscoverableGPTRelease(model) {
+		return true
 	}
 	model = strings.TrimPrefix(strings.ToLower(model), "models/")
 	model = strings.TrimPrefix(model, "openai/")

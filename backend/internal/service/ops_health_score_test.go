@@ -12,7 +12,7 @@ import (
 func TestComputeDashboardHealthScore_IdleReturns100(t *testing.T) {
 	t.Parallel()
 
-	score := computeDashboardHealthScore(time.Now().UTC(), &OpsDashboardOverview{})
+	score := computeDashboardHealthScore(time.Now().UTC(), &OpsDashboardOverview{}, nil)
 	require.Equal(t, 100, score)
 }
 
@@ -50,7 +50,7 @@ func TestComputeDashboardHealthScore_DegradesOnBadSignals(t *testing.T) {
 		},
 	}
 
-	score := computeDashboardHealthScore(time.Now().UTC(), ov)
+	score := computeDashboardHealthScore(time.Now().UTC(), ov, nil)
 	require.Less(t, score, 80)
 	require.GreaterOrEqual(t, score, 0)
 }
@@ -229,7 +229,7 @@ func TestComputeDashboardHealthScore_Comprehensive(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			score := computeDashboardHealthScore(time.Now().UTC(), tt.overview)
+			score := computeDashboardHealthScore(time.Now().UTC(), tt.overview, nil)
 			require.GreaterOrEqual(t, score, tt.wantMin, "score should be >= %d", tt.wantMin)
 			require.LessOrEqual(t, score, tt.wantMax, "score should be <= %d", tt.wantMax)
 			require.GreaterOrEqual(t, score, 0, "score must be >= 0")
@@ -303,15 +303,15 @@ func TestComputeBusinessHealth(t *testing.T) {
 			wantMax: 78,
 		},
 		{
-			name: "TTFT boundary 2s",
+			name: "normal model TTFT 2s",
 			overview: &OpsDashboardOverview{
 				SLA:               0.99,
 				ErrorRate:         0,
 				UpstreamErrorRate: 0,
 				TTFT:              OpsPercentiles{P99: intPtr(2000)},
 			},
-			wantMin: 75,
-			wantMax: 75,
+			wantMin: 100,
+			wantMax: 100,
 		},
 		{
 			name: "upstream error dominates",
@@ -328,7 +328,7 @@ func TestComputeBusinessHealth(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			score := computeBusinessHealth(tt.overview)
+			score := computeBusinessHealth(tt.overview, nil)
 			require.GreaterOrEqual(t, score, tt.wantMin, "score should be >= %.1f", tt.wantMin)
 			require.LessOrEqual(t, score, tt.wantMax, "score should be <= %.1f", tt.wantMax)
 			require.GreaterOrEqual(t, score, 0.0, "score must be >= 0")

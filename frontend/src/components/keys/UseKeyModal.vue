@@ -621,7 +621,7 @@ const currentFiles = computed((): FileConfig[] => {
       return generateAnthropicFiles(baseRoot, apiKey)
     case 'composite':
       if (activeClientTab.value === 'codex') {
-        return generateOpenAIFiles(apiBase, apiKey, false)
+        return generateOpenAIFiles(apiBase, apiKey)
       }
       return generateAnthropicFiles(baseRoot, apiKey)
     default:

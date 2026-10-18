@@ -12,18 +12,14 @@ import (
 // - Layered scoring: Business Health (70%) + Infrastructure Health (30%)
 // - Avoids double-counting (e.g., DB failure affects both infra and business metrics)
 // - Conservative + stable: penalize clear degradations; avoid overreacting to missing/idle data.
-func computeDashboardHealthScore(now time.Time, overview *OpsDashboardOverview) int {
+func computeDashboardHealthScore(now time.Time, overview *OpsDashboardOverview, thresholds *OpsMetricThresholds) int {
 	if overview == nil {
 		return 0
 	}
 
-	// Idle/no-data: avoid showing a "bad" score when there is no traffic.
-	// UI can still render a gray/idle state based on QPS + error rate.
-	if overview.RequestCountSLA <= 0 && overview.RequestCountTotal <= 0 && overview.ErrorCountTotal <= 0 {
-		return 100
-	}
-
-	businessHealth := computeBusinessHealth(overview)
+	// No traffic contributes no business penalty, but infrastructure failures
+	// must remain visible even when requests have stopped.
+	businessHealth := computeBusinessHealth(overview, thresholds)
 	infraHealth := computeInfraHealth(now, overview)
 
 	// Weighted combination: 70% business + 30% infrastructure
@@ -33,7 +29,7 @@ func computeDashboardHealthScore(now time.Time, overview *OpsDashboardOverview) 
 
 // computeBusinessHealth calculates business health score (0-100)
 // Components: Error Rate (50%) + TTFT (50%)
-func computeBusinessHealth(overview *OpsDashboardOverview) float64 {
+func computeBusinessHealth(overview *OpsDashboardOverview, thresholds *OpsMetricThresholds) float64 {
 	// Error rate score: 1% → 100, 10% → 0 (linear)
 	// Combines request errors and upstream errors
 	errorScore := 100.0
@@ -48,17 +44,22 @@ func computeBusinessHealth(overview *OpsDashboardOverview) float64 {
 		}
 	}
 
-	// TTFT score: 1s → 100, 3s → 0 (linear)
-	// Time to first token is critical for user experience
+	// Use the same configured boundary as the dashboard: warning at 80%,
+	// critical at 100%. A missing threshold explicitly disables this signal.
+	// Nil settings mean settings could not be loaded, so use the defaults.
+	if thresholds == nil {
+		thresholds = defaultOpsMetricThresholds()
+	}
 	ttftScore := 100.0
-	if overview.TTFT.P99 != nil {
+	if overview.TTFT.P99 != nil && thresholds.TTFTp99MsMax != nil {
 		p99 := float64(*overview.TTFT.P99)
-		if p99 > 1000 {
-			if p99 <= 3000 {
-				ttftScore = (3000 - p99) / 2000 * 100
-			} else {
+		limit := *thresholds.TTFTp99MsMax
+		if limit <= 0 {
+			if p99 > 0 {
 				ttftScore = 0
 			}
+		} else if p99 > limit*0.8 {
+			ttftScore = clampFloat64((limit-p99)/(limit*0.2)*100, 0, 100)
 		}
 	}
 
@@ -120,7 +121,7 @@ func computeInfraHealth(now time.Time, overview *OpsDashboardOverview) float64 {
 		totalJobs++
 		if hb.LastErrorAt != nil && (hb.LastSuccessAt == nil || hb.LastErrorAt.After(*hb.LastSuccessAt)) {
 			failedJobs++
-		} else if hb.LastSuccessAt != nil && now.Sub(*hb.LastSuccessAt) > 15*time.Minute {
+		} else if opsJobHeartbeatStale(now, hb) {
 			failedJobs++
 		}
 	}

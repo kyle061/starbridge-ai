@@ -13,7 +13,7 @@ describe('useModelWhitelist', () => {
     expect(models).toEqual([
       'gpt-5.5',
       'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna',
-      'gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna',
+      'gpt-6-astra', 'gpt-6.1-sol', 'gpt-6-sol', 'gpt-6-luna',
       'gpt-image-2', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'
     ])
   })
@@ -222,5 +222,17 @@ describe('useModelWhitelist', () => {
       allowedModels: ['gpt-5.6'],
       modelMappings: [{ from: 'gpt-latest', to: 'gpt-5.6' }]
     })
+  })
+})
+
+
+describe('new GPT release discovery', () => {
+  it('retains newly returned IDs without changing saved model permissions', () => {
+    expect(filterSupportedModelIds('openai', [
+      'gpt-6.1-sol', 'gpt-6.2-sol', 'gpt-7-sol', 'gpt-5.4', 'codex-auto-review', 'gpt-6', 'gpt-6.x-sol'
+    ])).toEqual(['gpt-6.1-sol', 'gpt-6.2-sol', 'gpt-7-sol'])
+    expect(getModelsByPlatform('openai')).not.toContain('gpt-7-sol')
+    expect(filterSupportedModelIds('gemini', ['gpt-6.1-sol'])).toEqual([])
+    expect(buildModelMappingObject('whitelist', ['gpt-6.1-sol'], [])).toEqual({ 'gpt-6.1-sol': 'gpt-6.1-sol' })
   })
 })

@@ -158,7 +158,7 @@ function openAlertEditor() {
     if (!draftAlert.value.thresholds) {
       draftAlert.value.thresholds = {
         sla_percent_min: 99.5,
-        ttft_p99_ms_max: 500,
+        ttft_p99_ms_max: 10_000,
         request_error_rate_percent_max: 5,
         upstream_error_rate_percent_max: 5
       }
@@ -357,7 +357,7 @@ onMounted(() => {
               min="0"
               step="100"
               class="input"
-              placeholder="500"
+              placeholder="10000"
             />
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t('admin.ops.runtime.ttftP99MaxMsHint') }}</p>
           </div>
