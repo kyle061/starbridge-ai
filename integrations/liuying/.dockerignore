@@ -1,0 +1,8 @@
+node_modules
+.env
+data
+.venv
+miniprogram
+tests
+scripts
+*.key

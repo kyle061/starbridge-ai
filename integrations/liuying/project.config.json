@@ -1,0 +1,20 @@
+{
+  "description": "留影：授权视频解析与保存",
+  "miniprogramRoot": "miniprogram/",
+  "projectname": "liuying",
+  "appid": "wx06427263aaf1143c",
+  "compileType": "miniprogram",
+  "libVersion": "3.7.8",
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "checkSiteMap": true,
+    "minifyWXML": true
+  },
+  "packOptions": {
+    "ignore": []
+  }
+}

@@ -1,0 +1,17 @@
+node_modules/
+.env
+.venv/
+data/
+*.key
+private.*
+__pycache__/
+*.pyc
+upload-result.json
+project.private.config.json
+!scripts/
+!scripts/*.mjs
+!scripts/*.cjs
+!scripts/*.sh
+!tests/
+!tests/*.test.mjs
+!tests/*_test.py

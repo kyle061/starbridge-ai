@@ -1,0 +1,23 @@
+{
+  "pages": ["pages/index/index", "pages/history/history", "pages/settings/settings"],
+  "window": {
+    "navigationBarTitleText": "留影",
+    "navigationBarBackgroundColor": "#f5f7f5",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f5f7f5"
+  },
+  "tabBar": {
+    "color": "#828983",
+    "selectedColor": "#167b55",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/index/index", "text": "解析", "iconPath": "assets/link.png", "selectedIconPath": "assets/link-active.png" },
+      { "pagePath": "pages/history/history", "text": "记录", "iconPath": "assets/history.png", "selectedIconPath": "assets/history-active.png" },
+      { "pagePath": "pages/settings/settings", "text": "设置", "iconPath": "assets/settings.png", "selectedIconPath": "assets/settings-active.png" }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "__usePrivacyCheck__": true
+}

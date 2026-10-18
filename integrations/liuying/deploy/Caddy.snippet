@@ -1,0 +1,11 @@
+# Add inside the existing HTTPS site, before its fallback proxy.
+redir /liuying /liuying/ 308
+handle_path /liuying/* {
+    reverse_proxy liuying:8787
+}
+# The existing site's gateway reverse_proxy belongs in a final handle block:
+# handle {
+#     reverse_proxy gateway:8080 {
+#         flush_interval -1
+#     }
+# }

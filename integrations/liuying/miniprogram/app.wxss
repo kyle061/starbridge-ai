@@ -1,0 +1,23 @@
+page { background: #f5f7f5; color: #202b25; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 28rpx; letter-spacing: 0; }
+view, button, textarea, input { box-sizing: border-box; }
+button { margin: 0; padding: 0; font-size: 28rpx; border-radius: 8rpx; background: transparent; line-height: 1.5; }
+button::after { border: 0; }
+button[disabled] { opacity: .45; }
+.page { padding: 36rpx 36rpx 64rpx; }
+.row { display: flex; align-items: center; gap: 16rpx; }
+.between { justify-content: space-between; }
+.muted { color: #7a857e; }
+.tiny { font-size: 22rpx; }
+.h1 { font-size: 48rpx; font-weight: 650; line-height: 1.3; }
+.h2 { font-size: 32rpx; font-weight: 600; }
+.icon { width: 36rpx; height: 36rpx; flex-shrink: 0; }
+.icon-button { width: 68rpx; height: 68rpx; display: flex; align-items: center; justify-content: center; }
+.primary { background: #197b56; color: #fff; min-height: 92rpx; padding: 22rpx 28rpx; display: flex; align-items: center; justify-content: center; gap: 16rpx; font-weight: 600; }
+.secondary { border: 1rpx solid #d9e1db; background: #fff; min-height: 84rpx; padding: 20rpx 24rpx; display: flex; align-items: center; justify-content: center; gap: 14rpx; }
+.label { font-size: 26rpx; color: #626e66; margin: 36rpx 0 20rpx; }
+.badge { display: inline-block; padding: 7rpx 12rpx; background: #e5f1e9; color: #197b56; font-size: 22rpx; border-radius: 6rpx; }
+.error { color: #a53d35; background: #fff0ec; padding: 24rpx; margin-top: 24rpx; border-radius: 8rpx; line-height: 1.6; }
+.empty { padding: 110rpx 0; text-align: center; color: #7a857e; line-height: 2; }
+.privacy-mask { position: fixed; z-index: 20; inset: 0; background: rgba(15,30,22,.5); display: flex; align-items: center; padding: 40rpx; }
+.privacy { width: 100%; border-radius: 12rpx; background: #fff; padding: 36rpx; line-height: 1.8; }
+.privacy button { margin-top: 24rpx; }

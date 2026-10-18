@@ -1,0 +1,1 @@
+.record { border-bottom: 1rpx solid #dce3dd; padding: 28rpx 0; display: flex; align-items: center; gap: 18rpx; }.record-main { flex: 1; min-width: 0; }.title { font-size: 30rpx; font-weight: 500; margin: 20rpx 0 14rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.empty-icon { width: 64rpx; height: 64rpx; margin-bottom: 20rpx; }
