@@ -225,6 +225,9 @@ func projectAccountModelsBody(body []byte, account *Account, group *Group, codex
 			continue
 		}
 		target, matched := account.ResolveMappedModel(id)
+		if !matched && accountAllowsDiscoveredGPTRelease(account, id, account.GetModelMapping()) {
+			target, matched = id, true
+		}
 		raw, available := byID[strings.TrimSpace(target)]
 		if !matched || !available {
 			continue

@@ -16,6 +16,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/domain"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/geminicli"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/modelcatalog"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai_compat"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
 )
@@ -839,6 +840,24 @@ func mappingSupportsRequestedModel(mapping map[string]string, requestedModel str
 	return false
 }
 
+func accountHasIdentityGPTModel(account *Account, mapping map[string]string) bool {
+	if account == nil || account.Platform != PlatformOpenAI {
+		return false
+	}
+	for source, target := range mapping {
+		source = strings.TrimSpace(source)
+		if !strings.EqualFold(source, strings.TrimSpace(target)) || !modelcatalog.IsDiscoverableGPTRelease(source) {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+func accountAllowsDiscoveredGPTRelease(account *Account, requestedModel string, mapping map[string]string) bool {
+	return modelcatalog.IsDiscoverableGPTRelease(requestedModel) && accountHasIdentityGPTModel(account, mapping)
+}
+
 func resolveRequestedModelInMapping(mapping map[string]string, requestedModel string) (mappedModel string, matched bool) {
 	if requestedModel == "" {
 		return "", false
@@ -874,6 +893,9 @@ func (a *Account) IsModelSupported(requestedModel string) bool {
 		return true // 无映射 = 允许所有
 	}
 	if mappingSupportsRequestedModel(mapping, requestedModel) {
+		return true
+	}
+	if accountAllowsDiscoveredGPTRelease(a, requestedModel, mapping) {
 		return true
 	}
 	normalized := normalizeRequestedModelForLookup(a.Platform, requestedModel)

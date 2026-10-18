@@ -234,12 +234,13 @@ func TestCodexModelsLiveDiscoveryHonorsAccountMappings(t *testing.T) {
 	}{
 		{name: "account wildcard without group allowlist"},
 		{name: "account and group wildcards", allowlist: service.GroupModelAllowlist{Enabled: true, Models: []string{"gpt-*", "other-coding"}}},
+		{name: "account and group selected GPT family", allowlist: service.GroupModelAllowlist{Enabled: true, Models: []string{"gpt-6-sol", "other-coding"}}},
 		{name: "pinned account", pinned: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			firstAccount := newPinnedCodexAccount(1, service.StatusActive, true, false)
 			firstAccount.Credentials["model_mapping"] = map[string]any{
-				"gpt-6-sol": "gpt-6-sol", "gpt-6.1-*": "gpt-6.1-*",
+				"gpt-6-sol": "gpt-6-sol",
 			}
 			otherAccount := newPinnedCodexAccount(2, service.StatusActive, true, false)
 			otherAccount.Credentials["model_mapping"] = map[string]any{"other-coding": "provider-code"}
@@ -256,7 +257,7 @@ func TestCodexModelsLiveDiscoveryHonorsAccountMappings(t *testing.T) {
 
 			first := performCodexModelsRequestForGroup(t, handler, group, "")
 			require.Equal(t, http.StatusOK, first.Code, first.Body.String())
-			want := []string{"gpt-6.1-sol", "gpt-6-sol"}
+			want := []string{"gpt-6.1-sol", "gpt-6-sol", "gpt-6-luna"}
 			if !tc.pinned {
 				want = append(want, "other-coding")
 			}

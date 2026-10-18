@@ -1535,7 +1535,7 @@ func TestWildcardGroupUsesLiveCodexManifest(t *testing.T) {
 func TestAutoAllowedOpenAIModelRequiresKnownPricing(t *testing.T) {
 	svc := &OpenAIGatewayService{billingService: NewBillingService(&config.Config{}, nil)}
 	apiKey := &APIKey{Group: &Group{Platform: PlatformOpenAI, ModelAllowlist: GroupModelAllowlist{
-		Enabled: true, Models: []string{"gpt-6-astra", "gpt-*"},
+		Enabled: true, Models: []string{"gpt-6-astra"},
 	}}}
 	require.True(t, svc.CanBillAutoAllowedModel(context.Background(), apiKey, "gpt-6-astra"))
 	require.True(t, svc.CanBillAutoAllowedModel(context.Background(), apiKey, "gpt-6-sol"))

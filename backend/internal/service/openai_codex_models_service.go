@@ -132,6 +132,9 @@ func (s *OpenAIGatewayService) BuildGroupConfiguredCodexModelsManifest(
 	// A local catalog contains only concrete configured IDs. A wildcard
 	// allowlist must use the upstream manifest so newly released models appear.
 	if group.ModelAllowlistEnabled() {
+		if group.ModelAllowlist.allowsFutureGPTReleases() {
+			return nil, false, nil
+		}
 		for _, modelID := range group.ModelAllowlist.Models {
 			if strings.HasSuffix(strings.TrimSpace(modelID), "*") {
 				return nil, false, nil
@@ -147,7 +150,11 @@ func (s *OpenAIGatewayService) BuildGroupConfiguredCodexModelsManifest(
 	// account wildcards without that restriction need upstream discovery.
 	if !group.ModelAllowlistEnabled() {
 		for i := range visible {
-			for modelID, target := range visible[i].GetModelMapping() {
+			mapping := visible[i].GetModelMapping()
+			if accountHasIdentityGPTModel(&visible[i], mapping) {
+				return nil, false, nil
+			}
+			for modelID, target := range mapping {
 				if strings.HasSuffix(modelID, "*") && (target == modelID || target == "*") {
 					return nil, false, nil
 				}

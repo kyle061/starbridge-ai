@@ -24,6 +24,27 @@ func TestGrokAccountModelMappingCacheInvalidatesWithRuntimeSettings(t *testing.T
 	requireMappedModel(t, account, "claude-sonnet-4-5", "grok-build-0.1")
 }
 
+func TestAccountAllowsFutureGPTReleaseAfterExplicitGPTSelection(t *testing.T) {
+	account := &Account{Platform: PlatformOpenAI, Credentials: map[string]any{
+		"model_mapping": map[string]any{"gpt-6-sol": "gpt-6-sol"},
+	}}
+	for _, model := range []string{"gpt-6.1-sol", "gpt-7-codex", "gpt-10-sol"} {
+		if !account.IsModelSupported(model) {
+			t.Fatalf("future GPT release %q should be supported", model)
+		}
+	}
+	for _, model := range []string{"gpt-image-3", "gpt-5.4"} {
+		if account.IsModelSupported(model) {
+			t.Fatalf("model %q must not be admitted by future GPT text support", model)
+		}
+	}
+
+	account.Credentials["model_mapping"] = map[string]any{"gpt-6-sol": "gpt-6-astra"}
+	if account.IsModelSupported("gpt-7-codex") {
+		t.Fatal("a GPT mapping to another upstream model must not enable future releases")
+	}
+}
+
 func requireMappedModel(t *testing.T, account *Account, requested, expected string) {
 	t.Helper()
 	if actual := account.GetMappedModel(requested); actual != expected {

@@ -167,6 +167,24 @@ func TestGroupModelAllowlistAllowsByWildcardOnly(t *testing.T) {
 	}
 }
 
+func TestGroupModelAllowlistKeepsFutureGPTReleasesInFamily(t *testing.T) {
+	allowlist := GroupModelAllowlist{Enabled: true, Models: []string{"gpt-6-sol"}}
+	for _, model := range []string{"gpt-6.1-sol", "gpt-7-codex", "gpt-10-sol"} {
+		if !allowlist.Allows(model) || !allowlist.AllowsByWildcardOnly(model) {
+			t.Fatalf("future GPT release %q should be automatically allowed and price-guarded", model)
+		}
+	}
+	for _, model := range []string{"gpt-image-3", "gpt-5.4", "claude-opus-5"} {
+		if allowlist.Allows(model) {
+			t.Fatalf("unrelated model %q must remain outside automatic GPT release support", model)
+		}
+	}
+	got := allowlist.FilterForListing([]string{"gpt-7-codex", "gpt-image-3", "gpt-6-sol"})
+	if !strings.Contains(strings.Join(got, ","), "gpt-7-codex") || strings.Contains(strings.Join(got, ","), "gpt-image-3") {
+		t.Fatalf("unexpected future GPT listing: %#v", got)
+	}
+}
+
 func TestGroupModelAllowlistFilterForListing(t *testing.T) {
 	source := []string{"claude-opus-4.6", "claude-sonnet-4.5", "gpt-5.4", "gpt-5.5-codex", "gpt-5.5-mini", "grok-4.6"}
 

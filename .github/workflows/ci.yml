@@ -74,7 +74,7 @@ jobs:
         working-directory: backend
       - run: go test -tags unit ./internal/service -run '^Test(ComputeDashboardHealthScore|ComputeBusinessHealth|ComputeInfraHealth|OpsJobStale|PopulateJobStaleness|OpsDashboardConfiguredThreshold|OpenAITokenProvider_)' -count=1
         working-directory: backend
-      - run: go test -tags unit ./internal/pkg/modelcatalog ./internal/pkg/openai ./internal/service -run 'TestDiscoveredGPT|TestAccountWildcardUsesLive|TestGPT61Sol|TestAutoAllowedOpenAI|TestBillingServiceGPT6Sol|TestIsGPT6Model|TestVisibleOpenAI|TestWildcardGroupUsesLive' -count=1
+      - run: go test -tags unit ./internal/pkg/modelcatalog ./internal/pkg/openai ./internal/service -run 'TestDiscoveredGPT|TestAccountWildcardUsesLive|TestAccountAllowsFutureGPTRelease|TestGroupModelAllowlistKeepsFutureGPTReleases|TestGPT61Sol|TestAutoAllowedOpenAI|TestBillingServiceGPT6Sol|TestIsGPT6Model|TestVisibleOpenAI|TestWildcardGroupUsesLive' -count=1
         working-directory: backend
       - run: go test -tags unit ./internal/handler -run '^TestCodexModels' -count=1
         working-directory: backend
