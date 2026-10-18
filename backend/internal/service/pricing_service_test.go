@@ -103,6 +103,7 @@ func TestBillingServiceGPT6SolAndLunaOfficialFallbackPricing(t *testing.T) {
 		input, output, write float64
 		read                 float64
 	}{
+		{model: "gpt-6.1-sol", input: 2e-6, output: 10e-6, write: 2.5e-6, read: 0.1e-6},
 		{model: "gpt-6-sol", input: 2e-6, output: 10e-6, write: 2.5e-6, read: 0.2e-6},
 		{model: "gpt-6-luna", input: 0.1e-6, output: 0.5e-6, write: 0.125e-6, read: 0.01e-6},
 	} {

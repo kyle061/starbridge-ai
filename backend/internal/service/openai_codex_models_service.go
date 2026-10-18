@@ -143,6 +143,17 @@ func (s *OpenAIGatewayService) BuildGroupConfiguredCodexModelsManifest(
 	if err != nil {
 		return nil, false, fmt.Errorf("load group configured Codex models: %w", err)
 	}
+	// Exact group selections still have a complete local catalog. Identity
+	// account wildcards without that restriction need upstream discovery.
+	if !group.ModelAllowlistEnabled() {
+		for i := range visible {
+			for modelID, target := range visible[i].GetModelMapping() {
+				if strings.HasSuffix(modelID, "*") && (target == modelID || target == "*") {
+					return nil, false, nil
+				}
+			}
+		}
+	}
 	configuredModels := openAIConfiguredCodexModelIDsForGroup(visible, group)
 	if len(configuredModels) == 0 {
 		return nil, false, nil
@@ -2029,6 +2040,7 @@ func CodexModelsManifestETag(body []byte) string {
 var apiKeyCodexModelsWithoutResponsesLite = map[string]struct{}{
 	"gpt-6-astra":   {},
 	"gpt-6-sol":     {},
+	"gpt-6.1-sol":   {},
 	"gpt-6-luna":    {},
 	"gpt-5.6-sol":   {},
 	"gpt-5.6-terra": {},
