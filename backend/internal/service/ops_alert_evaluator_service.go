@@ -598,6 +598,20 @@ func (s *OpsAlertEvaluatorService) computeRuleMetric(
 	}
 
 	switch strings.TrimSpace(rule.MetricType) {
+	case "p95_latency_ms", "p99_latency_ms":
+		// These legacy rules describe total successful-request duration, not
+		// TTFT. Missing samples must not be interpreted as zero latency.
+		if overview.SuccessCount <= 0 {
+			return 0, false
+		}
+		latency := overview.Duration.P95
+		if strings.TrimSpace(rule.MetricType) == "p99_latency_ms" {
+			latency = overview.Duration.P99
+		}
+		if latency == nil || *latency < 0 {
+			return 0, false
+		}
+		return float64(*latency), true
 	case "success_rate":
 		if overview.RequestCountSLA <= 0 {
 			return 0, false

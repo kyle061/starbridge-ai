@@ -11,7 +11,7 @@ const openaiModels = [
   // GPT-5.6 系列
   'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna',
   // GPT-6 系列
-  'gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna',
+  'gpt-6-astra', 'gpt-6.1-sol', 'gpt-6-sol', 'gpt-6-luna',
   // 当前支持的 GPT Image 系列
   'gpt-image-2', 'gpt-image-2.5-flare', 'gpt-image-2.5-sunburst'
 ]
@@ -240,6 +240,7 @@ const openaiPresetMappings = [
   { label: 'GPT-5.6 Terra', from: 'gpt-5.6-terra', to: 'gpt-5.6-terra', color: 'bg-lime-100 text-lime-700 hover:bg-lime-200 dark:bg-lime-900/30 dark:text-lime-400' },
   { label: 'GPT-5.6 Luna', from: 'gpt-5.6-luna', to: 'gpt-5.6-luna', color: 'bg-sky-100 text-sky-700 hover:bg-sky-200 dark:bg-sky-900/30 dark:text-sky-400' },
   { label: 'GPT-6 Astra', from: 'gpt-6-astra', to: 'gpt-6-astra', color: 'bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-200 dark:bg-fuchsia-900/30 dark:text-fuchsia-400' },
+  { label: 'GPT-6.1 Sol', from: 'gpt-6.1-sol', to: 'gpt-6.1-sol', color: 'bg-violet-100 text-violet-700 hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-400' },
   { label: 'GPT-6 Sol', from: 'gpt-6-sol', to: 'gpt-6-sol', color: 'bg-violet-100 text-violet-700 hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-400' },
   { label: 'GPT-6 Luna', from: 'gpt-6-luna', to: 'gpt-6-luna', color: 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400' }
 ]
@@ -387,18 +388,27 @@ export function normalizeModelId(model: string): string {
   return trimmed.startsWith('models/') ? trimmed.slice('models/'.length) : trimmed
 }
 
+// Keep newly discovered GPT releases; this does not change saved allowlists.
+function isDiscoverableGPTRelease(model: string): boolean {
+  return model !== 'gpt-6' && /^gpt-(?:[6-9]|[1-9][0-9]+)(?:\.[0-9]+)?(?:-[a-z0-9]+)*$/.test(model)
+}
+
+function allowsDiscoveredGPT(platforms: string[], model: string): boolean {
+  return platforms.some(platform => ['openai', 'composite'].includes(platform)) && isDiscoverableGPTRelease(model)
+}
+
 export function filterSupportedModelIds(platform: string | string[], models: string[]): string[] {
   const platforms = Array.isArray(platform) ? platform : [platform]
   const supported = new Set(platforms.flatMap(getModelsByPlatform).map(normalizeModelId))
   return models
     .map(normalizeModelId)
-    .filter(model => supported.has(model))
+    .filter(model => supported.has(model) || allowsDiscoveredGPT(platforms, model))
 }
 
 export function filterSupportedModels<T extends { id: string }>(platform: string | string[], models: T[]): T[] {
   const platforms = Array.isArray(platform) ? platform : [platform]
   const supported = new Set(platforms.flatMap(getModelsByPlatform).map(normalizeModelId))
-  return models.filter(model => supported.has(normalizeModelId(model.id)))
+  return models.filter(model => supported.has(normalizeModelId(model.id)) || allowsDiscoveredGPT(platforms, normalizeModelId(model.id)))
 }
 
 export function filterSupportedModelMappings<T extends { from: string; to: string }>(

@@ -24,3 +24,13 @@ func TestVisibleOpenAIModelsHideRetiredAndPreviewIDs(t *testing.T) {
 	require.True(t, IsVisibleOpenAIModel("gpt-5.6-sol"))
 	require.True(t, IsVisibleOpenAIModel("gpt-6-astra"))
 }
+
+func TestDiscoveredGPTReleasesDoNotRequireStaticCatalogUpdate(t *testing.T) {
+	for _, model := range []string{"gpt-6.1-sol", "gpt-6.2-sol", "gpt-7-sol", "gpt-10-sol"} {
+		require.True(t, IsVisibleOpenAIModel(model), model)
+	}
+	for _, model := range []string{"gpt-6", "gpt-6.x-sol", "gpt-6.1/sol", "gpt-6.1-*", "gpt-4o", "codex-auto-review"} {
+		require.False(t, IsVisibleOpenAIModel(model), model)
+	}
+	require.NotContains(t, ModelsForPlatform("openai"), "gpt-7-sol", "discovery must not invent static models")
+}

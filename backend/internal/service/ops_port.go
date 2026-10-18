@@ -292,6 +292,8 @@ type OpsUpsertJobHeartbeatInput struct {
 
 type OpsJobHeartbeat struct {
 	JobName string `json:"job_name"`
+	// Stale is derived for dashboard responses, never persisted.
+	Stale *bool `json:"stale,omitempty"`
 
 	LastRunAt      *time.Time `json:"last_run_at"`
 	LastSuccessAt  *time.Time `json:"last_success_at"`

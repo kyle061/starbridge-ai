@@ -8,6 +8,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/domain"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/modelcatalog"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 )
 
@@ -122,6 +123,11 @@ func (a GroupModelAllowlist) Allows(model string) bool {
 			}
 		}
 	}
+	for _, candidate := range candidates {
+		if a.allowsDiscoveredGPTRelease(candidate) {
+			return true
+		}
+	}
 	return false
 }
 
@@ -149,7 +155,34 @@ func (a GroupModelAllowlist) AllowsByWildcardOnly(model string) bool {
 			}
 		}
 	}
-	return wildcardMatched
+	if wildcardMatched {
+		return true
+	}
+	for _, candidate := range candidates {
+		if a.allowsDiscoveredGPTRelease(candidate) {
+			return true
+		}
+	}
+	return false
+}
+
+func (a GroupModelAllowlist) allowsDiscoveredGPTRelease(model string) bool {
+	model = strings.TrimPrefix(strings.ToLower(strings.TrimSpace(model)), "models/")
+	if !modelcatalog.IsDiscoverableGPTRelease(model) || !a.allowsFutureGPTReleases() {
+		return false
+	}
+	return true
+}
+
+func (a GroupModelAllowlist) allowsFutureGPTReleases() bool {
+	for _, entry := range a.Models {
+		entry = strings.TrimSpace(entry)
+		if !modelcatalog.IsDiscoverableGPTRelease(entry) {
+			continue
+		}
+		return true
+	}
+	return false
 }
 
 // groupModelAllowlistCandidates 返回客户端模型名在白名单匹配中的候选形式（均已小写）。
@@ -227,6 +260,11 @@ func (a GroupModelAllowlist) FilterForListing(source []string) []string {
 		}
 		if allowlistSourcePatternAllowsModel(patterns, entry) {
 			add(entry)
+		}
+	}
+	for _, model := range patterns {
+		if a.allowsDiscoveredGPTRelease(model) {
+			add(model)
 		}
 	}
 	return filtered

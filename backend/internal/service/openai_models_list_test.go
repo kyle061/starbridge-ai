@@ -346,3 +346,34 @@ func TestOpenAIModelsCacheSeparatesRepresentationsForIdenticalRequests(t *testin
 	require.JSONEq(t, manifestBody, string(manifest.Body))
 	require.EqualValues(t, 2, calls.Load())
 }
+
+func TestDiscoveredGPTReleasePreservesMetadataAndAccountPolicy(t *testing.T) {
+	source := []byte(`{"models":[{"slug":"gpt-6.1-sol","context_window":1050000},{"slug":"gpt-6.2-sol","context_window":1200000},{"slug":"gpt-5.4"}]}`)
+	group := &Group{Platform: PlatformOpenAI}
+	for _, tc := range []struct {
+		name    string
+		mapping map[string]any
+		group   *Group
+		want    []string
+	}{
+		{"automatic family", map[string]any{"gpt-*": "gpt-*"}, nil, []string{"gpt-6.1-sol", "gpt-6.2-sol"}},
+		{"new release after explicit selection", map[string]any{"gpt-6.1-sol": "gpt-6.1-sol"}, nil, []string{"gpt-6.1-sol", "gpt-6.2-sol"}},
+		{"new release after selected GPT", map[string]any{"gpt-6-sol": "gpt-6-sol"}, &Group{Platform: PlatformOpenAI, ModelAllowlist: GroupModelAllowlist{Enabled: true, Models: []string{"gpt-6-sol"}}}, []string{"gpt-6.1-sol", "gpt-6.2-sol"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			account := &Account{Platform: PlatformOpenAI, Credentials: map[string]any{"model_mapping": tc.mapping}}
+			selectedGroup := group
+			if tc.group != nil {
+				selectedGroup = tc.group
+			}
+			body, err := projectAccountModelsBody(source, account, selectedGroup, true)
+			require.NoError(t, err)
+			require.Equal(t, tc.want, codexManifestModelSlugs(t, body))
+			require.Contains(t, string(body), `"context_window":1050000`)
+			standard, err := standardOpenAIModelsBody(body, true)
+			require.NoError(t, err)
+			require.Contains(t, string(standard), `"id":"gpt-6.1-sol"`)
+			require.NotContains(t, string(standard), "gpt-5.4")
+		})
+	}
+}

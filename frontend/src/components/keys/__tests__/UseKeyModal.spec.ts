@@ -41,7 +41,7 @@ describe('UseKeyModal', () => {
     wrapper.unmount()
   })
 
-  it('uses HTTP/SSE and GPT6 for the composite Codex provider in both auth modes', async () => {
+  it('enables WebSocket and GPT6 for the composite Codex provider in both auth modes', async () => {
     const wrapper = mount(UseKeyModal, {
       props: { show: true, apiKey: 'sk-relay-test', baseUrl: 'https://example.com/v1/', platform: 'composite' },
       global: { stubs: { BaseDialog: { template: '<div><slot /><slot name="footer" /></div>' }, Icon: true } }
@@ -51,15 +51,18 @@ describe('UseKeyModal', () => {
     expect(inlineConfig).toContain('model_provider = "starbridaeai"')
     expect(inlineConfig).toContain('model_reasoning_effort = "xhigh"')
     expect(inlineConfig).toContain('base_url = "https://example.com/v1"')
-    expect(inlineConfig).toContain('supports_websockets = false')
-    expect(inlineConfig).toContain('responses_websockets_v2 = false')
+    expect(inlineConfig).toContain('supports_websockets = true')
+    expect(inlineConfig).toContain('responses_websockets_v2 = true')
+    expect(inlineConfig).toContain('requires_openai_auth = true')
     expect(inlineConfig).toContain('experimental_bearer_token = "sk-relay-test"')
     expect(inlineConfig).not.toContain('deepseek-v4-pro')
     expect(wrapper.findAll('pre code')).toHaveLength(1)
     await wrapper.get('[data-testid="codex-auth-mode-env-key"]').trigger('click')
     const envConfig = wrapper.findAll('pre code')[1].text()
     expect(envConfig).toContain('env_key = "STARBRIDGE_API_KEY"')
-    expect(envConfig).toContain('supports_websockets = false')
+    expect(envConfig).toContain('supports_websockets = true')
+    expect(envConfig).toContain('responses_websockets_v2 = true')
+    expect(envConfig).toContain('requires_openai_auth = true')
     expect(envConfig).not.toContain('experimental_bearer_token')
     await wrapper.setProps({ platform: 'openai' })
     expect(wrapper.get('pre code').text()).toContain('supports_websockets = true')

@@ -266,7 +266,7 @@ export default {
         description: 'Configure supported clients through the current Composite routing group.',
         codexDescription: 'Configure Codex with this API key and a model supported by the Composite group.',
         codexConfigTomlHint: 'The API key is included. Save as config.toml and restart Codex. Set model to a model supported by this group.',
-        codexNote: 'config.toml contains the plaintext API key; do not commit it. Requests are routed using the configured model.',
+        codexNote: 'The default GPT/Codex models use WebSocket. For HTTP-only models such as DeepSeek, set both supports_websockets and responses_websockets_v2 to false. config.toml contains the plaintext API key; do not commit it.',
       },
       routedCodex: {
         description: 'Configure Codex with this API key and a model supported by the current routed group.',

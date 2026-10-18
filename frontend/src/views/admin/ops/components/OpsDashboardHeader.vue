@@ -237,6 +237,7 @@ function getTTFTThresholdLevel(ttftMs: number | null): ThresholdLevel {
   if (ttftMs == null) return 'normal'
   const threshold = props.thresholds?.ttft_p99_ms_max
   if (threshold == null) return 'normal'
+  if (threshold <= 0) return ttftMs > 0 ? 'critical' : 'normal'
   if (ttftMs >= threshold) return 'critical'
   if (ttftMs >= threshold * 0.8) return 'warning'
   return 'normal'
@@ -432,7 +433,7 @@ const isSystemIdle = computed(() => {
   // already zero.  Using QPS here made the diagnosis panel report "idle" and
   // hide real errors from that window.  RequestCountTotal is the authoritative
   // sample count for all rate metrics.
-  return (ov.request_count_total ?? 0) <= 0
+  return (ov.request_count_total ?? 0) <= 0 && (ov.health_score ?? 100) >= 100
 })
 
 const healthScoreValue = computed<number | null>(() => {
@@ -617,8 +618,20 @@ const diagnosisReport = computed<DiagnosisItem[]>(() => {
     })
   }
 
-  // Health score diagnostics (lowest priority)
-  if (healthScoreValue.value != null) {
+  const unhealthyJobs = (ov.job_heartbeats ?? []).filter(hb => hb && (
+    hb.stale || (hb.last_error_at && (!hb.last_success_at || hb.last_error_at > hb.last_success_at))
+  )).length
+  if (unhealthyJobs > 0) {
+    report.push({
+      type: 'warning',
+      message: t('admin.ops.diagnosis.jobsUnhealthy', { count: unhealthyJobs }),
+      impact: t('admin.ops.diagnosis.jobsUnhealthyImpact'),
+      action: t('admin.ops.diagnosis.jobsUnhealthyAction')
+    })
+  }
+
+  // Summarize only when no specific cause has already been reported.
+  if (report.length === 0 && healthScoreValue.value != null) {
     if (healthScoreValue.value < 60) {
       report.push({
         type: 'critical',
@@ -822,7 +835,7 @@ const jobsStatus = computed<'ok' | 'warn' | 'unknown'>(() => {
   if (!list.length) return 'unknown'
   for (const hb of list) {
     if (!hb) continue
-    if (hb.last_error_at && (!hb.last_success_at || hb.last_error_at > hb.last_success_at)) return 'warn'
+    if (hb.stale || (hb.last_error_at && (!hb.last_success_at || hb.last_error_at > hb.last_success_at))) return 'warn'
   }
   return 'ok'
 })
@@ -831,7 +844,7 @@ const jobsWarnCount = computed(() => {
   let warn = 0
   for (const hb of jobHeartbeats.value) {
     if (!hb) continue
-    if (hb.last_error_at && (!hb.last_success_at || hb.last_error_at > hb.last_success_at)) warn++
+    if (hb.stale || (hb.last_error_at && (!hb.last_success_at || hb.last_error_at > hb.last_success_at))) warn++
   }
   return warn
 })
@@ -1360,6 +1373,9 @@ function handleToolbarRefresh() {
             </div>
             <span class="text-xs font-bold text-gray-400">ms (P99)</span>
           </div>
+          <p v-if="ttftP99Ms != null && (overview?.success_count ?? 0) < 20" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            {{ t('admin.ops.ttftLowSampleHint', { count: overview?.success_count ?? 0 }) }}
+          </p>
           <div class="mt-3 grid grid-cols-1 gap-x-3 gap-y-1 text-xs 2xl:grid-cols-2">
             <div class="flex items-baseline gap-1 whitespace-nowrap">
               <span class="text-gray-500">P95:</span>
@@ -1584,6 +1600,7 @@ function handleToolbarRefresh() {
             </div>
           </div>
 
+          <p v-if="hb.stale" class="mt-2 text-xs text-amber-600 dark:text-amber-400">{{ t('admin.ops.jobOverdue') }}</p>
           <div
             v-if="hb.last_error"
             class="mt-3 rounded-lg bg-rose-50 p-2 text-xs text-rose-700 dark:bg-rose-900/20 dark:text-rose-300"

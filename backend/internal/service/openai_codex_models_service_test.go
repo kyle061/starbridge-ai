@@ -1535,10 +1535,11 @@ func TestWildcardGroupUsesLiveCodexManifest(t *testing.T) {
 func TestAutoAllowedOpenAIModelRequiresKnownPricing(t *testing.T) {
 	svc := &OpenAIGatewayService{billingService: NewBillingService(&config.Config{}, nil)}
 	apiKey := &APIKey{Group: &Group{Platform: PlatformOpenAI, ModelAllowlist: GroupModelAllowlist{
-		Enabled: true, Models: []string{"gpt-6-astra", "gpt-*"},
+		Enabled: true, Models: []string{"gpt-6-astra"},
 	}}}
 	require.True(t, svc.CanBillAutoAllowedModel(context.Background(), apiKey, "gpt-6-astra"))
 	require.True(t, svc.CanBillAutoAllowedModel(context.Background(), apiKey, "gpt-6-sol"))
+	require.True(t, svc.CanBillAutoAllowedModel(context.Background(), apiKey, "gpt-6.1-sol"))
 	require.True(t, svc.CanBillAutoAllowedModel(context.Background(), apiKey, "gpt-6-luna"))
 	require.False(t, svc.CanBillAutoAllowedModel(context.Background(), apiKey, "gpt-7-future"))
 	require.False(t, svc.CanBillAutoAllowedModel(context.Background(), apiKey, "models/gpt-7-future"))
@@ -3757,4 +3758,35 @@ func TestFetchCodexModelsManifestOAuthSharedAcrossGroupsWithIndependentFiltering
 	require.Equal(t, []string{"model-a"}, got[91])
 	require.Equal(t, []string{"model-b"}, got[92])
 	require.EqualValues(t, 1, calls.Load(), "同一账号两个分组同时请求时只发一次上游请求")
+}
+
+func TestAccountWildcardUsesLiveCodexManifestWithoutGroupAllowlist(t *testing.T) {
+	const groupID int64 = 79
+	svc := &OpenAIGatewayService{accountRepo: codexModelsVisibilityAccountRepo{
+		byGroup: map[int64][]Account{groupID: {{Platform: PlatformOpenAI, Credentials: map[string]any{
+			"model_mapping": map[string]any{"gpt-6-sol": "gpt-6-sol", "gpt-*": "gpt-*"},
+		}}}},
+	}}
+	manifest, configured, err := svc.BuildGroupConfiguredCodexModelsManifest(context.Background(), &Group{ID: groupID, Platform: PlatformOpenAI}, "")
+	require.NoError(t, err)
+	require.False(t, configured)
+	require.Nil(t, manifest)
+}
+
+func TestGPT61SolCapabilitiesAndExactForwardModel(t *testing.T) {
+	const model = "gpt-6.1-sol"
+	descriptor := newConfiguredCodexModelDescriptor(model)
+	require.Equal(t, int64(1_050_000), descriptor.ContextWindow)
+	require.Equal(t, []string{"low", "medium", "high", "xhigh", "max"}, effortsFromConfiguredCodexLevels(descriptor.SupportedReasoningLevels))
+	require.True(t, configuredCodexSupportsPriorityServiceTier(model))
+	require.True(t, isOpenAICodexImageInputModel(model))
+	account := &Account{Platform: PlatformOpenAI, Type: AccountTypeOAuth, Credentials: map[string]any{
+		"model_mapping": map[string]any{"gpt-*": "gpt-*"},
+	}}
+	require.True(t, account.IsModelSupported(model))
+	require.Equal(t, model, resolveOpenAIForwardModel(account, model, ""))
+	require.Equal(t, model, normalizeOpenAIModelForUpstream(account, model))
+	body, err := adjustAPIKeyCodexModelsManifest([]byte(`{"models":[{"slug":"gpt-6.1-sol","use_responses_lite":true}]}`), nil)
+	require.NoError(t, err)
+	require.Contains(t, string(body), `"use_responses_lite":false`)
 }

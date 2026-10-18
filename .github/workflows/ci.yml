@@ -42,6 +42,8 @@ jobs:
           src/components/keys/__tests__/UseKeyModal.spec.ts
           src/utils/__tests__/codexConnectionConfig.spec.ts
           src/utils/__tests__/ccswitchImport.spec.ts
+          src/composables/__tests__/useModelWhitelist.spec.ts
+          src/components/account/__tests__/ModelWhitelistSelector.spec.ts
           src/components/modelPlaza/__tests__/PlazaModelPricingTable.spec.ts
           src/components/admin/usage/__tests__/UsageStatsCards.spec.ts
           src/views/user/__tests__/KeysView.spec.ts
@@ -49,6 +51,8 @@ jobs:
           src/views/__tests__/KeyUsageView.spec.ts
           src/views/user/__tests__/PaymentView.spec.ts
           src/components/payment/__tests__/SubscriptionPlanCard.spec.ts
+          src/views/admin/ops/components/__tests__/OpsDashboardHeader.health.spec.ts
+          src/views/admin/ops/components/__tests__/OpsAlertRulesCard.latency.spec.ts
           src/views/admin/orders/__tests__/PlanModelsDialog.spec.ts
           src/views/admin/orders/__tests__/PlanEditDialog.spec.ts
           src/views/admin/orders/__tests__/AdminPaymentPlansView.spec.ts
@@ -66,6 +70,14 @@ jobs:
       - run: python3 -m unittest discover -s integrations/codex/tests -v
       - uses: actions/setup-go@v5
         with: { go-version-file: backend/go.mod, cache: true, cache-dependency-path: backend/go.sum }
+      - run: go test -tags unit ./internal/service ./internal/handler/admin -run '^TestOpsLatencyAlert' -count=1
+        working-directory: backend
+      - run: go test -tags unit ./internal/service -run '^Test(ComputeDashboardHealthScore|ComputeBusinessHealth|ComputeInfraHealth|OpsJobStale|PopulateJobStaleness|OpsDashboardConfiguredThreshold|OpenAITokenProvider_)' -count=1
+        working-directory: backend
+      - run: go test -tags unit ./internal/pkg/modelcatalog ./internal/pkg/openai ./internal/service -run 'TestDiscoveredGPT|TestAccountWildcardUsesLive|TestAccountAllowsFutureGPTRelease|TestGroupModelAllowlistKeepsFutureGPTReleases|TestGPT61Sol|TestAutoAllowedOpenAI|TestBillingServiceGPT6Sol|TestIsGPT6Model|TestVisibleOpenAI|TestWildcardGroupUsesLive' -count=1
+        working-directory: backend
+      - run: go test -tags unit ./internal/handler -run '^TestCodexModels' -count=1
+        working-directory: backend
       - run: go test -tags unit ./internal/service ./internal/handler/admin ./internal/server/middleware -run 'TestRevealSecret|TestSecretReveal'
         working-directory: backend
       - run: >-

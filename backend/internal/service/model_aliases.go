@@ -1,6 +1,11 @@
 package service
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
+
+var gpt6Family = regexp.MustCompile(`^gpt-6(?:\.[0-9]+)?(?:-|$)`)
 
 // IsGPT6Model matches the public GPT6 family, including its reasoning suffixes.
 // It intentionally does not match arbitrary models containing "gpt-6".
@@ -9,5 +14,5 @@ func IsGPT6Model(model string) bool {
 	if i := strings.LastIndex(model, "/"); i >= 0 {
 		model = model[i+1:]
 	}
-	return model == "gpt-6" || strings.HasPrefix(model, "gpt-6-")
+	return gpt6Family.MatchString(model)
 }

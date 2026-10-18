@@ -132,6 +132,9 @@ func (s *OpenAIGatewayService) BuildGroupConfiguredCodexModelsManifest(
 	// A local catalog contains only concrete configured IDs. A wildcard
 	// allowlist must use the upstream manifest so newly released models appear.
 	if group.ModelAllowlistEnabled() {
+		if group.ModelAllowlist.allowsFutureGPTReleases() {
+			return nil, false, nil
+		}
 		for _, modelID := range group.ModelAllowlist.Models {
 			if strings.HasSuffix(strings.TrimSpace(modelID), "*") {
 				return nil, false, nil
@@ -142,6 +145,21 @@ func (s *OpenAIGatewayService) BuildGroupConfiguredCodexModelsManifest(
 	visible, catalog, err := loadCodexGroupCatalogAccounts(ctx, s.accountRepo, group.ID)
 	if err != nil {
 		return nil, false, fmt.Errorf("load group configured Codex models: %w", err)
+	}
+	// Exact group selections still have a complete local catalog. Identity
+	// account wildcards without that restriction need upstream discovery.
+	if !group.ModelAllowlistEnabled() {
+		for i := range visible {
+			mapping := visible[i].GetModelMapping()
+			if accountHasIdentityGPTModel(&visible[i], mapping) {
+				return nil, false, nil
+			}
+			for modelID, target := range mapping {
+				if strings.HasSuffix(modelID, "*") && (target == modelID || target == "*") {
+					return nil, false, nil
+				}
+			}
+		}
 	}
 	configuredModels := openAIConfiguredCodexModelIDsForGroup(visible, group)
 	if len(configuredModels) == 0 {
@@ -2029,6 +2047,7 @@ func CodexModelsManifestETag(body []byte) string {
 var apiKeyCodexModelsWithoutResponsesLite = map[string]struct{}{
 	"gpt-6-astra":   {},
 	"gpt-6-sol":     {},
+	"gpt-6.1-sol":   {},
 	"gpt-6-luna":    {},
 	"gpt-5.6-sol":   {},
 	"gpt-5.6-terra": {},
