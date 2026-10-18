@@ -2,6 +2,9 @@ import { readFile, readdir, access } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 const root = process.cwd(); let files = 0;
+for (const file of ['project.config.json', 'miniprogram/config.js']) {
+  try { await access(file); } catch { throw new Error('Run npm run configure to create ignored local client configuration'); }
+}
 async function walk(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     if (['node_modules', 'data', '.venv', '__pycache__'].includes(entry.name)) continue;

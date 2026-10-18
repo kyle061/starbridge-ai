@@ -18,7 +18,7 @@ class NetworkGuardTests(unittest.TestCase):
 
     def test_identifies_douyin_image_posts(self):
         with self.assertRaises(ValueError) as error:
-            resolver.canonical_douyin("https://www.douyin.com/note/7681836355521309147")
+            resolver.canonical_douyin("https://www.douyin.com/note/123456")
         self.assertEqual(resolver.classify_error(str(error.exception))[0], "NOT_VIDEO")
 
     def test_blocks_private_loopback_linklocal_and_mapped_ipv4(self):
