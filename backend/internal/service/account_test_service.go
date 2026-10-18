@@ -210,7 +210,7 @@ func (s *AccountTestService) FetchOpenAIAccountModels(ctx context.Context, accou
 	}
 	visible := payload.Data[:0]
 	for _, model := range payload.Data {
-		if modelcatalog.IsVisibleOpenAIModel(model.ID) {
+		if modelcatalog.IsVisibleOpenAIModel(model.ID) || (account != nil && account.HasUpstreamModel(model.ID)) {
 			visible = append(visible, model)
 		}
 	}

@@ -273,6 +273,21 @@ func ProvideAccountTestService(
 	return service
 }
 
+func ProvideUpstreamModelCatalogSyncService(
+	accountRepo AccountRepository,
+	accountTestService *AccountTestService,
+	gatewayService *GatewayService,
+) *UpstreamModelCatalogSyncService {
+	svc := NewUpstreamModelCatalogSyncService(
+		accountRepo,
+		accountTestService,
+		gatewayService,
+		upstreamModelCatalogSyncInterval,
+	)
+	svc.Start()
+	return svc
+}
+
 func ProvideGrokQuotaService(
 	accountRepo AccountRepository,
 	proxyRepo ProxyRepository,
@@ -881,6 +896,7 @@ var ProviderSet = wire.NewSet(
 	ProvideRateLimitService,
 	ProvideAccountUsageService,
 	ProvideAccountTestService,
+	ProvideUpstreamModelCatalogSyncService,
 	ProvideUpstreamBillingProbeService,
 	ProvideOllamaCloudUsageService,
 	ProvideSettingService,

@@ -208,6 +208,24 @@ func TestProjectAccountModelsPassthroughIgnoresStaleMappings(t *testing.T) {
 	require.JSONEq(t, string(body), string(projected))
 }
 
+func TestVerifiedUpstreamModelBypassesStaticOpenAIVisibilityFilter(t *testing.T) {
+	account := newCodexModelsAPIKeyTestAccount("https://models.example/v1")
+	account.SetUpstreamModelCatalogSnapshot(UpstreamModelCatalogSnapshot{
+		Source:   "upstream",
+		SyncedAt: time.Now().UTC().Format(time.RFC3339),
+		Models:   []string{"o5-preview"},
+	})
+	body := []byte(`{"object":"list","data":[{"id":"o5-preview"}]}`)
+
+	static, err := standardOpenAIModelsBody(body, false)
+	require.NoError(t, err)
+	require.NotContains(t, string(static), `"id":"o5-preview"`)
+
+	accountSpecific, err := standardOpenAIModelsBodyForAccount(body, false, account)
+	require.NoError(t, err)
+	require.Contains(t, string(accountSpecific), `"id":"o5-preview"`)
+}
+
 func TestFetchOpenAIModelsListEmptyAndMalformedResponses(t *testing.T) {
 	for _, body := range []string{`{"data":[]}`, `{"data":null}`, `{}`, `{"data":{}}`, `{"data":[{}]}`, `{"data":[null]}`} {
 		t.Run(body, func(t *testing.T) {

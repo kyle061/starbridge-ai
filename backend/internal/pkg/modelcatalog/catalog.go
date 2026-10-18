@@ -144,6 +144,7 @@ func IsSupported(platform, model string) bool {
 // this deployment's static fallback is updated. This predicate neither invents
 // catalog entries nor grants account/group access or supplies a guessed price.
 var discoverableGPTRelease = regexp.MustCompile(`^gpt-(?:[6-9]|[1-9][0-9]+)(?:\.[0-9]+)?(?:-[a-z0-9]+)*$`)
+var discoverableGPTImageRelease = regexp.MustCompile(`^gpt-image-(?:[2-9]|[1-9][0-9]+)(?:\.[0-9]+)?(?:-[a-z0-9]+)*$`)
 
 func IsDiscoverableGPTRelease(model string) bool {
 	return model != "gpt-6" && discoverableGPTRelease.MatchString(model)
@@ -162,7 +163,7 @@ func IsVisibleOpenAIModel(model string) bool {
 			return true
 		}
 	}
-	if IsDiscoverableGPTRelease(model) {
+	if IsDiscoverableGPTRelease(model) || discoverableGPTImageRelease.MatchString(model) {
 		return true
 	}
 	model = strings.TrimPrefix(strings.ToLower(model), "models/")

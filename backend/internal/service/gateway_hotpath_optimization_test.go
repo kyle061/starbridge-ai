@@ -740,6 +740,37 @@ func TestGetAvailableModels_GlobalListPreservesMappedModelsWithOpenAIPassthrough
 	require.Equal(t, []string{"claude-mapped"}, svc.GetAvailableModels(context.Background(), &groupID, ""))
 }
 
+func TestGetAvailableModelsIncludesDiscoveredUpstreamModels(t *testing.T) {
+	groupID := int64(12)
+	account := Account{ID: 4, Platform: PlatformDeepseek}
+	account.SetUpstreamModelCatalogSnapshot(UpstreamModelCatalogSnapshot{
+		Source:   "upstream",
+		SyncedAt: time.Now().UTC().Format(time.RFC3339),
+		Models:   []string{"deepseek-v6", "deepseek-v5"},
+	})
+	repo := &modelsListAccountRepoStub{byGroup: map[int64][]Account{groupID: {account}}}
+	svc := &GatewayService{
+		accountRepo:        repo,
+		modelsListCache:    gocache.New(time.Minute, time.Minute),
+		modelsListCacheTTL: time.Minute,
+	}
+
+	require.Equal(t, []string{"deepseek-v5", "deepseek-v6"}, svc.GetAvailableModels(context.Background(), &groupID, PlatformDeepseek))
+}
+
+func TestResolveCompositeModelOwnershipIncludesDiscoveredUpstreamModels(t *testing.T) {
+	groupID := int64(13)
+	account := Account{ID: 9, Platform: PlatformDeepseek}
+	account.SetUpstreamModelCatalogSnapshot(UpstreamModelCatalogSnapshot{Models: []string{"deepseek-v6"}})
+	repo := &modelsListAccountRepoStub{byGroup: map[int64][]Account{groupID: {account}}}
+	svc := &GatewayService{accountRepo: repo, modelsListCache: gocache.New(time.Minute, time.Minute)}
+
+	ownership, err := svc.resolveCompositeModelOwnership(context.Background(), groupID, "deepseek-v6")
+	require.NoError(t, err)
+	require.True(t, ownership.Matched)
+	require.Equal(t, PlatformDeepseek, ownership.TargetPlatform)
+}
+
 func TestGatewayHotpathHelpers_CacheTTLAndStickyContext(t *testing.T) {
 	t.Run("resolve_user_group_rate_cache_ttl", func(t *testing.T) {
 		require.Equal(t, defaultUserGroupRateCacheTTL, resolveUserGroupRateCacheTTL(nil))

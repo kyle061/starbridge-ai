@@ -2790,6 +2790,10 @@ func (h *AccountHandler) GetAvailableModels(c *gin.Context) {
 				return
 			}
 		}
+		if snapshot := account.GetUpstreamModelCatalogSnapshot(); snapshot != nil {
+			response.Success(c, syncedAccountModelPickerEntries(account))
+			return
+		}
 		// OpenAI 自动透传会绕过常规模型改写，测试/模型列表也应回落到默认模型集。
 		if account.IsOpenAIPassthroughEnabled() {
 			response.Success(c, openai.SelectableModels())
@@ -2823,6 +2827,10 @@ func (h *AccountHandler) GetAvailableModels(c *gin.Context) {
 			}
 		}
 		response.Success(c, models)
+		return
+	}
+	if account.GetUpstreamModelCatalogSnapshot() != nil {
+		response.Success(c, syncedAccountModelPickerEntries(account))
 		return
 	}
 
@@ -2985,6 +2993,96 @@ func (h *AccountHandler) GetAvailableModels(c *gin.Context) {
 	}
 
 	response.Success(c, models)
+}
+
+func syncedAccountModelPickerEntries(account *service.Account) any {
+	if account == nil {
+		return []claude.Model{}
+	}
+	snapshot := account.GetUpstreamModelCatalogSnapshot()
+	if snapshot == nil {
+		return []claude.Model{}
+	}
+	modelIDs := append([]string(nil), snapshot.Models...)
+	for modelID := range account.GetModelMapping() {
+		modelIDs = append(modelIDs, modelID)
+	}
+	modelIDs = uniqueSortedNonWildcardModelIDs(modelIDs)
+
+	metadataDisplayName := func(modelID string) string {
+		if metadata, ok := account.GetUpstreamModelMetadata(modelID); ok && strings.TrimSpace(metadata.DisplayName) != "" {
+			return strings.TrimSpace(metadata.DisplayName)
+		}
+		return modelID
+	}
+	switch account.Platform {
+	case service.PlatformOpenAI:
+		defaults := make(map[string]openai.Model, len(openai.DefaultModels))
+		for _, model := range openai.DefaultModels {
+			defaults[model.ID] = model
+		}
+		models := make([]openai.Model, 0, len(modelIDs))
+		for _, modelID := range modelIDs {
+			if model, ok := defaults[modelID]; ok {
+				models = append(models, model)
+				continue
+			}
+			models = append(models, openai.Model{ID: modelID, Object: "model", OwnedBy: "openai", Type: "model", DisplayName: metadataDisplayName(modelID)})
+		}
+		return models
+	case service.PlatformGemini:
+		defaults := make(map[string]geminicli.Model, len(geminicli.DefaultModels))
+		for _, model := range geminicli.DefaultModels {
+			defaults[model.ID] = model
+		}
+		models := make([]geminicli.Model, 0, len(modelIDs))
+		for _, modelID := range modelIDs {
+			if model, ok := defaults[modelID]; ok {
+				models = append(models, model)
+				continue
+			}
+			models = append(models, geminicli.Model{ID: modelID, Type: "model", DisplayName: metadataDisplayName(modelID)})
+		}
+		return models
+	case service.PlatformGrok:
+		defaults := make(map[string]xai.Model, len(xai.DefaultModels()))
+		for _, model := range xai.DefaultModels() {
+			defaults[model.ID] = model
+		}
+		models := make([]xai.Model, 0, len(modelIDs))
+		for _, modelID := range modelIDs {
+			if model, ok := defaults[modelID]; ok {
+				models = append(models, model)
+				continue
+			}
+			models = append(models, xai.Model{ID: modelID, Object: "model", OwnedBy: "xai", DisplayName: metadataDisplayName(modelID)})
+		}
+		return models
+	default:
+		models := make([]claude.Model, 0, len(modelIDs))
+		for _, modelID := range modelIDs {
+			models = append(models, claude.Model{ID: modelID, Type: "model", DisplayName: metadataDisplayName(modelID), CreatedAt: "2024-01-01T00:00:00Z"})
+		}
+		return models
+	}
+}
+
+func uniqueSortedNonWildcardModelIDs(modelIDs []string) []string {
+	seen := make(map[string]struct{}, len(modelIDs))
+	unique := make([]string, 0, len(modelIDs))
+	for _, modelID := range modelIDs {
+		modelID = strings.TrimSpace(modelID)
+		if modelID == "" || strings.Contains(modelID, "*") {
+			continue
+		}
+		if _, ok := seen[modelID]; ok {
+			continue
+		}
+		seen[modelID] = struct{}{}
+		unique = append(unique, modelID)
+	}
+	sort.Strings(unique)
+	return unique
 }
 
 // SyncUpstreamModels handles syncing live supported models from an account's upstream.

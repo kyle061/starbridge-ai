@@ -488,6 +488,7 @@ func TestSyncUpstreamModelCatalogEnrichesOpenCodeIDOnlyListAndPersistsSnapshot(t
 	require.Equal(t, int64(1_000_000), metadata.ContextWindow)
 	require.Equal(t, int64(131_072), metadata.MaxOutputTokens)
 	require.Equal(t, int64(91), repo.accountID)
+	require.True(t, account.HasUpstreamModel("x-preview-f-free"))
 
 	rawSnapshot, ok := repo.updates[UpstreamModelMetadataExtraKey]
 	require.True(t, ok)
@@ -689,6 +690,11 @@ func TestSyncUpstreamModelCatalogReplacesSnapshotWhenUpstreamModelsChange(t *tes
 	require.NoError(t, json.Unmarshal(encoded, &snapshot))
 	require.NotContains(t, snapshot.Models, "old-model")
 	require.Contains(t, snapshot.Models, "new-model")
+	catalogEncoded, err := json.Marshal(repo.updates[UpstreamModelCatalogExtraKey])
+	require.NoError(t, err)
+	var catalogSnapshot UpstreamModelCatalogSnapshot
+	require.NoError(t, json.Unmarshal(catalogEncoded, &catalogSnapshot))
+	require.Equal(t, []string{"kept-model", "new-model"}, catalogSnapshot.Models)
 }
 
 // Scenario: 上游明确声明无推理能力时保存 false。
@@ -769,7 +775,8 @@ func TestSyncUpstreamModelCatalogDoesNotOverwriteSnapshotWhenRegistryFails(t *te
 		Code:    UpstreamModelMetadataIncompleteCode,
 		Message: "Model IDs were synced, but capability metadata is incomplete.",
 	}}, catalog.Warnings)
-	require.Nil(t, repo.updates, "a failed metadata enrichment must not erase a previously saved snapshot")
+	require.NotContains(t, repo.updates, UpstreamModelMetadataExtraKey, "a failed metadata enrichment must not erase a previously saved capability snapshot")
+	require.Contains(t, repo.updates, UpstreamModelCatalogExtraKey, "the valid live ID list is persisted independently from capability metadata")
 }
 
 func TestSyncUpstreamModelCatalogDoesNotPersistPartialMetadataWhenRegistryFails(t *testing.T) {
@@ -796,7 +803,8 @@ func TestSyncUpstreamModelCatalogDoesNotPersistPartialMetadataWhenRegistryFails(
 	require.Equal(t, []string{"partially-described-model"}, catalog.Models)
 	require.Equal(t, "Partial Model", catalog.Metadata["partially-described-model"].DisplayName)
 	require.Equal(t, UpstreamModelMetadataIncompleteCode, catalog.Warnings[0].Code)
-	require.Nil(t, repo.updates, "partial metadata must not replace a more complete persisted snapshot")
+	require.NotContains(t, repo.updates, UpstreamModelMetadataExtraKey, "partial metadata must not replace a more complete persisted snapshot")
+	require.Contains(t, repo.updates, UpstreamModelCatalogExtraKey, "the valid live ID list is persisted independently from capability metadata")
 }
 
 // Scenario: 图片专用模型缺少 context 时，不阻止 agent 模型能力落库，也不误报整批失败。

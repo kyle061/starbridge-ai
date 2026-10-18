@@ -23,6 +23,7 @@ const (
 	modelsDevRegistryURL                      = "https://models.dev/api.json"
 	modelsDevRegistryTTL                      = 6 * time.Hour
 	UpstreamModelMetadataExtraKey             = "upstream_model_metadata"
+	UpstreamModelCatalogExtraKey              = "upstream_model_catalog"
 	UpstreamModelMetadataIncompleteCode       = "upstream_model_metadata_incomplete"
 	UpstreamModelMetadataPartialCode          = "upstream_model_metadata_partial"
 )
@@ -45,6 +46,12 @@ type UpstreamModelMetadataSnapshot struct {
 	Source   string                           `json:"source"`
 	SyncedAt string                           `json:"synced_at"`
 	Models   map[string]UpstreamModelMetadata `json:"models"`
+}
+
+type UpstreamModelCatalogSnapshot struct {
+	Source   string   `json:"source"`
+	SyncedAt string   `json:"synced_at"`
+	Models   []string `json:"models"`
 }
 
 type UpstreamModelCatalog struct {
@@ -126,6 +133,57 @@ func (a *Account) GetUpstreamModelMetadata(modelID string) (UpstreamModelMetadat
 	}
 	metadata, ok := snapshot.Models[strings.TrimSpace(modelID)]
 	return metadata, ok
+}
+
+func (a *Account) SetUpstreamModelCatalogSnapshot(snapshot UpstreamModelCatalogSnapshot) {
+	if a == nil {
+		return
+	}
+	if a.Extra == nil {
+		a.Extra = make(map[string]any)
+	}
+	snapshot.Models = append([]string(nil), snapshot.Models...)
+	a.Extra[UpstreamModelCatalogExtraKey] = snapshot
+}
+
+func (a *Account) GetUpstreamModelCatalogSnapshot() *UpstreamModelCatalogSnapshot {
+	if a == nil || a.Extra == nil {
+		return nil
+	}
+	raw, ok := a.Extra[UpstreamModelCatalogExtraKey]
+	if !ok || raw == nil {
+		return nil
+	}
+	body, err := json.Marshal(raw)
+	if err != nil {
+		return nil
+	}
+	var snapshot UpstreamModelCatalogSnapshot
+	if err := json.Unmarshal(body, &snapshot); err != nil || len(snapshot.Models) == 0 {
+		return nil
+	}
+	snapshot.Models = normalizeDiscoveredUpstreamModelIDs(snapshot.Models)
+	if len(snapshot.Models) == 0 {
+		return nil
+	}
+	return &snapshot
+}
+
+func (a *Account) HasUpstreamModel(modelID string) bool {
+	modelID = strings.TrimSpace(modelID)
+	if modelID == "" {
+		return false
+	}
+	snapshot := a.GetUpstreamModelCatalogSnapshot()
+	if snapshot == nil {
+		return false
+	}
+	for _, discovered := range snapshot.Models {
+		if discovered == modelID {
+			return true
+		}
+	}
+	return false
 }
 
 // UpstreamModelSyncErrorKind classifies model sync failures for safe HTTP mapping.
@@ -210,6 +268,12 @@ func (s *AccountTestService) FetchUpstreamSupportedModels(ctx context.Context, a
 func (s *AccountTestService) SyncUpstreamModelCatalog(ctx context.Context, account *Account) (*UpstreamModelCatalog, error) {
 	models, body, err := s.fetchUpstreamModelList(ctx, account)
 	liveListAvailable := err == nil
+	if liveListAvailable {
+		models = normalizeDiscoveredUpstreamModelIDs(models)
+		if len(models) == 0 {
+			return nil, newUpstreamModelSyncUpstreamError("Upstream returned no valid model IDs", nil)
+		}
+	}
 	if err != nil {
 		configuredModels := configuredUpstreamModelsForCapabilitySync(account)
 		if !upstreamModelListEndpointUnsupported(err) || len(configuredModels) == 0 {
@@ -263,6 +327,8 @@ func (s *AccountTestService) SyncUpstreamModelCatalog(ctx context.Context, accou
 
 	completeMetadata := completeUpstreamModelMetadataSubset(capabilityIDs, catalog.Metadata)
 	persistedCapabilities := false
+	extraUpdates := make(map[string]any, 2)
+	var metadataSnapshot *UpstreamModelMetadataSnapshot
 	if len(completeMetadata) > 0 && account != nil && account.ID > 0 && s.accountRepo != nil {
 		// Retain known metadata only for models still listed or explicitly mapped.
 		if previous := account.GetUpstreamModelMetadataSnapshot(); previous != nil {
@@ -289,16 +355,35 @@ func (s *AccountTestService) SyncUpstreamModelCatalog(ctx context.Context, accou
 				}
 			}
 		}
-		snapshot := UpstreamModelMetadataSnapshot{
+		snapshot := &UpstreamModelMetadataSnapshot{
 			Source:   source,
 			SyncedAt: time.Now().UTC().Format(time.RFC3339),
 			Models:   completeMetadata,
 		}
-		if err := s.accountRepo.UpdateExtra(ctx, account.ID, map[string]any{UpstreamModelMetadataExtraKey: snapshot}); err != nil {
-			return nil, newUpstreamModelSyncInternalError("Failed to save upstream model metadata", err)
+		extraUpdates[UpstreamModelMetadataExtraKey] = snapshot
+		metadataSnapshot = snapshot
+	}
+	var catalogSnapshot *UpstreamModelCatalogSnapshot
+	if liveListAvailable && account != nil && account.ID > 0 && s.accountRepo != nil {
+		snapshot := &UpstreamModelCatalogSnapshot{
+			Source:   "upstream",
+			SyncedAt: time.Now().UTC().Format(time.RFC3339),
+			Models:   append([]string(nil), models...),
 		}
-		account.SetUpstreamModelMetadataSnapshot(snapshot)
-		persistedCapabilities = true
+		extraUpdates[UpstreamModelCatalogExtraKey] = snapshot
+		catalogSnapshot = snapshot
+	}
+	if len(extraUpdates) > 0 {
+		if err := s.accountRepo.UpdateExtra(ctx, account.ID, extraUpdates); err != nil {
+			return nil, newUpstreamModelSyncInternalError("Failed to save upstream model catalog", err)
+		}
+		if metadataSnapshot != nil {
+			account.SetUpstreamModelMetadataSnapshot(*metadataSnapshot)
+			persistedCapabilities = true
+		}
+		if catalogSnapshot != nil {
+			account.SetUpstreamModelCatalogSnapshot(*catalogSnapshot)
+		}
 	}
 
 	if upstreamCatalogNeedsRegistry(capabilityIDs, catalog.Metadata) {
@@ -315,6 +400,18 @@ func (s *AccountTestService) SyncUpstreamModelCatalog(ctx context.Context, accou
 		}
 	}
 	return catalog, nil
+}
+
+func normalizeDiscoveredUpstreamModelIDs(models []string) []string {
+	normalized := make([]string, 0, len(models))
+	for _, model := range models {
+		model = strings.TrimSpace(model)
+		if model == "" || strings.Contains(model, "*") || len(model) > 256 {
+			continue
+		}
+		normalized = append(normalized, model)
+	}
+	return dedupeAndSortModelIDs(normalized)
 }
 
 func upstreamModelSyncStatusCode(err error) int {

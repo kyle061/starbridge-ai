@@ -33,7 +33,7 @@ func (s *OpenAIGatewayService) FetchOpenAIModelsList(ctx context.Context, accoun
 		if err != nil {
 			return nil, err
 		}
-		body, err := standardOpenAIModelsBody(response.Body, true)
+		body, err := standardOpenAIModelsBodyForAccount(response.Body, true, account)
 		if err != nil {
 			return nil, invalidOpenAIModelsList(err)
 		}
@@ -55,7 +55,7 @@ func (s *OpenAIGatewayService) FetchOpenAIModelsList(ctx context.Context, accoun
 		if err != nil || response.NotModified {
 			return response, err
 		}
-		body, err := standardOpenAIModelsBody(response.Body, false)
+		body, err := standardOpenAIModelsBodyForAccount(response.Body, false, account)
 		if err != nil {
 			return nil, invalidOpenAIModelsList(err)
 		}
@@ -77,6 +77,21 @@ func invalidOpenAIModelsList(err error) error {
 		err:       infraerrors.Newf(http.StatusBadGateway, "OPENAI_MODELS_UPSTREAM_INVALID", "invalid upstream model list: %v", err),
 		retryable: true,
 	}
+}
+
+func isOpenAIModelVisibleForAccount(account *Account, modelID string) bool {
+	return modelcatalog.IsVisibleOpenAIModel(modelID) || (account != nil && account.HasUpstreamModel(modelID))
+}
+
+func isOpenAIAccountModelVisible(account *Account, modelID string) bool {
+	if isOpenAIModelVisibleForAccount(account, modelID) {
+		return true
+	}
+	if account == nil {
+		return false
+	}
+	_, mapped := account.GetModelMapping()[strings.TrimSpace(modelID)]
+	return mapped
 }
 
 // modelCatalogEntries requires a real array. An empty array is authoritative;
@@ -102,6 +117,10 @@ func modelCatalogEntries(body []byte, field string) (map[string]json.RawMessage,
 // their upstream fields. Both keep display_name, which the admin picker and alias
 // projection read.
 func standardOpenAIModelsBody(body []byte, fromManifest bool) ([]byte, error) {
+	return standardOpenAIModelsBodyForAccount(body, fromManifest, nil)
+}
+
+func standardOpenAIModelsBodyForAccount(body []byte, fromManifest bool, account *Account) ([]byte, error) {
 	field, idField := "data", "id"
 	if fromManifest {
 		field, idField = "models", "slug"
@@ -122,7 +141,7 @@ func standardOpenAIModelsBody(body []byte, fromManifest bool) ([]byte, error) {
 			return nil, fmt.Errorf("model entry has no valid %s", idField)
 		}
 		id = strings.TrimSpace(id)
-		if _, ok := seen[id]; ok || strings.Contains(id, "*") || !modelcatalog.IsVisibleOpenAIModel(id) {
+		if _, ok := seen[id]; ok || strings.Contains(id, "*") || !isOpenAIModelVisibleForAccount(account, id) {
 			continue
 		}
 		seen[id] = struct{}{}
@@ -188,7 +207,7 @@ func projectAccountModelsBody(body []byte, account *Account, group *Group, codex
 			continue
 		}
 		id = strings.TrimSpace(id)
-		if id == "" || strings.Contains(id, "*") || !modelcatalog.IsVisibleOpenAIModel(id) {
+		if id == "" || strings.Contains(id, "*") || !isOpenAIAccountModelVisible(account, id) {
 			continue
 		}
 		// Apply the allowlist to public names after mapping, not upstream targets.
@@ -218,13 +237,16 @@ func projectAccountModelsBody(body []byte, account *Account, group *Group, codex
 	seen := make(map[string]struct{}, len(candidates))
 	for _, id := range candidates {
 		id = strings.TrimSpace(id)
-		if id == "" || strings.Contains(id, "*") || !modelcatalog.IsVisibleOpenAIModel(id) {
+		if id == "" || strings.Contains(id, "*") || !isOpenAIAccountModelVisible(account, id) {
 			continue
 		}
 		if _, ok := seen[id]; ok {
 			continue
 		}
 		target, matched := account.ResolveMappedModel(id)
+		if !matched && account.HasUpstreamModel(id) {
+			target, matched = id, true
+		}
 		if !matched && accountAllowsDiscoveredGPTRelease(account, id, account.GetModelMapping()) {
 			target, matched = id, true
 		}
@@ -303,7 +325,7 @@ func (s *OpenAIGatewayService) FetchPinnedOpenAIModelsList(ctx context.Context, 
 			if err := json.Unmarshal(raw, &model); err != nil {
 				return nil, nil, err
 			}
-			if !modelcatalog.IsVisibleOpenAIModel(model.ID) {
+			if !isOpenAIModelVisibleForAccount(result.account, model.ID) {
 				continue
 			}
 			if _, exists := byID[model.ID]; !exists {

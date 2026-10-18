@@ -1148,12 +1148,14 @@ func (h *GatewayHandler) Models(c *gin.Context) {
 			source := availableModels
 			if len(source) == 0 {
 				source = defaultModelIDsForPlatform(service.PlatformComposite)
+				writeAllowlistedModelsList(c, service.PlatformComposite, apiKey.Group.ModelAllowlist.FilterForListing(source))
+				return
 			}
-			writeAllowlistedModelsList(c, service.PlatformComposite, apiKey.Group.ModelAllowlist.FilterForListing(source))
+			writeAllowlistedAccountModelsList(c, service.PlatformComposite, apiKey.Group.ModelAllowlist.FilterForListing(source))
 			return
 		}
 		if len(availableModels) > 0 {
-			writeModelsList(c, service.PlatformComposite, availableModels)
+			writeAccountModelsList(c, service.PlatformComposite, availableModels)
 			return
 		}
 		writeModelsList(c, service.PlatformComposite, defaultModelIDsForPlatform(service.PlatformComposite))
@@ -1175,12 +1177,16 @@ func (h *GatewayHandler) Models(c *gin.Context) {
 	}
 	if apiKey != nil && apiKey.Group != nil && apiKey.Group.ModelAllowlistEnabled() {
 		source := modelListingSource(platform, availableModels, defaultModelIDsForPlatform(platform))
+		if len(availableModels) > 0 {
+			writeAllowlistedAccountModelsList(c, platform, apiKey.Group.ModelAllowlist.FilterForListing(source))
+			return
+		}
 		writeAllowlistedModelsList(c, platform, apiKey.Group.ModelAllowlist.FilterForListing(source))
 		return
 	}
 
 	if len(availableModels) > 0 {
-		writeModelsList(c, platform, availableModels)
+		writeAccountModelsList(c, platform, availableModels)
 		return
 	}
 
@@ -1204,7 +1210,6 @@ func (h *GatewayHandler) CodexModels(c *gin.Context) {
 	}
 	modelIDs := h.codexModelIDsForGroup(c.Request.Context(), apiKey.Group, forcedPlatform)
 	modelIDs = service.FilterCodexModelIDsForGroup(modelIDs, apiKey.Group)
-	modelIDs = modelcatalog.FilterVisibleOpenAIModels(modelIDs)
 	body, err := h.gatewayService.BuildCodexModelsManifestForGroup(
 		c.Request.Context(),
 		apiKey.Group,
@@ -1294,9 +1299,19 @@ func (h *GatewayHandler) compositeAvailableModels(ctx context.Context, groupID *
 }
 
 func writeModelsList(c *gin.Context, platform string, modelIDs []string) {
-	modelIDs = modelcatalog.FilterVisibleOpenAIModels(modelIDs)
+	writeModelsListWithVisibility(c, platform, modelIDs, true)
+}
+
+func writeAccountModelsList(c *gin.Context, platform string, modelIDs []string) {
+	writeModelsListWithVisibility(c, platform, modelIDs, false)
+}
+
+func writeModelsListWithVisibility(c *gin.Context, platform string, modelIDs []string, filterVisibility bool) {
+	if filterVisibility {
+		modelIDs = modelcatalog.FilterVisibleOpenAIModels(modelIDs)
+	}
 	if platform == service.PlatformOpenAI {
-		writeOpenAIModelsList(c, modelIDs)
+		writeOpenAIModelsListWithVisibility(c, modelIDs, filterVisibility)
 		return
 	}
 	if platform == service.PlatformGrok {
@@ -1316,11 +1331,11 @@ func writeModelsList(c *gin.Context, platform string, modelIDs []string) {
 }
 
 func writeAllowlistedModelsList(c *gin.Context, platform string, modelIDs []string) {
-	if platform == service.PlatformOpenAI {
-		writeOpenAIModelsList(c, modelIDs)
-		return
-	}
-	writeModelsList(c, platform, modelIDs)
+	writeModelsListWithVisibility(c, platform, modelIDs, true)
+}
+
+func writeAllowlistedAccountModelsList(c *gin.Context, platform string, modelIDs []string) {
+	writeModelsListWithVisibility(c, platform, modelIDs, false)
 }
 
 type grokReasoningEffortOption struct {
@@ -1384,7 +1399,13 @@ func grokModelSupportsConfigurableReasoning(modelID string) bool {
 }
 
 func writeOpenAIModelsList(c *gin.Context, modelIDs []string) {
-	modelIDs = modelcatalog.FilterVisibleOpenAIModels(modelIDs)
+	writeOpenAIModelsListWithVisibility(c, modelIDs, true)
+}
+
+func writeOpenAIModelsListWithVisibility(c *gin.Context, modelIDs []string, filterVisibility bool) {
+	if filterVisibility {
+		modelIDs = modelcatalog.FilterVisibleOpenAIModels(modelIDs)
+	}
 	defaultsByID := make(map[string]openai.Model, len(openai.DefaultModels))
 	for _, model := range openai.DefaultModels {
 		defaultsByID[model.ID] = model

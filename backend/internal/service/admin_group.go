@@ -124,6 +124,19 @@ func (s *adminServiceImpl) GetGroupModelsListCandidates(ctx context.Context, id 
 			seen[model] = struct{}{}
 			candidates = append(candidates, model)
 		}
+		if snapshot := acc.GetUpstreamModelCatalogSnapshot(); snapshot != nil {
+			for _, model := range snapshot.Models {
+				model = strings.TrimSpace(model)
+				if model == "" {
+					continue
+				}
+				if _, ok := seen[model]; ok {
+					continue
+				}
+				seen[model] = struct{}{}
+				candidates = append(candidates, model)
+			}
+		}
 	}
 	return candidates, nil
 }

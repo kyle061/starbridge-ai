@@ -188,6 +188,20 @@ describe('ModelWhitelistSelector', () => {
     expect(showWarning).toHaveBeenCalledWith('admin.accounts.syncUpstreamModelsMetadataPartial')
   })
 
+  it('keeps newly discovered provider models even when absent from the local catalogue', async () => {
+    syncUpstreamModels.mockResolvedValue({ models: ['deepseek-v6'] })
+    const wrapper = mountSelector({ platform: 'deepseek', accountId: 47 })
+    const syncButton = wrapper
+      .findAll('button')
+      .find(button => button.text() === 'admin.accounts.syncUpstreamModels')
+
+    expect(syncButton).toBeDefined()
+    await syncButton!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.emitted('update:modelValue')).toEqual([[['deepseek-v6']]])
+  })
+
   it('reports a successful preview so account creation can persist metadata', async () => {
     syncUpstreamModelsPreview.mockResolvedValue({
       models: ['x-preview-f-free'],

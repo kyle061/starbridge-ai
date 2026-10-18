@@ -4400,7 +4400,6 @@ import { extractApiErrorMessage } from "@/utils/apiError";
 import { useKeyedDebouncedSearch } from "@/composables/useKeyedDebouncedSearch";
 import { getPersistedPageSize } from "@/composables/usePersistedPageSize";
 import { useAdminListAutoRefresh } from "@/composables/useAdminListAutoRefresh";
-import { filterSupportedModelIds } from "@/composables/useModelWhitelist";
 import {
   createDefaultMessagesDispatchFormState,
   messagesDispatchConfigToFormState,
@@ -5315,7 +5314,7 @@ const loadModelAllowlistCandidates = async (
     if (!modelAllowlistCandidatesTracker.isCurrent(requestID, request)) {
       return;
     }
-    setModelAllowlistCandidates(state, filterSupportedModelIds(platform, models));
+    setModelAllowlistCandidates(state, models);
   } catch (error) {
     if (!modelAllowlistCandidatesTracker.isCurrent(requestID, request)) {
       return;

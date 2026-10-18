@@ -469,6 +469,60 @@ func TestGatewayModels_GeminiGroupFallsBackToGeminiModels(t *testing.T) {
 	require.NotContains(t, modelIDsForTest(got.Data), "claude-sonnet-4-6")
 }
 
+func TestGatewayModelsIncludesVerifiedUpstreamOpenAIModel(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	groupID := int64(21)
+	account := service.Account{ID: 1, Platform: service.PlatformOpenAI}
+	account.SetUpstreamModelCatalogSnapshot(service.UpstreamModelCatalogSnapshot{
+		Source: "upstream",
+		Models: []string{"o5-preview"},
+	})
+	h := newGatewayModelsHandlerForTest(&gatewayModelsAccountRepoStub{
+		byGroup: map[int64][]service.Account{groupID: {account}},
+	})
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/models", nil)
+	c.Set(string(middleware2.ContextKeyAPIKey), &service.APIKey{
+		Group: &service.Group{ID: groupID, Platform: service.PlatformOpenAI},
+	})
+
+	h.Models(c)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	var got gatewayModelsResponseForTest
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	require.Contains(t, modelIDsForTest(got.Data), "o5-preview")
+}
+
+func TestGatewayCodexModelsIncludesVerifiedUpstreamOpenAIModel(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	groupID := int64(22)
+	account := service.Account{ID: 1, Platform: service.PlatformOpenAI}
+	account.SetUpstreamModelCatalogSnapshot(service.UpstreamModelCatalogSnapshot{
+		Source: "upstream",
+		Models: []string{"o5-preview"},
+	})
+	h := newGatewayModelsHandlerForTest(&gatewayModelsAccountRepoStub{
+		byGroup: map[int64][]service.Account{groupID: {account}},
+	})
+
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodGet, "/v1/codex/models", nil)
+	c.Set(string(middleware2.ContextKeyAPIKey), &service.APIKey{
+		Group: &service.Group{ID: groupID, Platform: service.PlatformOpenAI},
+	})
+
+	h.CodexModels(c)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	var got codexModelsResponseForTest
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	require.Contains(t, codexModelSlugsForTest(got.Models), "o5-preview")
+}
+
 func TestGatewayModels_Grok45AdvertisesReasoningEffortForGrokBuild(t *testing.T) {
 	assertGrokGatewayReasoningEfforts(t, 4409, "grok-4.5", []gatewayReasoningEffortOptionForTest{
 		{Value: "low", Label: "Low"},

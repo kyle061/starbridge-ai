@@ -1414,30 +1414,43 @@ func (s *GatewayService) GetAvailableModels(ctx context.Context, groupID *int64,
 	// Collect unique models from all accounts
 	modelSet := make(map[string]struct{})
 	hasAnyMapping := false
+	hasAnyDiscoveredModels := false
+	hasOpenAIPassthrough := false
 
 	for _, acc := range accounts {
-		// Passthrough routing accepts models independently of model_mapping. A stale
-		// mapping on any eligible passthrough account therefore cannot define the
-		// public whitelist; return nil so the handler uses its default model set.
 		if platform == PlatformOpenAI && acc.IsOpenAIPassthroughEnabled() {
-			if s.modelsListCache != nil {
-				s.modelsListCache.Set(cacheKey, []string(nil), s.modelsListCacheTTL)
-				modelsListCacheStoreTotal.Add(1)
-			}
-			return nil
+			hasOpenAIPassthrough = true
 		}
 
 		mapping := acc.GetModelMapping()
-		if len(mapping) > 0 {
+		if len(mapping) > 0 && !(platform == PlatformOpenAI && acc.IsOpenAIPassthroughEnabled()) {
 			hasAnyMapping = true
 			for model := range mapping {
 				modelSet[model] = struct{}{}
 			}
 		}
+		if snapshot := acc.GetUpstreamModelCatalogSnapshot(); snapshot != nil {
+			for _, model := range snapshot.Models {
+				if !acc.IsModelSupported(model) {
+					continue
+				}
+				modelSet[model] = struct{}{}
+				hasAnyDiscoveredModels = true
+			}
+		}
 	}
 
-	// If no account has model_mapping, return nil (use default)
-	if !hasAnyMapping {
+	// Passthrough accounts do not expose stale mapping aliases. Once a live
+	// catalog exists, expose its verified IDs; without one, preserve the legacy
+	// static fallback behavior.
+	if hasOpenAIPassthrough && !hasAnyDiscoveredModels {
+		if s.modelsListCache != nil {
+			s.modelsListCache.Set(cacheKey, []string(nil), s.modelsListCacheTTL)
+			modelsListCacheStoreTotal.Add(1)
+		}
+		return nil
+	}
+	if !hasAnyMapping && !hasAnyDiscoveredModels {
 		if s.modelsListCache != nil {
 			s.modelsListCache.Set(cacheKey, []string(nil), s.modelsListCacheTTL)
 			modelsListCacheStoreTotal.Add(1)
@@ -1486,7 +1499,7 @@ func (s *GatewayService) resolveCompositeModelOwnership(ctx context.Context, gro
 	platforms := make(map[string]struct{})
 	for _, account := range accounts {
 		platform := strings.TrimSpace(account.Platform)
-		if !isConcreteRequestPlatform(platform) || !explicitModelMappingClaims(account, model) {
+		if !isConcreteRequestPlatform(platform) || (!explicitModelMappingClaims(account, model) && !account.HasUpstreamModel(model)) {
 			continue
 		}
 		platforms[platform] = struct{}{}

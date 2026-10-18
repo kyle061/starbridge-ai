@@ -4,6 +4,7 @@ package service
 
 import (
 	"testing"
+	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/domain"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/xai"
@@ -283,6 +284,28 @@ func TestAccountIsModelSupported(t *testing.T) {
 				t.Errorf("IsModelSupported(%q) = %v, want %v", tt.requestedModel, result, tt.expected)
 			}
 		})
+	}
+}
+
+func TestAccountIsModelSupportedUsesVerifiedUpstreamCatalog(t *testing.T) {
+	account := &Account{
+		ID:       81,
+		Platform: PlatformDeepseek,
+		Credentials: map[string]any{
+			"model_mapping": map[string]any{"legacy-alias": "deepseek-chat"},
+		},
+	}
+	account.SetUpstreamModelCatalogSnapshot(UpstreamModelCatalogSnapshot{
+		Source:   "upstream",
+		SyncedAt: time.Now().UTC().Format(time.RFC3339),
+		Models:   []string{"deepseek-v6", "gpt-7.2"},
+	})
+
+	if !account.IsModelSupported("deepseek-v6") {
+		t.Fatal("expected a model reported by this account's upstream to be supported")
+	}
+	if account.IsModelSupported("deepseek-v7") {
+		t.Fatal("an undiscovered model must not bypass a configured account mapping")
 	}
 }
 
