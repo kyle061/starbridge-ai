@@ -251,10 +251,11 @@ func projectAccountModelsBody(body []byte, account *Account, group *Group, codex
 	return json.Marshal(envelope)
 }
 
-// ApplyPinnedCodexModelsMapping is used by pinned discovery and its scheduler
-// fallback. The ordinary (non-pinned) Codex path retains its local catalog policy.
-func ApplyPinnedCodexModelsMapping(response *OpenAIModelsResponse, account *Account, group *Group) error {
-	if group == nil || group.Platform != PlatformOpenAI || !group.CodexModelsManifestConfig.Enabled {
+// ApplyCodexModelsMapping projects the fetched account's model permissions for
+// both pinned and scheduled discovery. Other group accounts' configured aliases
+// are merged separately after this projection.
+func ApplyCodexModelsMapping(response *OpenAIModelsResponse, account *Account, group *Group) error {
+	if group == nil || group.Platform != PlatformOpenAI {
 		return nil
 	}
 	body, err := projectAccountModelsBody(response.Body, account, group, true)

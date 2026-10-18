@@ -76,6 +76,8 @@ jobs:
         working-directory: backend
       - run: go test -tags unit ./internal/pkg/modelcatalog ./internal/pkg/openai ./internal/service -run 'TestDiscoveredGPT|TestAccountWildcardUsesLive|TestGPT61Sol|TestAutoAllowedOpenAI|TestBillingServiceGPT6Sol|TestIsGPT6Model|TestVisibleOpenAI|TestWildcardGroupUsesLive' -count=1
         working-directory: backend
+      - run: go test -tags unit ./internal/handler -run '^TestCodexModels' -count=1
+        working-directory: backend
       - run: go test -tags unit ./internal/service ./internal/handler/admin ./internal/server/middleware -run 'TestRevealSecret|TestSecretReveal'
         working-directory: backend
       - run: >-

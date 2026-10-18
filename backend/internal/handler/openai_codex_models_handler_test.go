@@ -151,7 +151,7 @@ func TestCodexModelsAppliesLocalFiltersBeforeClientETag(t *testing.T) {
 		},
 	}}
 	upstream := &codexModelsFailoverHTTPUpstream{
-		firstBody: `{"object":"list","data":[{"id":"codex-auto-review"},{"id":"gpt-5.5"},{"id":"gpt-5.6"}]}`,
+		firstBody: `{"object":"list","data":[{"id":"codex-auto-review"},{"id":"gpt-5.5"},{"id":"gpt-5.6-sol"}]}`,
 	}
 	gatewayService := service.NewOpenAIGatewayService(
 		repo,
@@ -165,7 +165,7 @@ func TestCodexModelsAppliesLocalFiltersBeforeClientETag(t *testing.T) {
 		Platform: service.PlatformOpenAI,
 		ModelAllowlist: service.GroupModelAllowlist{
 			Enabled: true,
-			Models:  []string{"codex-auto-review", "gpt-5.6"},
+			Models:  []string{"codex-auto-review", "gpt-5.6-sol"},
 		},
 	}
 
@@ -173,9 +173,7 @@ func TestCodexModelsAppliesLocalFiltersBeforeClientETag(t *testing.T) {
 	if first.Code != http.StatusOK {
 		t.Fatalf("first status: got %d, want %d; body=%s", first.Code, http.StatusOK, first.Body.String())
 	}
-	if body := first.Body.String(); strings.Contains(body, "codex-auto-review") || strings.Contains(body, "gpt-5.5") || !strings.Contains(body, "gpt-5.6") {
-		t.Fatalf("first body did not contain only visible selected models: %s", body)
-	}
+	require.Equal(t, []string{"gpt-5.6-sol"}, codexHandlerManifestSlugs(t, first))
 	oldETag := first.Header().Get("ETag")
 	if oldETag == "" {
 		t.Fatal("first response did not include an ETag")
@@ -186,9 +184,7 @@ func TestCodexModelsAppliesLocalFiltersBeforeClientETag(t *testing.T) {
 	if second.Code != http.StatusOK {
 		t.Fatalf("second status: got %d, want %d; body=%s", second.Code, http.StatusOK, second.Body.String())
 	}
-	if body := second.Body.String(); strings.Contains(body, "codex-auto-review") || !strings.Contains(body, "gpt-5.5") || !strings.Contains(body, "gpt-5.6") {
-		t.Fatalf("second body was not the filtered manifest: %s", body)
-	}
+	require.Equal(t, []string{"gpt-5.5", "gpt-5.6-sol"}, codexHandlerManifestSlugs(t, second))
 	if newETag := second.Header().Get("ETag"); newETag == "" || newETag == oldETag {
 		t.Fatalf("second ETag: got %q, want a new final-body ETag", newETag)
 	}
@@ -227,6 +223,51 @@ func TestCodexModelsHidesRetiredUpstreamModels(t *testing.T) {
 	require.Equal(t, service.CodexModelsManifestETag(first.Body.Bytes()), first.Header().Get("ETag"))
 	second := performCodexModelsRequestForGroup(t, handler, group, first.Header().Get("ETag"))
 	require.Equal(t, http.StatusNotModified, second.Code)
+}
+
+func TestCodexModelsLiveDiscoveryHonorsAccountMappings(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	for _, tc := range []struct {
+		name      string
+		allowlist service.GroupModelAllowlist
+		pinned    bool
+	}{
+		{name: "account wildcard without group allowlist"},
+		{name: "account and group wildcards", allowlist: service.GroupModelAllowlist{Enabled: true, Models: []string{"gpt-*", "other-coding"}}},
+		{name: "pinned account", pinned: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			firstAccount := newPinnedCodexAccount(1, service.StatusActive, true, false)
+			firstAccount.Credentials["model_mapping"] = map[string]any{
+				"gpt-6-sol": "gpt-6-sol", "gpt-6.1-*": "gpt-6.1-*",
+			}
+			otherAccount := newPinnedCodexAccount(2, service.StatusActive, true, false)
+			otherAccount.Credentials["model_mapping"] = map[string]any{"other-coding": "provider-code"}
+			repo := &codexModelsFailoverAccountRepo{accounts: []service.Account{firstAccount, otherAccount}}
+			upstream := &codexModelsFailoverHTTPUpstream{firstBody: `{"models":[{"slug":"gpt-6.1-sol","context_window":1200000},{"slug":"gpt-6-sol"},{"slug":"gpt-5.5"},{"slug":"gpt-6-luna"}]}`}
+			gateway := service.NewOpenAIGatewayService(
+				repo, nil, nil, nil, nil, nil, nil, &config.Config{RunMode: config.RunModeSimple}, nil, nil, nil, nil, nil,
+				upstream, nil, nil, nil, nil, nil, nil, nil, nil,
+			)
+			handler := &OpenAIGatewayHandler{gatewayService: gateway}
+			group := &service.Group{ID: 74, Platform: service.PlatformOpenAI, ModelAllowlist: tc.allowlist}
+			group.CodexModelsManifestConfig.Enabled = tc.pinned
+			group.CodexModelsManifestConfig.AccountIDs = []int64{1}
+
+			first := performCodexModelsRequestForGroup(t, handler, group, "")
+			require.Equal(t, http.StatusOK, first.Code, first.Body.String())
+			want := []string{"gpt-6.1-sol", "gpt-6-sol"}
+			if !tc.pinned {
+				want = append(want, "other-coding")
+			}
+			require.Equal(t, want, codexHandlerManifestSlugs(t, first))
+			require.Contains(t, first.Body.String(), `"context_window":1200000`)
+			require.Equal(t, []int64{1}, upstream.calls())
+			require.Equal(t, service.CodexModelsManifestETag(first.Body.Bytes()), first.Header().Get("ETag"))
+			second := performCodexModelsRequestForGroup(t, handler, group, first.Header().Get("ETag"))
+			require.Equal(t, http.StatusNotModified, second.Code, second.Body.String())
+		})
+	}
 }
 
 func TestCodexModelsAPIKeyCacheDoesNotLeakGroupFilters(t *testing.T) {
