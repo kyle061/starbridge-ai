@@ -56,23 +56,32 @@ function setBusy(value) {
   $('#task-progress').hidden = !value;
 }
 function resetPreview() {
-  $('#video').removeAttribute('src'); $('#video').controls = false; $('#video').load();
-  $('#preview-overlay').hidden = false;
+  $('#video').removeAttribute('src'); $('#video').removeAttribute('poster'); $('#video').controls = false; $('#video').load();
+  $('#preview-overlay').hidden = true;
   $('#video-title').textContent = '你的下一个好片段';
   $('#video-details').textContent = '解析完成后，视频将在这里出现';
   $('#preview-status').textContent = '等待解析';
+  $('#save-note').textContent = '';
   $('#save').disabled = $('#save-original').disabled = $('#copy').disabled = true;
 }
 function renderJob(job) {
   state.job = job;
   const busy = ['queued', 'processing'].includes(job.status); setBusy(busy);
-  $('#preview-status').textContent = labels[job.status] || job.status;
-  if (busy) { $('#progress').value = job.progress; $('#task-status').textContent = `${labels[job.status]} · ${Math.floor(job.progress)}%`; }
+  const transcoding = busy && (job.phase === 'transcoding' || (!job.phase && job.progress >= 96));
+  $('#preview-status').textContent = transcoding ? '生成相册兼容版' : (labels[job.status] || job.status);
+  if (busy) {
+    if (transcoding) $('#progress').removeAttribute('value'); else $('#progress').value = job.progress;
+    $('#task-status').textContent = transcoding ? '生成相册兼容版' : `${labels[job.status]} · ${Math.floor(job.progress)}%`;
+    $('#resolve span').textContent = transcoding ? '生成相册兼容版' : '正在解析视频';
+  }
   $('#save').disabled = $('#save-original').disabled = $('#copy').disabled = job.status !== 'ready';
   if (job.status === 'ready') {
     $('#video').controls = true; $('#video').src = job.mediaUrl; $('#preview-overlay').hidden = true;
     $('#video-title').textContent = job.title;
-    $('#video-details').textContent = [job.platformName, durationText(job.duration), sizeText(job.bytes), job.isDemo ? '示例视频' : ''].filter(Boolean).join(' · ');
+    $('#video-details').textContent = [job.platformName, durationText(job.duration), sizeText(job.bytes), job.transcoded ? '相册兼容版' : '', job.isDemo ? '示例视频' : ''].filter(Boolean).join(' · ');
+    $('#save-original').lastChild.textContent = job.transcoded ? '下载视频文件' : '下载原文件';
+    $('.source-note strong').textContent = job.transcoded ? '相册兼容版' : '保留原有画质';
+    $('.source-note p').textContent = job.transcoded ? 'H.264 MP4 · 已压缩' : '仅获取平台可用的视频源，不添加水印。';
     $('#format-label').textContent = job.ext.toUpperCase();
     $('#save-note').textContent = `临时文件保留至 ${new Date(job.expiresAt).toLocaleTimeString()}${job.compatible ? '' : ' · 当前格式请使用原文件下载'}`;
     $('#save').disabled = !job.compatible;

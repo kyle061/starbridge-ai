@@ -25,9 +25,9 @@ function numberEnv(name, fallback, max) {
 }
 const config = {
   root, dataDir: path.resolve(root, process.env.DATA_DIR || 'data'), python: process.env.PYTHON_BIN || 'python3',
-  concurrency: numberEnv('MAX_CONCURRENT_JOBS', 2, 8), ttl: numberEnv('JOB_TTL_SECONDS', 3600, 86400),
-  maxMb: numberEnv('MAX_FILE_MB', 200, 1024), maxDuration: numberEnv('MAX_DURATION_SECONDS', 1200, 7200),
-  workerTimeout: numberEnv('WORKER_TIMEOUT_SECONDS', 600, 3600), cookiesFile: process.env.COOKIES_FILE
+  concurrency: numberEnv('MAX_CONCURRENT_JOBS', 1, 8), ttl: numberEnv('JOB_TTL_SECONDS', 3600, 86400),
+  maxMb: numberEnv('MAX_FILE_MB', 1024, 1024), maxDuration: numberEnv('MAX_DURATION_SECONDS', 3600, 7200),
+  workerTimeout: numberEnv('WORKER_TIMEOUT_SECONDS', 1800, 3600), cookiesFile: process.env.COOKIES_FILE
 };
 await mkdir(config.dataDir, { recursive: true });
 // Jobs are intentionally ephemeral; files left by a previous process have no valid signed URLs.
