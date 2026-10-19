@@ -6,19 +6,19 @@
   <view class="label">保存模式</view>
   <view class="segments"><button class="{{mode === 'compatible' ? 'selected' : ''}}" data-mode="compatible" bindtap="setMode">相册兼容</button><button class="{{mode === 'original' ? 'selected' : ''}}" data-mode="original" bindtap="setMode">原画质</button></view>
   <checkbox-group bindchange="setAuthorized"><label class="consent"><checkbox value="authorized" checked="{{authorized}}" color="#197b56" /><text>我拥有该视频的保存权限</text></label></checkbox-group>
-  <button class="primary" bindtap="resolve" disabled="{{busy || !text || !authorized}}"><image class="icon" src="/assets/scan-line-white.png" />{{busy ? '正在解析视频' : '解析视频'}}</button>
+  <button class="primary" bindtap="resolve" disabled="{{busy || !text || !authorized}}"><image class="icon" src="/assets/scan-line-white.png" />{{busy ? (job.phase === 'transcoding' ? '生成相册兼容版' : '正在解析视频') : '解析视频'}}</button>
   <button wx:if="{{demoMode && !job}}" class="demo muted" bindtap="demo">试用示例视频</button>
   <view wx:if="{{error}}" class="error">{{error}}<button class="retry" bindtap="resolve" wx:if="{{text && !busy}}">重新解析</button></view>
   <view wx:if="{{job}}" class="result">
     <view class="row between"><view class="h2">{{job.status === 'ready' ? '视频已就绪' : job.statusText}}</view><view class="badge">{{job.platformName}}</view></view>
-    <view wx:if="{{busy}}" class="progress-wrap"><progress percent="{{job.progress}}" activeColor="#197b56" stroke-width="4"/><view class="muted tiny">{{job.statusText}} · {{job.progress}}%</view><button class="cancel" bindtap="cancel">取消任务</button></view>
+    <view wx:if="{{busy}}" class="progress-wrap"><progress wx:if="{{job.phase !== 'transcoding'}}" percent="{{job.progress}}" activeColor="#197b56" stroke-width="4"/><view class="muted tiny">{{job.statusText}}{{job.phase === 'transcoding' ? '' : ' · ' + job.progress + '%'}}</view><button class="cancel" bindtap="cancel">取消任务</button></view>
     <block wx:if="{{job.status === 'ready'}}">
       <video id="preview" src="{{job.mediaUrl}}" controls object-fit="contain" show-center-play-btn binderror="videoError" />
-      <view class="video-title">{{job.title}}</view><view class="row muted tiny details"><text>{{job.durationText}}</text><text>{{job.sizeText}}</text><text>{{job.ext}}</text><text wx:if="{{job.isDemo}}">示例视频</text></view>
+      <view class="video-title">{{job.title}}</view><view class="row muted tiny details"><text>{{job.durationText}}</text><text>{{job.sizeText}}</text><text>{{job.ext}}</text><text wx:if="{{job.transcoded}}">相册兼容版</text><text wx:if="{{job.isDemo}}">示例视频</text></view>
       <view wx:if="{{!job.compatible}}" class="error tiny">当前原文件不兼容相册，可保存原文件或切换相册兼容模式重新解析。</view>
       <button class="primary save" bindtap="saveAlbum" disabled="{{saving || !job.compatible}}"><image class="icon" src="/assets/download-white.png" />{{saving ? '下载中 ' + downloadProgress + '%' : '保存到相册'}}</button>
-      <view wx:if="{{saving}}" class="row between tiny muted"><text>正在下载原文件</text><button class="cancel" bindtap="cancelDownload">取消下载</button></view>
-      <view class="actions"><button class="secondary" bindtap="saveFile" disabled="{{saving}}"><image class="icon" src="/assets/file-down.png" />保存原文件</button><button class="secondary" bindtap="copyDownload"><image class="icon" src="/assets/link.png" />复制地址</button></view>
+      <view wx:if="{{saving}}" class="row between tiny muted"><text>正在下载视频</text><button class="cancel" bindtap="cancelDownload">取消下载</button></view>
+      <view class="actions"><button class="secondary" bindtap="saveFile" disabled="{{saving}}"><image class="icon" src="/assets/file-down.png" />{{job.transcoded ? '保存视频文件' : '保存原文件'}}</button><button class="secondary" bindtap="copyDownload"><image class="icon" src="/assets/link.png" />复制地址</button></view>
       <view class="muted tiny expiry">临时视频保留至 {{job.timeExpiry}}</view>
     </block>
   </view>

@@ -57,6 +57,7 @@ Page({
   async download() {
     await api.privacy();
     const job = await api.request('/api/jobs/' + this.data.job.id); this.setJob(job);
+    if (job.bytes > 200000000) throw new Error('原文件超过微信单次下载大小限制，请复制地址到浏览器保存，或切换相册兼容模式');
     this.setData({ saving: true, downloadProgress: 0 }); this.cancelledDownload = false;
     this.deleteTemp();
     return new Promise((resolve, reject) => {
@@ -80,7 +81,8 @@ Page({
       await new Promise((resolve, reject) => wx.saveVideoToPhotosAlbum({ filePath, success: resolve, fail: reject }));
       wx.showToast({ title: '已保存到相册', icon: 'success' });
     } catch (error) {
-      if (/auth deny|auth denied|authorize|permission/i.test(error.errMsg || '')) wx.showModal({ title: '需要相册权限', content: '请在设置中允许保存到相册', confirmText: '打开设置', success: res => { if (res.confirm) wx.openSetting({}); } });
+      if (/privacy agreement|scope is not declared/i.test(error.errMsg || '')) this.setData({ error: '小程序尚未配置相册接口的隐私声明，请联系运营者完成配置后重试' });
+      else if (/auth deny|auth denied|authorize|permission/i.test(error.errMsg || '')) wx.showModal({ title: '需要相册权限', content: '请在设置中允许保存到相册', confirmText: '打开设置', success: res => { if (res.confirm) wx.openSetting({}); } });
       else this.setData({ error: error.message || '保存失败，请检查相册权限和可用空间' });
     } finally { this.setData({ saving: false }); this.deleteTemp(); }
   },
@@ -89,7 +91,7 @@ Page({
     if (!wx.shareFileMessage) { this.setData({ error: '当前微信版本不支持原文件保存，请更新微信或复制下载地址' }); return; }
     try {
       const filePath = await this.download();
-      await new Promise((resolve, reject) => wx.shareFileMessage({ filePath, fileName: '留影原视频.' + this.data.job.ext, success: resolve, fail: reject }));
+      await new Promise((resolve, reject) => wx.shareFileMessage({ filePath, fileName: (this.data.job.transcoded ? '留影视频.' : '留影原视频.') + this.data.job.ext, success: resolve, fail: reject }));
     } catch (error) { if (!/cancel/.test(error.errMsg || '')) this.setData({ error: error.message || '原文件保存未完成' }); }
     finally { this.setData({ saving: false }); this.deleteTemp(); }
   },

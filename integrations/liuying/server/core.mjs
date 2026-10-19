@@ -69,8 +69,8 @@ export function parseRange(header, size) {
 }
 
 export function publicJob(job, signer, baseUrl) {
-  const { id, status, platform, platformName, mode, progress, title, duration, bytes, ext, compatible, error, createdAt, expiresAt, isDemo } = job;
-  const output = { id, status, platform, platformName, mode, progress, title, duration, bytes, ext, compatible, error, createdAt, expiresAt, isDemo };
+  const { id, status, phase, platform, platformName, mode, progress, title, duration, bytes, ext, compatible, transcoded, error, createdAt, expiresAt, isDemo } = job;
+  const output = { id, status, phase, platform, platformName, mode, progress, title, duration, bytes, ext, compatible, transcoded, error, createdAt, expiresAt, isDemo };
   if (status === 'ready') {
     const exp = Math.min(expiresAt, Date.now() + 900000);
     output.mediaUrl = `${baseUrl}/media/${id}?exp=${exp}&sig=${signer.media(id, exp)}`;

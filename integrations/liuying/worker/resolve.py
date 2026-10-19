@@ -5,7 +5,6 @@ import json
 import os
 from pathlib import Path
 import socket
-import subprocess
 import sys
 import time
 import urllib.parse
@@ -75,6 +74,8 @@ def classify_error(message):
     message = message.lower()
     if "image posts are not supported" in message:
         return "NOT_VIDEO", "该链接指向抖音图文作品，当前仅支持视频，请换一个视频链接"
+    if any(term in message for term in ["size limit", "duration limit", "file size", "max_filesize"]):
+        return "LIMIT", "视频时长或文件大小超出限制，请选择较短的视频或相册兼容模式"
     if any(term in message for term in ["cookie", "sign in", "login", "log in", "authentication"]):
         return "PLATFORM_AUTH", "平台要求有效的访问凭证，当前链接暂时无法解析"
     if "drm" in message:
@@ -102,6 +103,8 @@ def main():
     args = parser.parse_args()
     try:
         import yt_dlp
+        from platform_extractors import install
+        from media_compat import ALBUM_MAX_BYTES, album_copy, format_selector, probe
         from yt_dlp.downloader.external import FFmpegFD
         from yt_dlp.utils import DownloadError
     except ImportError:
@@ -138,17 +141,13 @@ def main():
         "instagram": ["Instagram.*"], "twitter": ["Twitter.*"],
         "vimeo": ["Vimeo.*"], "facebook": ["Facebook.*"], "direct": ["Generic"],
     }
-    # Select an existing MP4/H.264 stream for album compatibility; never re-encode the original.
-    compatible_format = "bv[vcodec^=avc1][ext=mp4]+ba[ext=m4a]/b[vcodec^=avc1][ext=mp4]"
-    if args.platform == "direct":
-        compatible_format = "b[ext=mp4]"
     options = {
         "quiet": True, "no_warnings": True, "logger": SilentLogger(),
         "noplaylist": True, "playlistend": 1,
         "outtmpl": str(directory / "video.%(ext)s"),
-        "format": compatible_format if args.mode == "compatible" else "bv*+ba/b",
+        "format": format_selector(args.mode, max_bytes, args.platform == "direct"),
         "merge_output_format": "mp4" if args.mode == "compatible" else "mkv/mp4",
-        "max_filesize": max_bytes, "match_filter": limit,
+        "max_filesize": max_bytes,
         "socket_timeout": 25, "retries": 2, "fragment_retries": 2,
         "concurrent_fragment_downloads": 2, "hls_prefer_native": True,
         "progress_hooks": [progress], "proxy": "", "cachedir": False,
@@ -167,6 +166,7 @@ def main():
     try:
         url = canonical_douyin(args.url) if args.platform == "douyin" else args.url
         with yt_dlp.YoutubeDL(options) as ydl:
+            install(ydl, args.platform)
             info = ydl.extract_info(url, download=False)
             if not info or info.get("_type") in ("playlist", "multi_video"):
                 raise ValueError("Only a single video is supported")
@@ -175,6 +175,7 @@ def main():
                 emit("error", code="LIMIT", message="视频过长、过大或为直播，请选择较短的视频")
                 return 1
             emit("metadata", title=info.get("title", "视频"), duration=info.get("duration"))
+            emit('phase', value='downloading')
             # Process the already selected formats instead of making a second page request.
             info = ydl.process_ie_result(info, download=True)
             candidates = [p for p in directory.glob("video.*") if p.suffix.lower() in (".mp4", ".webm", ".mkv", ".mov")]
@@ -184,25 +185,20 @@ def main():
             if result.stat().st_size > max_bytes:
                 emit("error", code="FILE_TOO_LARGE", message="视频超出大小限制")
                 return 1
-            formats = info.get("requested_formats") or [info]
-            video_codec = next((f.get("vcodec", "") for f in formats if f.get("vcodec") not in (None, "none")), "")
-            audio_codec = next((f.get("acodec", "") for f in formats if f.get("acodec") not in (None, "none")), "none")
-            compatible = result.suffix == ".mp4" and video_codec.startswith(("avc1", "h264")) and (audio_codec == "none" or audio_codec.startswith(("mp4a", "aac")))
-            try:
-                probe = subprocess.run(["ffprobe", "-v", "error", "-show_streams", "-show_format", "-of", "json", str(result)], check=True, capture_output=True, text=True, timeout=15)
-                media = json.loads(probe.stdout)
-                streams = media.get("streams", [])
-                video_codec = next((s.get("codec_name") for s in streams if s.get("codec_type") == "video"), None)
-                audio_codec = next((s.get("codec_name") for s in streams if s.get("codec_type") == "audio"), None)
-                compatible = result.suffix == ".mp4" and video_codec == "h264" and audio_codec in (None, "aac")
-                duration = float(media.get("format", {}).get("duration") or 0)
-                if duration > args.max_duration:
-                    emit("error", code="LIMIT", message="视频时长超出限制")
-                    return 1
-                emit("metadata", title=info.get("title", "视频"), duration=duration or info.get("duration"))
-            except (OSError, ValueError, subprocess.SubprocessError):
-                pass
-            emit("complete", filename=result.name, ext=result.suffix[1:], compatible=compatible)
+            media = probe(result)
+            if media['duration'] > args.max_duration:
+                emit("error", code="LIMIT", message="视频时长超出限制")
+                return 1
+            transcoded = False
+            if args.mode == 'compatible' and (not media['compatible'] or result.stat().st_size > min(max_bytes, ALBUM_MAX_BYTES)):
+                emit('phase', value='transcoding')
+                emit('progress', value=96)
+                converted, media = album_copy(result, max_bytes, media['duration'])
+                result.unlink()
+                result = converted.rename(directory / 'video.mp4')
+                transcoded = True
+            emit("metadata", title=info.get("title", "视频"), duration=media['duration'])
+            emit("complete", filename=result.name, ext=result.suffix[1:], compatible=media['compatible'], transcoded=transcoded)
             return 0
     except Exception as error:
         code, message = classify_error(str(error))
