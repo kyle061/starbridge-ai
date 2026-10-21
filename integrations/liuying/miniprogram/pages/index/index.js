@@ -91,7 +91,7 @@ Page({
     if (!wx.shareFileMessage) { this.setData({ error: '当前微信版本不支持原文件保存，请更新微信或复制下载地址' }); return; }
     try {
       const filePath = await this.download();
-      await new Promise((resolve, reject) => wx.shareFileMessage({ filePath, fileName: (this.data.job.transcoded ? '留影视频.' : '留影原视频.') + this.data.job.ext, success: resolve, fail: reject }));
+      await new Promise((resolve, reject) => wx.shareFileMessage({ filePath, fileName: (this.data.job.transcoded ? '视频.' : '原视频.') + this.data.job.ext, success: resolve, fail: reject }));
     } catch (error) { if (!/cancel/.test(error.errMsg || '')) this.setData({ error: error.message || '原文件保存未完成' }); }
     finally { this.setData({ saving: false }); this.deleteTemp(); }
   },

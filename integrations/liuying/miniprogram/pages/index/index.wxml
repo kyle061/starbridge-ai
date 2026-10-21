@@ -1,5 +1,5 @@
 <view class="page">
-  <view class="row between"><view><view class="h1">留住每个好片段</view><view class="muted subtitle">视频解析与原片保存</view></view><image class="brand" src="/assets/scan-line-active.png" /></view>
+  <view class="row between"><view><view class="h1">留影去水印助手</view><view class="muted subtitle">视频解析与原片保存</view></view><image class="brand" src="/assets/scan-line-active.png" /></view>
   <view class="platforms"><view wx:for="{{platforms}}" wx:key="id" class="platform"><view class="platform-mark">{{item.mark}}</view><text>{{item.name}}</text></view></view>
   <view class="row between label"><text>视频链接</text><button class="paste row" bindtap="paste"><image class="icon" src="/assets/clipboard-paste-active.png" />粘贴</button></view>
   <view class="input-wrap"><textarea value="{{text}}" bindinput="input" maxlength="4096" placeholder="粘贴视频链接或分享文案" auto-height="{{false}}" /><button wx:if="{{text}}" class="icon-button clear" bindtap="clear" aria-label="清空链接"><image class="icon" src="/assets/x.png" /></button></view>
