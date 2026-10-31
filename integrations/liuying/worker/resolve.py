@@ -11,8 +11,8 @@ import urllib.parse
 import urllib.request
 
 
-def emit(kind, **data):
-    print(json.dumps({"type": kind, **data}, ensure_ascii=False), flush=True)
+def emit(event_type, **data):
+    print(json.dumps({"type": event_type, **data}, ensure_ascii=False), flush=True)
 
 
 # Validate the actual addresses returned to connect(), including redirects and CDN requests.
@@ -52,11 +52,9 @@ def canonical_douyin(url):
         if not any(host == domain or host.endswith("." + domain) for domain in ("douyin.com", "iesdouyin.com")):
             raise ValueError("Unsupported short link destination")
         parts = parsed.path.strip("/").split("/")
-        if parts and parts[0] == "note":
-            raise ValueError("Image posts are not supported")
         video_id = urllib.parse.parse_qs(parsed.query).get("modal_id", [None])[0]
-        if "video" in parts:
-            index = parts.index("video")
+        if "video" in parts or "note" in parts:
+            index = parts.index("note") if "note" in parts else parts.index("video")
             if index + 1 < len(parts):
                 video_id = parts[index + 1]
         if video_id and video_id.isdigit():
@@ -72,30 +70,28 @@ def canonical_douyin(url):
 
 def classify_error(message):
     message = message.lower()
-    if "image posts are not supported" in message:
-        return "NOT_VIDEO", "该链接指向抖音图文作品，当前仅支持视频，请换一个视频链接"
     if any(term in message for term in ["size limit", "duration limit", "file size", "max_filesize"]):
-        return "LIMIT", "视频时长或文件大小超出限制，请选择较短的视频或相册兼容模式"
+        return "LIMIT", "文件数量、时长或总大小超出限制"
     if any(term in message for term in ["cookie", "sign in", "login", "log in", "authentication"]):
         return "PLATFORM_AUTH", "平台要求有效的访问凭证，当前链接暂时无法解析"
     if "drm" in message:
-        return "PROTECTED", "该视频受保护，无法提供下载"
+        return "PROTECTED", "该内容受保护，无法提供下载"
     if any(term in message for term in ["private video", "not available", "unavailable", "removed", "geo"]):
-        return "UNAVAILABLE", "视频不可用、已删除或在服务器所在地区无法访问"
+        return "UNAVAILABLE", "内容不可用、已删除或在服务器所在地区无法访问"
     if "format" in message:
-        return "NO_FORMAT", "没有找到所选模式的视频源，请尝试另一种保存模式"
+        return "NO_FORMAT", "没有找到可保存的原文件"
     if any(term in message for term in ["timed out", "network", "resolve", "connection"]):
-        return "NETWORK", "暂时无法连接视频平台，请稍后重试"
+        return "NETWORK", "暂时无法连接内容平台，请稍后重试"
     if "ffmpeg" in message:
         return "DEPENDENCY_MISSING", "服务器缺少 FFmpeg，请联系管理员"
-    return "RESOLVE_FAILED", "平台暂未提供可下载的视频源，请更换链接或稍后重试"
+    return "RESOLVE_FAILED", "平台暂未提供可下载的图片或视频源，请更换链接或稍后重试"
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", required=True)
     parser.add_argument("--platform", required=True)
-    parser.add_argument("--mode", choices=["original", "compatible"], required=True)
+    parser.add_argument("--mode", choices=["original", "compatible"], default="original")
     parser.add_argument("--directory", required=True)
     parser.add_argument("--max-mb", type=int, required=True)
     parser.add_argument("--max-duration", type=int, required=True)
@@ -167,9 +163,25 @@ def main():
         url = canonical_douyin(args.url) if args.platform == "douyin" else args.url
         with yt_dlp.YoutubeDL(options) as ydl:
             install(ydl, args.platform)
-            info = ydl.extract_info(url, download=False)
+            from images import download_images
+            if args.platform == 'direct' and Path(urllib.parse.urlsplit(url).path).suffix.lower() in ('.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif'):
+                info = {'title': '原图', '_liuying_images': [{'urls': [url]}]}
+            else:
+                info = ydl.extract_info(url, download=False, process=False)
+            for _ in range(4):
+                if not info or info.get('_type') not in ('url', 'url_transparent'):
+                    break
+                info = ydl.extract_info(info['url'], download=False, process=False)
+            if info and info.get('_liuying_images'):
+                emit('metadata', title=info.get('title', '图文作品'), kind='images')
+                emit('phase', value='downloading')
+                assets, archive = download_images(ydl, info['_liuying_images'], directory, max_bytes,
+                                                   info.get('http_headers') or {}, emit)
+                emit('complete', assets=assets, archive=archive, kind='images')
+                return 0
             if not info or info.get("_type") in ("playlist", "multi_video"):
                 raise ValueError("Only a single video is supported")
+            info = ydl.process_ie_result(info, download=False)
             rejection = limit(info)
             if rejection:
                 emit("error", code="LIMIT", message="视频过长、过大或为直播，请选择较短的视频")
@@ -198,7 +210,7 @@ def main():
                 result = converted.rename(directory / 'video.mp4')
                 transcoded = True
             emit("metadata", title=info.get("title", "视频"), duration=media['duration'])
-            emit("complete", filename=result.name, ext=result.suffix[1:], compatible=media['compatible'], transcoded=transcoded)
+            emit("complete", filename=result.name, ext=result.suffix[1:], kind="video", compatible=media['compatible'], transcoded=transcoded)
             return 0
     except Exception as error:
         code, message = classify_error(str(error))

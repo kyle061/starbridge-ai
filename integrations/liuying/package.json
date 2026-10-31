@@ -1,9 +1,11 @@
 {
   "name": "liuying-video-miniapp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node --env-file-if-exists=.env server/index.mjs",
     "dev": "node --watch --env-file-if-exists=.env server/index.mjs",
@@ -12,5 +14,8 @@
     "upload": "node --env-file-if-exists=.env scripts/upload.cjs",
     "check": "node scripts/check.mjs"
   },
-  "devDependencies": { "lucide": "1.8.0", "sharp": "0.35.5" }
+  "devDependencies": {
+    "lucide": "1.8.0",
+    "sharp": "0.35.5"
+  }
 }
