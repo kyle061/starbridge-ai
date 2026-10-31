@@ -1,27 +1,22 @@
 <view class="page">
-  <view class="row between"><view><view class="h1">留影去水印助手</view><view class="muted subtitle">视频解析与原片保存</view></view><image class="brand" src="/assets/scan-line-active.png" /></view>
+  <view class="hero"><view class="row between"><view class="eyebrow">LIUYING · 留住每一刻</view><image class="brand" src="/assets/scan-line-active.png" /></view><view class="h1">留影去水印助手</view><view class="subtitle muted">图片与视频，一个链接就能保存。</view><view class="hero-tags"><text>自动识别内容</text><text>默认原图原视频</text></view></view>
+  <view class="card editor"><view class="row between"><view class="h2">粘贴分享链接</view><button class="paste row" bindtap="paste"><image class="icon" src="/assets/clipboard-paste-active.png" />粘贴</button></view><view class="input-wrap"><textarea value="{{text}}" bindinput="input" maxlength="4096" placeholder="粘贴图片、图文或视频链接，也支持整段分享文案" auto-height="{{false}}" /><button wx:if="{{text}}" class="icon-button clear" bindtap="clear" aria-label="清空链接"><image class="icon" src="/assets/x.png" /></button><view class="input-note">自动识别平台与内容类型</view></view>
+  <checkbox-group bindchange="setAuthorized"><label class="consent"><checkbox value="authorized" checked="{{authorized}}" color="#197b56" /><text>我拥有该内容的保存权限</text></label></checkbox-group>
+  <button class="primary" bindtap="resolve" disabled="{{busy || saving || !text || !authorized}}"><image class="icon" src="/assets/scan-line-white.png" />{{busy ? '正在获取原文件' : '开始解析'}}</button>
+  <view wx:if="{{demoMode && !job}}" class="demo-row"><button class="demo muted" data-kind="images" bindtap="demo">试用示例图片</button><button class="demo muted" data-kind="video" bindtap="demo">试用示例视频</button></view></view>
   <view class="platforms"><view wx:for="{{platforms}}" wx:key="id" class="platform"><view class="platform-mark">{{item.mark}}</view><text>{{item.name}}</text></view></view>
-  <view class="row between label"><text>视频链接</text><button class="paste row" bindtap="paste"><image class="icon" src="/assets/clipboard-paste-active.png" />粘贴</button></view>
-  <view class="input-wrap"><textarea value="{{text}}" bindinput="input" maxlength="4096" placeholder="粘贴视频链接或分享文案" auto-height="{{false}}" /><button wx:if="{{text}}" class="icon-button clear" bindtap="clear" aria-label="清空链接"><image class="icon" src="/assets/x.png" /></button></view>
-  <view class="label">保存模式</view>
-  <view class="segments"><button class="{{mode === 'compatible' ? 'selected' : ''}}" data-mode="compatible" bindtap="setMode">相册兼容</button><button class="{{mode === 'original' ? 'selected' : ''}}" data-mode="original" bindtap="setMode">原画质</button></view>
-  <checkbox-group bindchange="setAuthorized"><label class="consent"><checkbox value="authorized" checked="{{authorized}}" color="#197b56" /><text>我拥有该视频的保存权限</text></label></checkbox-group>
-  <button class="primary" bindtap="resolve" disabled="{{busy || !text || !authorized}}"><image class="icon" src="/assets/scan-line-white.png" />{{busy ? (job.phase === 'transcoding' ? '生成相册兼容版' : '正在解析视频') : '解析视频'}}</button>
-  <button wx:if="{{demoMode && !job}}" class="demo muted" bindtap="demo">试用示例视频</button>
-  <view wx:if="{{error}}" class="error">{{error}}<button class="retry" bindtap="resolve" wx:if="{{text && !busy}}">重新解析</button></view>
-  <view wx:if="{{job}}" class="result">
-    <view class="row between"><view class="h2">{{job.status === 'ready' ? '视频已就绪' : job.statusText}}</view><view class="badge">{{job.platformName}}</view></view>
-    <view wx:if="{{busy}}" class="progress-wrap"><progress wx:if="{{job.phase !== 'transcoding'}}" percent="{{job.progress}}" activeColor="#197b56" stroke-width="4"/><view class="muted tiny">{{job.statusText}}{{job.phase === 'transcoding' ? '' : ' · ' + job.progress + '%'}}</view><button class="cancel" bindtap="cancel">取消任务</button></view>
+  <view wx:if="{{error}}" class="error">{{error}}<button class="retry" bindtap="resolve" wx:if="{{text && !busy && !saving}}">重新解析</button></view>
+  <view wx:if="{{job}}" class="card result"><view class="row between"><view class="h2">{{job.status === 'ready' ? (job.kind === 'images' ? '原图已就绪' : '视频已就绪') : job.statusText}}</view><view class="badge">{{job.platformName}}</view></view>
+    <view wx:if="{{busy}}" class="progress-wrap"><progress wx:if="{{job.phase !== 'transcoding'}}" percent="{{job.progress}}" activeColor="#197b56" stroke-width="4"/><view class="muted tiny">{{job.statusText}} · {{job.progress}}%</view><button class="cancel" bindtap="cancel">取消任务</button></view>
     <block wx:if="{{job.status === 'ready'}}">
-      <video id="preview" src="{{job.mediaUrl}}" controls object-fit="contain" show-center-play-btn binderror="videoError" />
-      <view class="video-title">{{job.title}}</view><view class="row muted tiny details"><text>{{job.durationText}}</text><text>{{job.sizeText}}</text><text>{{job.ext}}</text><text wx:if="{{job.transcoded}}">相册兼容版</text><text wx:if="{{job.isDemo}}">示例视频</text></view>
-      <view wx:if="{{!job.compatible}}" class="error tiny">当前原文件不兼容相册，可保存原文件或切换相册兼容模式重新解析。</view>
-      <button class="primary save" bindtap="saveAlbum" disabled="{{saving || !job.compatible}}"><image class="icon" src="/assets/download-white.png" />{{saving ? '下载中 ' + downloadProgress + '%' : '保存到相册'}}</button>
-      <view wx:if="{{saving}}" class="row between tiny muted"><text>正在下载视频</text><button class="cancel" bindtap="cancelDownload">取消下载</button></view>
-      <view class="actions"><button class="secondary" bindtap="saveFile" disabled="{{saving}}"><image class="icon" src="/assets/file-down.png" />{{job.transcoded ? '保存视频文件' : '保存原文件'}}</button><button class="secondary" bindtap="copyDownload"><image class="icon" src="/assets/link.png" />复制地址</button></view>
-      <view class="muted tiny expiry">临时视频保留至 {{job.timeExpiry}}</view>
+      <view wx:if="{{job.kind === 'images'}}" class="gallery"><view wx:for="{{job.assets}}" wx:key="id" class="image-tile"><image class="gallery-image" src="{{item.mediaUrl}}" mode="aspectFill" data-index="{{index}}" bindtap="previewImage" /><view class="row between image-caption"><text>{{index + 1}} / {{job.assets.length}}</text><button data-id="{{item.id}}" bindtap="saveAlbum" disabled="{{saving}}">保存此图</button></view></view></view>
+      <video wx:else id="preview" src="{{job.mediaUrl}}" controls object-fit="contain" show-center-play-btn binderror="videoError" />
+      <view class="video-title">{{job.title}}</view><view class="row muted tiny details"><text>{{job.mediaText}}</text><text>{{job.durationText}}</text><text>{{job.sizeText}}</text></view>
+      <view class="original-note">默认保留平台提供的原文件。{{job.kind === 'images' ? '点按图片可查看大图。' : '保存到相册时自动适配格式，原文件始终保留。'}}</view>
+      <button class="primary save" bindtap="saveAlbum" disabled="{{saving}}"><image class="icon" src="/assets/download-white.png" />{{saving ? saveLabel : (job.kind === 'images' ? (savedCount >= job.assets.length ? '全部已保存' : (savedCount ? '继续保存剩余图片' : '全部保存到相册')) : '保存到相册')}}</button>
+      <view wx:if="{{saving}}" class="progress-wrap"><progress percent="{{downloadProgress}}" activeColor="#197b56" stroke-width="4"/><view class="row between tiny muted"><text>下载进度 {{downloadProgress}}%</text><button class="cancel" bindtap="cancelDownload">取消保存</button></view></view>
+      <view class="actions"><button class="secondary" bindtap="saveFile" disabled="{{saving}}"><image class="icon" src="/assets/file-down.png" />{{job.assets.length > 1 ? '导出整组原图' : '导出原文件'}}</button><button class="secondary" bindtap="copyDownload"><image class="icon" src="/assets/link.png" />复制地址</button></view><view class="muted tiny expiry">临时文件保留至 {{job.timeExpiry}}</view>
     </block>
-  </view>
-  <view class="footnote">仅获取平台可用的视频源，不添加水印。</view>
+  </view><view class="footnote">仅获取平台可用的原文件，不添加水印。</view>
 </view>
-<view wx:if="{{privacyVisible}}" class="privacy-mask"><view class="privacy"><view class="h2">隐私保护指引</view><view class="muted">为读取你主动粘贴的链接及将视频保存到相册，需要取得你的授权。</view><button bindtap="openPrivacy">查看隐私保护指引</button><button id="privacy-agree" class="primary" open-type="agreePrivacyAuthorization" bindagreeprivacyauthorization="agreePrivacy">同意并继续</button><button bindtap="rejectPrivacy">暂不同意</button></view></view>
+<view wx:if="{{privacyVisible}}" class="privacy-mask"><view class="privacy"><view class="h2">隐私保护指引</view><view class="muted">为读取你主动粘贴的链接及将图片、视频保存到相册，需要取得你的授权。</view><button bindtap="openPrivacy">查看隐私保护指引</button><button id="privacy-agree" class="primary" open-type="agreePrivacyAuthorization" bindagreeprivacyauthorization="agreePrivacy">同意并继续</button><button bindtap="rejectPrivacy">暂不同意</button></view></view>

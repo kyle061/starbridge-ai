@@ -11,10 +11,11 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parents[1] / 'worker'))
 from media_compat import album_copy, format_selector, probe
+from album import prepare
 
 try:
     import yt_dlp
-    from platform_extractors import TikTokIE, BaseTikTokIE
+    from platform_extractors import TikTokIE, BaseTikTokIE, DouyinIE, InstagramIE, TwitterIE, image_post
 except ImportError:
     yt_dlp = None
 
@@ -61,6 +62,30 @@ class PlatformTests(unittest.TestCase):
                 self.assertEqual(extractor._extract_web_data_and_status('https://www.tiktok.com/share/video/123/', '123'), ({}, -1))
                 fallback.assert_called_once()
 
+    def test_gallery_uses_full_size_sources_and_accepts_photo_urls(self):
+        self.assertTrue(TikTokIE.suitable('https://www.tiktok.com/@creator/photo/123456'))
+        self.assertTrue(DouyinIE.suitable('https://www.douyin.com/note/123456'))
+        images = [{'imageURL': {'urlList': ['https://cdn.example.com/original.webp']},
+                   'thumbnail': {'urlList': ['https://cdn.example.com/thumb.webp']}}]
+        with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+            result = TikTokIE(ydl)._parse_aweme_video_web({'desc': 'photos', 'imagePost': {'images': images}},
+                                                         'https://www.tiktok.com/@creator/photo/123456', '123456')
+        self.assertEqual(result['_liuying_images'][0]['urls'], ['https://cdn.example.com/original.webp'])
+        with self.assertRaises(Exception):
+            image_post('123', 'missing', [{'url_list': []}], 'https://www.douyin.com/')
+
+    def test_instagram_and_x_keep_full_size_image_sources(self):
+        with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+            instagram = InstagramIE(ydl)._extract_product({'pk': '123', 'image_versions2': {'candidates': [
+                {'url': 'https://cdn.example.com/small.jpg', 'width': 100, 'height': 100},
+                {'url': 'https://cdn.example.com/large.jpg', 'width': 2000, 'height': 2000}]}}, get_comments=False)
+            self.assertEqual(instagram['_liuying_images'][0]['urls'][0], 'https://cdn.example.com/large.jpg')
+            twitter = TwitterIE(ydl)
+            with patch.object(twitter, '_extract_status', return_value={'extended_entities': {'media': [
+                {'type': 'photo', 'media_url_https': 'https://pbs.twimg.com/media/test.jpg?name=small'}]}}):
+                result = twitter._real_extract('https://x.com/test/status/123')
+                self.assertEqual(result['_liuying_images'][0]['urls'][0], 'https://pbs.twimg.com/media/test.jpg?name=orig')
+
 
 class ConversionTests(unittest.TestCase):
     @unittest.skipUnless(shutil.which('ffmpeg') and shutil.which('ffprobe'), 'FFmpeg and FFprobe required')
@@ -77,6 +102,18 @@ class ConversionTests(unittest.TestCase):
             self.assertTrue(converted['compatible'])
             self.assertLessEqual(output.stat().st_size, 300000)
             self.assertAlmostEqual(converted['duration'], metadata['duration'], delta=0.2)
+            self.assertEqual(hashlib.sha256(source.read_bytes()).digest(), original_hash)
+
+    @unittest.skipUnless(shutil.which('ffmpeg') and shutil.which('ffprobe'), 'FFmpeg and FFprobe required')
+    def test_webp_album_copy_keeps_original_image_unchanged(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'image-000.webp'
+            subprocess.run(['ffmpeg', '-v', 'error', '-f', 'lavfi', '-i', 'color=c=red:size=64x64',
+                            '-frames:v', '1', '-threads', '1', '-y', str(source)], check=True, capture_output=True)
+            original_hash = hashlib.sha256(source.read_bytes()).digest()
+            assets = prepare([{'file': str(source), 'kind': 'image', 'compatible': False}], 1048576)
+            result = Path(directory) / assets[0]['filename']
+            self.assertTrue(result.read_bytes().startswith(b'\xff\xd8\xff'))
             self.assertEqual(hashlib.sha256(source.read_bytes()).digest(), original_hash)
 
 

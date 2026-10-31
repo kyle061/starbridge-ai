@@ -36,7 +36,7 @@ const jobs = new Jobs(config); const signer = new Signer(secret); const limiter 
 let extractor = false;
 try { await promisify(execFile)(config.python, ['-c', 'import yt_dlp'], { timeout: 8000 }); extractor = true; } catch { /* Report readiness in health. */ }
 const directHosts = (process.env.DIRECT_MEDIA_HOSTS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime', '.mkv': 'video/x-matroska' };
+const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp', '.avif': 'image/avif', '.zip': 'application/zip', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime', '.mkv': 'video/x-matroska' };
 const local = req => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
 const send = (res, value, status = 200) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(value)); };
 async function body(req) {
@@ -57,7 +57,7 @@ async function fileResponse(req, res, file, attachment) {
   try { range = parseRange(req.headers.range, size); } catch (error) { res.setHeader('Content-Range', `bytes */${size}`); throw error; }
   const headers = { 'Content-Type': types[path.extname(file)] || 'application/octet-stream', 'Accept-Ranges': 'bytes', 'Cache-Control': 'private, no-store', 'Content-Length': range ? range.end - range.start + 1 : size };
   if (range) headers['Content-Range'] = `bytes ${range.start}-${range.end}/${size}`;
-  if (attachment) headers['Content-Disposition'] = `attachment; filename="liuying-${path.basename(path.dirname(file))}${path.extname(file)}"`;
+  if (attachment) headers['Content-Disposition'] = `attachment; filename="liuying-${path.basename(path.dirname(file))}-${path.basename(file)}"`;
   res.writeHead(range ? 206 : 200, headers);
   if (req.method === 'HEAD') { res.end(); return; }
   await pipeline(createReadStream(file, range || undefined), res);
@@ -107,29 +107,44 @@ export const server = http.createServer(async (req, res) => {
       if (url.pathname === '/api/demo' && req.method === 'POST') {
         if (!demoMode || !local(req)) throw new AppError('DEMO_DISABLED', '当前环境未开放示例视频', 403);
         limiter.take('create:' + owner, 10, 60000);
-        return send(res, publicJob(await jobs.demo(owner), signer, baseUrl), 201);
+        const input = await body(req);
+        return send(res, publicJob(await jobs.demo(owner, input.kind), signer, baseUrl), 201);
       }
       if (url.pathname === '/api/jobs' && req.method === 'POST') {
         limiter.take('create:' + owner, 10, 60000);
         const input = await body(req);
-        if (input.authorized !== true) throw new AppError('AUTHORIZATION_REQUIRED', '请确认你拥有该视频的保存权限');
-        if (!['original', 'compatible'].includes(input.mode)) throw new AppError('INVALID_MODE', '请选择有效的保存模式');
+        if (input.authorized !== true) throw new AppError('AUTHORIZATION_REQUIRED', '请确认你拥有该内容的保存权限');
+        if (input.mode !== undefined && !['original', 'compatible'].includes(input.mode)) throw new AppError('INVALID_MODE', '保存参数无效');
         const link = parseLink(input.text, directHosts);
         if (!extractor) throw new AppError('DEPENDENCY_MISSING', '视频解析引擎尚未安装，请先完成后端部署', 503);
         return send(res, publicJob(jobs.create(owner, link, input.mode), signer, baseUrl), 202);
+      }
+      const albumMatch = /^\/api\/jobs\/([a-f0-9-]{36})\/album$/.exec(url.pathname);
+      if (albumMatch && req.method === 'POST') {
+        limiter.take('album:' + owner, 20, 60000);
+        const job = jobs.get(albumMatch[1], owner); jobs.prepareAlbum(job);
+        return send(res, publicJob(job, signer, baseUrl), 202);
       }
       const match = /^\/api\/jobs\/([a-f0-9-]{36})$/.exec(url.pathname);
       if (match && req.method === 'GET') return send(res, publicJob(jobs.get(match[1], owner), signer, baseUrl));
       if (match && req.method === 'DELETE') { jobs.cancel(match[1], owner); return send(res, { ok: true }); }
       throw new AppError('NOT_FOUND', '接口不存在', 404);
     }
-    const mediaMatch = /^\/media\/([a-f0-9-]{36})$/.exec(url.pathname);
+    const mediaMatch = /^\/media\/([a-f0-9-]{36})(?:\/(archive|\d{1,3}(?:-album)?))?$/.exec(url.pathname);
     if (mediaMatch && ['GET', 'HEAD'].includes(req.method)) {
       const expText = url.searchParams.get('exp'); const exp = Number(expText);
-      if (!Number.isSafeInteger(exp) || exp < Date.now() || !signer.verify(`media:${mediaMatch[1]}:${expText}`, url.searchParams.get('sig') || '')) throw new AppError('MEDIA_EXPIRED', '下载地址已过期，请从记录重新打开', 403);
+      if (!Number.isSafeInteger(exp) || exp < Date.now() || !signer.verify(mediaMatch[2] ? `asset:${mediaMatch[1]}:${mediaMatch[2]}:${expText}` : `media:${mediaMatch[1]}:${expText}`, url.searchParams.get('sig') || '')) throw new AppError('MEDIA_EXPIRED', '下载地址已过期，请从记录重新打开', 403);
       const job = jobs.get(mediaMatch[1]);
       if (job.status !== 'ready') throw new AppError('NOT_READY', '视频尚未就绪', 409);
-      return await fileResponse(req, res, job.file, url.searchParams.get('download') === '1');
+      const key = mediaMatch[2];
+      let file = job.file;
+      if (key === 'archive') file = job.archive?.file;
+      else if (key) {
+        const asset = job.assets?.find(a => a.id === key.replace('-album', ''));
+        file = key.endsWith('-album') ? asset?.album?.file : asset?.file;
+      }
+      if (!file) throw new AppError('NOT_FOUND', '文件不存在', 404);
+      return await fileResponse(req, res, file, url.searchParams.get('download') === '1');
     }
     if (!['GET', 'HEAD'].includes(req.method)) throw new AppError('NOT_FOUND', '页面不存在', 404);
     const relative = url.pathname === '/' ? 'index.html' : decodeURIComponent(url.pathname).replace(/^\//, '');

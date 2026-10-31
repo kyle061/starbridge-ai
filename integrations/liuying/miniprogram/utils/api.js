@@ -38,7 +38,7 @@ function privacy() {
 }
 function display(job) {
   const phase = job.phase || (job.status === 'processing' && job.progress >= 96 ? 'transcoding' : undefined);
-  return { ...job, phase, sizeText: job.bytes ? (job.bytes / 1048576).toFixed(1) + ' MB' : '',
+  return { ...job, mediaText: job.kind === 'images' ? ((job.assets || []).length + ' 张原图') : '原视频', phase, sizeText: job.bytes ? (job.bytes < 1048576 ? Math.ceil(job.bytes / 1024) + ' KB' : (job.bytes / 1048576).toFixed(1) + ' MB') : '',
     durationText: job.duration ? Math.floor(job.duration / 60) + ':' + String(Math.floor(job.duration % 60)).padStart(2, '0') : '',
     timeText: new Date(job.createdAt).toLocaleString(),
     statusText: job.status === 'processing' && phase === 'transcoding' ? '生成相册兼容版' : (({ ready: '可保存', queued: '排队中', processing: '处理中', failed: '解析失败', cancelled: '已取消' })[job.status] || job.status) };

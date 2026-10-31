@@ -17,7 +17,7 @@ export const PLATFORMS = [
 
 export function parseLink(text, directHosts = []) {
   if (typeof text !== 'string' || !text.trim() || text.length > 4096)
-    throw new AppError('INVALID_LINK', '请粘贴有效的视频分享链接');
+    throw new AppError('INVALID_LINK', '请粘贴有效的图片或视频分享链接');
   const matches = text.match(/https?:\/\/[^\s<>"，。！？；（）【】]+/gi) || [];
   for (let raw of matches) {
     raw = raw.replace(/[)\],.!?;]+$/, '');
@@ -27,10 +27,10 @@ export function parseLink(text, directHosts = []) {
     const host = url.hostname.toLowerCase();
     const platform = PLATFORMS.find(p => p.hosts.some(h => host === h || host.endsWith('.' + h)));
     if (platform) return { url: url.href, platform: platform.id, platformName: platform.name };
-    if (directHosts.includes(host) && /\.(mp4|webm|mov)$/i.test(url.pathname))
-      return { url: url.href, platform: 'direct', platformName: '视频直链' };
+    if (directHosts.includes(host) && /\.(mp4|webm|mov|jpg|jpeg|png|webp|gif|avif)$/i.test(url.pathname))
+      return { url: url.href, platform: 'direct', platformName: '文件直链' };
   }
-  throw new AppError('UNSUPPORTED_LINK', '未找到支持的平台链接，请使用 HTTPS 视频分享链接');
+  throw new AppError('UNSUPPORTED_LINK', '未找到支持的平台链接，请使用 HTTPS 图片或视频分享链接');
 }
 
 export class Signer {
@@ -53,6 +53,7 @@ export class Signer {
     if (!value.owner || !Number.isFinite(value.exp) || value.exp <= now) throw new AppError('UNAUTHORIZED', '登录已过期，请重新登录', 401);
     return value.owner;
   }
+  asset(id, asset, exp) { return this.sign(`asset:${id}:${asset}:${exp}`); }
   media(id, exp) { return this.sign(`media:${id}:${exp}`); }
   newOwner() { return randomBytes(18).toString('hex'); }
 }
@@ -70,11 +71,16 @@ export function parseRange(header, size) {
 
 export function publicJob(job, signer, baseUrl) {
   const { id, status, phase, platform, platformName, mode, progress, title, duration, bytes, ext, compatible, transcoded, error, createdAt, expiresAt, isDemo } = job;
-  const output = { id, status, phase, platform, platformName, mode, progress, title, duration, bytes, ext, compatible, transcoded, error, createdAt, expiresAt, isDemo };
+  const output = { kind: job.kind, albumStatus: job.albumStatus, albumError: job.albumError, id, status, phase, platform, platformName, mode, progress, title, duration, bytes, ext, compatible, transcoded, error, createdAt, expiresAt, isDemo };
   if (status === 'ready') {
     const exp = Math.min(expiresAt, Date.now() + 900000);
     output.mediaUrl = `${baseUrl}/media/${id}?exp=${exp}&sig=${signer.media(id, exp)}`;
     output.downloadUrl = output.mediaUrl + '&download=1';
+    const assetUrl = key => `${baseUrl}/media/${id}/${key}?exp=${exp}&sig=${signer.asset(id, key, exp)}`;
+    output.assets = (job.assets || []).map(a => ({ id: a.id, kind: a.kind, bytes: a.bytes, ext: a.ext, compatible: a.compatible,
+      mediaUrl: assetUrl(a.id), downloadUrl: assetUrl(a.id) + '&download=1',
+      albumUrl: a.album ? assetUrl(a.id + '-album') : (a.compatible && a.bytes <= 190 * 1048576 ? assetUrl(a.id) : undefined) }));
+    if (job.archive) output.downloadUrl = assetUrl('archive') + '&download=1';
   }
   return output;
 }
