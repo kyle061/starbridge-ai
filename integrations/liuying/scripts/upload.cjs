@@ -24,7 +24,7 @@ if (projectConfig.appid !== process.env.WX_APP_ID) throw new Error('project.conf
 if (process.env.WX_ACCOUNT_TYPE !== 'formal') throw new Error('Set WX_ACCOUNT_TYPE=formal only after registering a formal mini program.');
 const cli = process.env.WX_DEVTOOLS_CLI || '/Applications/wechatwebdevtools.app/Contents/MacOS/cli';
 try {
-  const result = spawnSync(cli, ['upload', '--project', root, '--version', process.env.RELEASE_VERSION || '1.1.0', '--desc', process.env.RELEASE_DESCRIPTION || '图文与视频自动识别、原文件保存、图集下载与相册适配', '--lang', 'en'], { encoding: 'utf8', timeout: 120000, maxBuffer: 2 * 1024 * 1024 });
+  const result = spawnSync(cli, ['upload', '--project', root, '--version', process.env.RELEASE_VERSION || '1.1.1', '--desc', process.env.RELEASE_DESCRIPTION || '图文与视频自动识别、原文件保存、图集下载与相册适配', '--lang', 'en'], { encoding: 'utf8', timeout: 120000, maxBuffer: 2 * 1024 * 1024 });
   if (result.stdout) process.stdout.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);
   verifyUploadResult(result);
