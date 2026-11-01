@@ -82,6 +82,7 @@ function renderJob(job) {
     $('.preview-frame').classList.toggle('has-gallery', images);
     if (images) {
       $('#video').removeAttribute('src'); $('#video').load(); $('#gallery').replaceChildren();
+      $('#gallery').classList.toggle('single-image', job.assets.length === 1);
       for (const [index, asset] of job.assets.entries()) {
         const tile = document.createElement('div'); tile.className = 'image-tile';
         const open = document.createElement('button'); open.className = 'image-open'; open.setAttribute('aria-label', '查看第 ' + (index + 1) + ' 张原图');

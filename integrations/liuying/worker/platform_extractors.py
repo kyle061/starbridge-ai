@@ -44,8 +44,14 @@ class DouyinIE(BaseDouyinIE):
     def _real_extract(self, url):
         video_id = self._match_id(url)
         self._prepare_session()
+        # The web client identity is required for image posts. Without it the API
+        # returns status 0 with filter_reason=images_base and no aweme_detail.
         response = self._download_json(self._WEBPAGE_HOST + 'aweme/v1/web/aweme/detail/', video_id,
-                                       query=self._signed_query({'aweme_id': video_id}))
+                                       query=self._signed_query({
+                                           'aweme_id': video_id, 'aid': 6383,
+                                           'device_platform': 'webapp', 'channel': 'channel_pc_web',
+                                           'version_code': '190500',
+                                       }))
         detail = traverse_obj(response, ('aweme_detail', {dict}))
         if not detail:
             if response.get('filter_detail') or response.get('status_code') == 0:

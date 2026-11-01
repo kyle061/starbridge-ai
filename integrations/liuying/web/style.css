@@ -6,3 +6,5 @@
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 
 .demo-actions{display:flex;gap:16px;flex-shrink:0}@media(max-width:620px){.demo-actions{flex-direction:column;gap:4px}.demo-actions .text-button{font-size:10px;min-height:24px}.demo-actions img{display:none}}
+
+#gallery.single-image{grid-template-columns:minmax(0,1fr)}#gallery.single-image .image-open img{height:320px;object-fit:contain}.image-caption>span,.image-caption>button{white-space:nowrap;flex-shrink:0}

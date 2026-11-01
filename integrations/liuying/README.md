@@ -39,7 +39,7 @@
 
 图片帖适配覆盖抖音图文、TikTok 图片帖、Instagram 纯图片帖/图集及 X/Twitter 纯图片帖；视频解析器保持原有支持。混合图文视频轮播、直播、平台未提供源文件的内容不保证支持。管理员允许的 HTTPS 图片直链也可解析。
 
-抖音适配器增加匿名平台会话和当前接口请求签名，TikTok 适配器保留分享页路径并读取公开桌面页数据；实现依据见 `worker/UPSTREAM.md`。这些适配不改变视频访问权限，平台仍可能要求有效 Cookie。管理员可将有权使用的 Netscape Cookie 文件只读挂载进容器，并设置 `COOKIES_FILE`。不要收集用户 Cookie 或把 Cookie 写入客户端。
+抖音适配器增加匿名平台会话、网页客户端参数和当前接口请求签名；缺少网页客户端参数可能触发 `images_base` 过滤，即使图文本身仍公开可用。TikTok 适配器保留分享页路径并读取公开桌面页数据；实现依据见 `worker/UPSTREAM.md`。这些适配不改变视频访问权限，平台仍可能要求有效 Cookie。管理员可将有权使用的 Netscape Cookie 文件只读挂载进容器，并设置 `COOKIES_FILE`。不要收集用户 Cookie 或把 Cookie 写入客户端。
 
 ## 本机运行
 

@@ -22,6 +22,8 @@ H.264 may be labeled `h264` or `avc1` by different upstream extractors. Both lab
 
 The adapters return a private image manifest before yt-dlp video format processing. Douyin note URLs use the same post detail API; TikTok `/photo/` and video-path slideshow metadata read `imagePost.images`. Instagram pure image products use the largest `image_versions2` candidates. X pure photo posts request `name=orig` from the declared photo URL. Covers and thumbnails are never silently used as post images. Mixed video/image carousels are not yet supported.
 
+Douyin's detail request includes the public web client parameters (`aid=6383`, `device_platform=webapp`, `channel=channel_pc_web`, `version_code=190500`) in the signed query. Omitting this identity can return `status_code=0` with `filter_reason=images_base` even for a publicly available image post. Verified on 2026-11-01 with a user-supplied image post and a separate video control; private or otherwise unavailable responses remain failures.
+
 `images.py` downloads through the same cookie-aware yt-dlp transport and public-address DNS guard. It validates HTTPS source URLs, image signatures, image count, individual and total size caps, and stores bytes without re-encoding. ZIP archives contain these exact downloaded bytes. Each asset URL signs the job, resource key and expiration together. `album.py` creates requested album copies in the bounded worker queue, retaining ready originals when conversion fails.
 
 The old `mode` API is retained for earlier uploaded clients. Current clients omit it and the server defaults to `original`. Album preparation is a separate authenticated operation and never replaces the original download URLs.

@@ -1,7 +1,7 @@
 services:
   liuying:
     build: ..
-    image: liuying-video:1.1.0
+    image: liuying-video:1.1.1
     container_name: liuying-video
     restart: unless-stopped
     env_file: ../.env

@@ -74,6 +74,38 @@ class PlatformTests(unittest.TestCase):
         with self.assertRaises(Exception):
             image_post('123', 'missing', [{'url_list': []}], 'https://www.douyin.com/')
 
+    def test_douyin_web_client_identity_avoids_images_base_filter(self):
+        def detail_response(url, post_id, query):
+            if query.get('aid') != 6383 or query.get('device_platform') != 'webapp' or not query.get('version_code'):
+                return {'status_code': 0, 'filter_detail': {'filter_reason': 'images_base'}}
+            return {'status_code': 0, 'aweme_detail': {'aweme_id': post_id, 'desc': 'photos', 'images': [
+                {'url_list': ['https://cdn.example.com/full.webp'],
+                 'thumbnail': {'url_list': ['https://cdn.example.com/thumb.webp']}}]}}
+
+        with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+            extractor = DouyinIE(ydl)
+            with patch.object(extractor, '_prepare_session'), patch.object(extractor, '_signed_query', side_effect=lambda query: query), \
+                    patch.object(extractor, '_download_json', side_effect=detail_response):
+                result = extractor._real_extract('https://www.douyin.com/note/123456')
+            self.assertEqual(result['_liuying_images'][0]['urls'], ['https://cdn.example.com/full.webp'])
+
+            with patch.object(extractor, '_prepare_session'), patch.object(extractor, '_signed_query', side_effect=lambda query: query), \
+                    patch.object(extractor, '_download_json', return_value={'status_code': 0, 'filter_detail': {'filter_reason': 'private'}}), \
+                    patch.object(extractor, '_parse_aweme_video_app') as video_parser:
+                with self.assertRaisesRegex(Exception, 'unavailable'):
+                    extractor._real_extract('https://www.douyin.com/note/123456')
+                video_parser.assert_not_called()
+
+    def test_douyin_web_identity_keeps_video_parsing(self):
+        detail = {'aweme_id': '123456', 'video': {'play_addr': {'url_list': ['https://cdn.example.com/video.mp4']}}}
+        with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+            extractor = DouyinIE(ydl)
+            with patch.object(extractor, '_prepare_session'), patch.object(extractor, '_signed_query', side_effect=lambda query: query), \
+                    patch.object(extractor, '_download_json', return_value={'status_code': 0, 'aweme_detail': detail}), \
+                    patch.object(extractor, '_parse_aweme_video_app', return_value={'id': '123456'}) as video_parser:
+                self.assertEqual(extractor._real_extract('https://www.douyin.com/video/123456'), {'id': '123456'})
+                video_parser.assert_called_once_with(detail)
+
     def test_instagram_and_x_keep_full_size_image_sources(self):
         with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
             instagram = InstagramIE(ydl)._extract_product({'pk': '123', 'image_versions2': {'candidates': [
