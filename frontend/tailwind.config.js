@@ -1,52 +1,22 @@
+import { heroui } from '@heroui/theme'
+import colors from 'tailwindcss/colors.js'
+
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
+  content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}', './node_modules/@heroui/theme/dist/**/*.{js,mjs}'],
   darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        // 主色调 - Teal/Cyan 青色系
+        // Keep legacy utility names aligned with the HeroUI semantic palette.
+        gray: colors.zinc,
         primary: {
-          50: '#f0fdfa',
-          100: '#ccfbf1',
-          200: '#99f6e4',
-          300: '#5eead4',
-          400: '#2dd4bf',
-          500: '#14b8a6',
-          600: '#0d9488',
-          700: '#0f766e',
-          800: '#115e59',
-          900: '#134e4a',
-          950: '#042f2e'
+          ...colors.emerald,
+          DEFAULT: 'hsl(var(--heroui-primary) / <alpha-value>)',
+          foreground: 'hsl(var(--heroui-primary-foreground) / <alpha-value>)'
         },
-        // 辅助色 - 深蓝灰
-        accent: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
-          950: '#020617'
-        },
-        // 深色模式背景
-        dark: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
-          950: '#020617'
-        }
+        accent: colors.zinc,
+        dark: colors.zinc
       },
       fontFamily: {
         sans: [
@@ -65,22 +35,21 @@ export default {
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
       },
       boxShadow: {
-        glass: '0 8px 32px rgba(0, 0, 0, 0.08)',
-        'glass-sm': '0 4px 16px rgba(0, 0, 0, 0.06)',
-        glow: '0 0 20px rgba(20, 184, 166, 0.25)',
-        'glow-lg': '0 0 40px rgba(20, 184, 166, 0.35)',
-        card: '0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06)',
-        'card-hover': '0 10px 40px rgba(0, 0, 0, 0.08)',
+        glass: '0 4px 16px rgba(0, 0, 0, 0.05)',
+        'glass-sm': '0 2px 8px rgba(0, 0, 0, 0.04)',
+        glow: 'none',
+        'glow-lg': 'none',
+        card: '0 1px 2px rgba(0, 0, 0, 0.03)',
+        'card-hover': '0 2px 6px rgba(0, 0, 0, 0.05)',
         'inner-glow': 'inset 0 1px 0 rgba(255, 255, 255, 0.1)'
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-primary': 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)',
-        'gradient-dark': 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+        'gradient-primary': 'linear-gradient(#18181b, #18181b)',
+        'gradient-dark': 'linear-gradient(#18181b, #18181b)',
         'gradient-glass':
           'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-        'mesh-gradient':
-          'radial-gradient(at 40% 20%, rgba(20, 184, 166, 0.12) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(6, 182, 212, 0.08) 0px, transparent 50%), radial-gradient(at 0% 50%, rgba(20, 184, 166, 0.08) 0px, transparent 50%)'
+        'mesh-gradient': 'none'
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-out',
@@ -126,9 +95,43 @@ export default {
         xs: '2px'
       },
       borderRadius: {
-        '4xl': '2rem'
-      }
+        xl: '8px', '2xl': '8px', '3xl': '8px', '4xl': '8px'
+      },
+      letterSpacing: { tighter: '0', tight: '0', normal: '0', wide: '0', wider: '0', widest: '0' }
     }
   },
-  plugins: []
+  plugins: [heroui({
+    defaultTheme: 'light',
+    layout: {
+      radius: { small: '6px', medium: '8px', large: '8px' },
+      borderWidth: { small: '1px', medium: '1px', large: '2px' },
+      boxShadow: { small: '0 1px 2px rgb(0 0 0 / 0.04)', medium: '0 4px 16px rgb(0 0 0 / 0.06)', large: '0 12px 40px rgb(0 0 0 / 0.12)' }
+    },
+    themes: {
+      light: {
+        colors: {
+          background: '#fafafa', foreground: '#18181b',
+          content1: '#ffffff', content2: '#f4f4f5', content3: '#e4e4e7', content4: '#d4d4d8',
+          divider: '#e4e4e7', focus: '#059669',
+          primary: { ...colors.emerald, DEFAULT: '#18181b', foreground: '#ffffff' },
+          secondary: { DEFAULT: '#047857', foreground: '#ffffff' },
+          success: { DEFAULT: '#047857', foreground: '#ffffff' },
+          warning: { DEFAULT: '#b45309', foreground: '#ffffff' },
+          danger: { DEFAULT: '#dc2626', foreground: '#ffffff' }
+        }
+      },
+      dark: {
+        colors: {
+          background: '#09090b', foreground: '#f4f4f5',
+          content1: '#18181b', content2: '#27272a', content3: '#3f3f46', content4: '#52525b',
+          divider: '#3f3f46', focus: '#34d399',
+          primary: { ...colors.emerald, DEFAULT: '#f4f4f5', foreground: '#18181b' },
+          secondary: { DEFAULT: '#34d399', foreground: '#052e16' },
+          success: { DEFAULT: '#34d399', foreground: '#052e16' },
+          warning: { DEFAULT: '#fbbf24', foreground: '#18181b' },
+          danger: { DEFAULT: '#f87171', foreground: '#18181b' }
+        }
+      }
+    }
+  })]
 }

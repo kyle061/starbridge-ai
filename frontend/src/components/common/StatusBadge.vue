@@ -1,12 +1,7 @@
 <template>
-  <div class="flex items-center gap-1.5">
-    <span
-      :class="[
-        'inline-block h-2 w-2 rounded-full',
-        variantClass
-      ]"
-    ></span>
-    <span class="text-sm text-gray-700 dark:text-gray-300">
+  <div :class="styles.base()">
+    <span :class="styles.dot()" aria-hidden="true" />
+    <span :class="styles.content()">
       {{ label }}
     </span>
   </div>
@@ -14,26 +9,29 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { chip } from '@heroui/theme'
 
 const props = defineProps<{
   status: string
   label: string
 }>()
 
-const variantClass = computed(() => {
+const color = computed(() => {
   switch (props.status) {
     case 'active':
     case 'success':
-      return 'bg-green-500'
+      return 'success'
     case 'disabled':
     case 'inactive':
     case 'warning':
-      return 'bg-yellow-500'
+      return 'warning'
     case 'error':
     case 'danger':
-      return 'bg-red-500'
+      return 'danger'
     default:
-      return 'bg-gray-400'
+      return 'default'
   }
 })
+
+const styles = computed(() => chip({ variant: 'dot', size: 'sm', radius: 'sm', color: color.value }))
 </script>

@@ -11,6 +11,7 @@
       :aria-label="ariaLabel ?? 'Select option'"
       :aria-describedby="ariaDescribedby"
       :class="[
+        styles.trigger({ class: 'border bg-content1 shadow-sm' }),
         'select-trigger',
         isOpen && 'select-trigger-open',
         error && 'select-trigger-error',
@@ -84,6 +85,7 @@
               @click.stop="!isOptionDisabled(option) && selectOption(option)"
               @mouseenter="handleOptionMouseEnter(option, index)"
               :class="[
+                optionStyles.base(),
                 'select-option',
                 isGroupHeaderOption(option) && 'select-option-group',
                 isSelected(option) && 'select-option-selected',
@@ -122,6 +124,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { select, listboxItem } from '@heroui/theme'
 import { useI18n } from 'vue-i18n'
 import Icon from '@/components/icons/Icon.vue'
 
@@ -180,6 +183,12 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<Emits>()
+
+const styles = computed(() => select({
+  variant: 'bordered', radius: 'md', size: 'md',
+  isDisabled: props.disabled, isInvalid: props.error
+}))
+const optionStyles = listboxItem({ variant: 'flat', color: 'default' })
 
 const isOpen = ref(false)
 const searchQuery = ref('')
@@ -506,18 +515,16 @@ onUnmounted(() => {
 <style scoped>
 .select-trigger {
   @apply flex w-full items-center justify-between gap-2;
-  @apply rounded-xl px-4 py-2.5 text-sm;
-  @apply bg-white dark:bg-dark-800;
-  @apply border border-gray-200 dark:border-dark-600;
-  @apply text-gray-900 dark:text-gray-100;
+  @apply min-h-10 rounded-lg px-3 py-2.5 text-sm;
+  @apply border border-divider bg-content1 text-foreground;
   @apply transition-all duration-200;
-  @apply focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30;
+  @apply focus:border-focus focus:outline-none focus:ring-2 focus:ring-focus/20;
   @apply hover:border-gray-300 dark:hover:border-dark-500;
   @apply cursor-pointer;
 }
 
 .select-trigger-open {
-  @apply border-primary-500 ring-2 ring-primary-500/30;
+  @apply border-focus ring-2 ring-focus/20;
 }
 
 .select-trigger-error {
@@ -546,9 +553,7 @@ onUnmounted(() => {
 <style>
 .select-dropdown-portal {
   @apply w-max min-w-[200px];
-  @apply bg-white dark:bg-dark-800;
-  @apply rounded-xl;
-  @apply border border-gray-200 dark:border-dark-700;
+  @apply rounded-lg border border-divider bg-content1 p-1;
   @apply shadow-lg shadow-black/10 dark:shadow-black/30;
   @apply overflow-hidden;
   pointer-events: auto !important;
@@ -572,7 +577,7 @@ onUnmounted(() => {
 
 .select-dropdown-portal .select-option {
   @apply flex items-center justify-between gap-2;
-  @apply px-4 py-2.5 text-sm;
+  @apply rounded-md px-3 py-2.5 text-sm;
   @apply text-gray-700 dark:text-gray-300;
   @apply cursor-pointer transition-colors duration-150;
   @apply hover:bg-gray-50 dark:hover:bg-dark-700;

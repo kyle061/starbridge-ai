@@ -1,4 +1,5 @@
 // Export all common components
+export { default as Button } from './Button.vue'
 export { default as DataTable } from './DataTable.vue'
 export { default as Pagination } from './Pagination.vue'
 export { default as BaseDialog } from './BaseDialog.vue'

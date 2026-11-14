@@ -8,5 +8,6 @@ overrides:
   'dompurify@<3.4.14': '>=3.4.14'
 
 allowBuilds:
+  '@heroui/shared-utils': false
   esbuild: true
   vue-demi: true

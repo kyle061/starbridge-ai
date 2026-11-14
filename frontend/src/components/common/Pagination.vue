@@ -4,23 +4,27 @@
   >
     <div class="flex min-w-0 flex-1 items-center justify-between gap-2 sm:hidden">
       <!-- Mobile pagination -->
-      <button
+      <Button
         @click="goToPage(page - 1)"
         :disabled="page === 1"
-        class="relative inline-flex min-h-11 shrink-0 items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-600 dark:bg-dark-700 dark:text-gray-200 dark:hover:bg-dark-600"
+        variant="bordered"
+        is-icon-only
+        :aria-label="t('pagination.previous')"
       >
-        {{ t('pagination.previous') }}
-      </button>
+        <Icon name="chevronLeft" size="md" />
+      </Button>
       <span class="min-w-0 text-center text-xs text-gray-700 dark:text-gray-300">
         {{ t('pagination.pageOf', { page, total: totalPages }) }}
       </span>
-      <button
+      <Button
         @click="goToPage(page + 1)"
         :disabled="page === totalPages"
-        class="relative inline-flex min-h-11 shrink-0 items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-600 dark:bg-dark-700 dark:text-gray-200 dark:hover:bg-dark-600"
+        variant="bordered"
+        is-icon-only
+        :aria-label="t('pagination.next')"
       >
-        {{ t('pagination.next') }}
-      </button>
+        <Icon name="chevronRight" size="md" />
+      </Button>
     </div>
 
     <div class="hidden gap-4 sm:flex sm:flex-1 sm:flex-wrap sm:items-center sm:justify-between">
@@ -69,49 +73,47 @@
 
       <!-- Desktop pagination buttons -->
       <nav
-        class="relative z-0 inline-flex -space-x-px rounded-md shadow-sm"
+        class="relative z-0 inline-flex items-center gap-1"
         aria-label="Pagination"
       >
         <!-- Previous button -->
-        <button
+        <Button
           @click="goToPage(page - 1)"
           :disabled="page === 1"
-          class="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-600 dark:bg-dark-700 dark:text-gray-400 dark:hover:bg-dark-600"
+          variant="light"
+          is-icon-only
           :aria-label="t('pagination.previous')"
         >
           <Icon name="chevronLeft" size="md" />
-        </button>
+        </Button>
 
         <!-- Page numbers -->
-        <button
+        <Button
           v-for="(pageNum, index) in visiblePages"
           :key="`${pageNum}-${index}`"
           @click="typeof pageNum === 'number' && goToPage(pageNum)"
           :disabled="typeof pageNum !== 'number'"
-          :class="[
-            'relative inline-flex items-center border px-4 py-2 text-sm font-medium',
-            pageNum === page
-              ? 'z-10 border-primary-500 bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400'
-              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-dark-600 dark:bg-dark-700 dark:text-gray-300 dark:hover:bg-dark-600',
-            typeof pageNum !== 'number' && 'cursor-default'
-          ]"
+          :color="pageNum === page ? 'primary' : 'default'"
+          :variant="pageNum === page ? 'solid' : 'light'"
+          is-icon-only
           :aria-label="
             typeof pageNum === 'number' ? t('pagination.goToPage', { page: pageNum }) : undefined
           "
           :aria-current="pageNum === page ? 'page' : undefined"
         >
           {{ pageNum }}
-        </button>
+        </Button>
 
         <!-- Next button -->
-        <button
+        <Button
           @click="goToPage(page + 1)"
           :disabled="page === totalPages"
-          class="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-600 dark:bg-dark-700 dark:text-gray-400 dark:hover:bg-dark-600"
+          variant="light"
+          is-icon-only
           :aria-label="t('pagination.next')"
         >
           <Icon name="chevronRight" size="md" />
-        </button>
+        </Button>
       </nav>
     </div>
   </div>
@@ -122,6 +124,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Icon from '@/components/icons/Icon.vue'
 import Select from './Select.vue'
+import Button from './Button.vue'
 import { getConfiguredTablePageSizeOptions, normalizeTablePageSize } from '@/utils/tablePreferences'
 import { setPersistedPageSize } from '@/composables/usePersistedPageSize'
 

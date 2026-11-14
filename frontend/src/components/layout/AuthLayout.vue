@@ -1,37 +1,13 @@
 <template>
-  <div class="auth-layout relative flex min-h-screen items-center justify-center p-4">
-    <!-- Background -->
-    <div
-      class="absolute inset-0 bg-gradient-to-br from-gray-50 via-primary-50/30 to-gray-100 dark:from-dark-950 dark:via-dark-900 dark:to-dark-950"
-    ></div>
-
-    <!-- Decorative Elements -->
-    <div class="pointer-events-none absolute inset-0 overflow-hidden">
-      <!-- Gradient Orbs -->
-      <div
-        class="absolute -right-40 -top-40 h-80 w-80 rounded-full bg-primary-400/20 blur-3xl"
-      ></div>
-      <div
-        class="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-primary-500/15 blur-3xl"
-      ></div>
-      <div
-        class="absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-300/10 blur-3xl"
-      ></div>
-
-      <!-- Grid Pattern -->
-      <div
-        class="absolute inset-0 bg-[linear-gradient(rgba(20,184,166,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(20,184,166,0.03)_1px,transparent_1px)] bg-[size:64px_64px]"
-      ></div>
-    </div>
-
+  <div class="auth-layout flex min-h-screen items-center justify-center bg-content1 px-4 py-10 text-foreground">
     <!-- Content Container -->
-    <div class="relative z-10 w-full max-w-md">
+    <div class="w-full max-w-sm">
       <!-- Logo/Brand -->
       <div class="mb-6 text-center sm:mb-8">
         <!-- Custom Logo or Default Logo -->
         <template v-if="settingsLoaded">
-          <h1 class="mb-4">
-            <BrandLogo :logo="siteLogo" :name="siteName" style="width: 17rem; height: 3rem" />
+          <h1 class="mb-4 flex justify-center">
+            <BrandLogo :logo="siteLogo" :name="siteName" class="max-w-full" style="width: 17rem; height: 3rem" />
           </h1>
           <p class="text-sm text-gray-500 dark:text-dark-400">
             {{ siteSubtitle }}
@@ -40,7 +16,7 @@
       </div>
 
       <!-- Card Container -->
-      <div class="card-glass rounded-2xl p-5 shadow-glass sm:p-8">
+      <div class="border-t border-divider pt-7">
         <slot />
       </div>
 

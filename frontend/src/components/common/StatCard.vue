@@ -1,5 +1,5 @@
 <template>
-  <div class="stat-card">
+  <div :class="styles.base({ class: 'stat-card flex-row overflow-visible' })">
     <div :class="['stat-icon', iconClass]">
       <component v-if="icon" :is="icon" class="h-6 w-6" aria-hidden="true" />
     </div>
@@ -23,6 +23,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { card } from '@heroui/theme'
 import type { Component } from 'vue'
 import Icon from '@/components/icons/Icon.vue'
 
@@ -43,6 +44,8 @@ const props = withDefaults(defineProps<Props>(), {
   changeType: 'neutral',
   iconVariant: 'primary'
 })
+
+const styles = card({ radius: 'md', shadow: 'none' })
 
 const formattedValue = computed(() => {
   if (props.formatValue) {

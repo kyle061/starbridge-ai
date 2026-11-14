@@ -2,6 +2,24 @@
 
 This directory contains reusable Vue 3 components built with Composition API, TypeScript, and TailwindCSS.
 
+## HeroUI Theme
+
+The Vue controls use the official `@heroui/theme` component slot factories and
+Tailwind plugin. HeroUI's React runtime is not mounted inside Vue. Keep Vue models,
+events, native form semantics, and existing keyboard handling in these adapters.
+Version `2.4.10` is pinned for Tailwind CSS 3 compatibility.
+
+`tailwind.config.js` owns the light/dark tokens: neutral surfaces, monochrome
+primary actions, emerald links and status accents, 6-8px radii, and subtle borders.
+The visual reference is Cal.com, adapted to a dense gateway console. Use semantic
+utilities (`bg-content1`, `text-foreground`, `border-divider`, `ring-focus`) for new
+controls. Legacy `.btn`, `.input`, `.card`, and sidebar classes share these tokens.
+
+`Button.vue` supports `color`, `variant`, `size`, `loading`, `disabled`,
+`isIconOnly`, and `fullWidth`; icon-only controls need an accessible label.
+Use the existing `Input`, `TextArea`, `Select`, `Toggle`, `BaseDialog`, `StatusBadge`,
+and `DataTable` adapters to retain the application's Vue behavior.
+
 ## Components
 
 ### DataTable.vue

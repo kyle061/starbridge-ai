@@ -116,7 +116,7 @@
   </div>
 
   <!-- Default Home Page -->
-  <div v-else class="min-h-screen bg-gray-50 text-gray-900 dark:bg-dark-950 dark:text-white">
+  <div v-else class="min-h-screen bg-background text-foreground">
     <header class="border-b border-gray-200 bg-white dark:border-dark-800 dark:bg-dark-900" @keydown.esc="closeMobileMenu">
       <nav class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6" :aria-label="t('home.navigation')">
         <router-link to="/home" class="flex min-w-0 items-center gap-2.5">
@@ -156,25 +156,27 @@
     </header>
 
     <main class="mx-auto max-w-6xl space-y-14 px-4 pb-16 pt-10 sm:space-y-20 sm:px-6 sm:pt-16">
-      <section class="grid items-center gap-8 lg:grid-cols-[1.2fr_1fr] lg:gap-14">
-        <div class="min-w-0">
-          <p class="mb-4 text-sm font-semibold tracking-wide text-primary-700 dark:text-primary-400">{{ siteName }} · {{ t('home.heroEyebrow') }}</p>
-          <h1 class="text-balance text-4xl font-bold leading-tight tracking-tight sm:text-5xl">{{ t('home.heroSubtitle') }}</h1>
-          <p class="mt-5 max-w-xl text-base leading-8 text-gray-600 dark:text-dark-300">{{ t('home.heroDescription') }}</p>
-          <div class="mt-7 flex flex-wrap gap-3">
-            <router-link :to="primaryActionPath" class="btn btn-primary min-h-12 px-6">{{ primaryActionLabel }}<Icon name="arrowRight" size="md" class="ml-2" /></router-link>
-            <router-link v-if="showModelPlazaEntry" to="/model-plaza" class="btn btn-secondary min-h-12 px-6">{{ t('home.modelPricing') }}</router-link>
-            <a v-else href="#quick-start" class="btn btn-secondary min-h-12 px-6">{{ t('home.quickStart') }}</a>
+      <section class="grid justify-items-center gap-8">
+        <div class="min-w-0 max-w-2xl text-center">
+          <img :src="siteLogo || '/logo-mark.png'" :alt="siteName" class="mx-auto mb-5 h-14 w-14 object-contain" />
+          <p class="mb-3 text-sm font-medium text-primary-700 dark:text-primary-400">{{ t('home.heroEyebrow') }}</p>
+          <h1 class="text-balance break-words text-4xl font-semibold leading-tight">{{ siteName }}</h1>
+          <p class="mt-4 text-xl font-medium text-foreground">{{ t('home.heroSubtitle') }}</p>
+          <p class="mt-3 text-sm leading-7 text-gray-600 dark:text-dark-300">{{ t('home.heroDescription') }}</p>
+          <div class="mt-6 flex flex-wrap justify-center gap-3">
+            <router-link :to="primaryActionPath" :class="primaryButton">{{ primaryActionLabel }}<Icon name="arrowRight" size="md" /></router-link>
+            <router-link v-if="showModelPlazaEntry" to="/model-plaza" :class="secondaryButton">{{ t('home.modelPricing') }}</router-link>
+            <a v-else href="#quick-start" :class="secondaryButton">{{ t('home.quickStart') }}</a>
           </div>
           <p class="mt-4 text-xs leading-6 text-gray-500 dark:text-dark-400">{{ t('home.balanceNote') }}</p>
         </div>
-        <div data-testid="home-connection" class="min-w-0 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-dark-700 dark:bg-dark-900 sm:p-6">
+        <div data-testid="home-connection" class="w-full min-w-0 max-w-3xl rounded-lg border border-divider bg-content1 p-5 sm:p-6">
           <div class="flex items-center justify-between gap-3 border-b border-gray-100 pb-4 dark:border-dark-800">
             <h2 class="font-semibold">{{ t('home.connection.title') }}</h2>
             <Icon name="terminal" size="md" class="text-primary-600 dark:text-primary-400" />
           </div>
           <p class="mb-2 mt-5 text-xs font-medium text-gray-500 dark:text-dark-400">{{ t('home.connection.endpoint') }}</p>
-          <div class="flex min-w-0 items-center gap-2 rounded-xl bg-gray-50 p-3 dark:bg-dark-800">
+          <div class="flex min-w-0 items-center gap-2 rounded-md bg-content2 p-3">
             <code class="min-w-0 flex-1 text-sm [overflow-wrap:anywhere]">{{ publicEndpoint }}</code>
             <button type="button" class="inline-flex home-icon-button shrink-0" :aria-label="t('home.connection.copyEndpoint')" @click="copyToClipboard(publicEndpoint, t('common.copiedToClipboard'))"><Icon :name="copied ? 'check' : 'clipboard'" size="md" /></button>
           </div>
@@ -219,7 +221,7 @@
 
       <section aria-labelledby="home-faq-title" class="grid gap-6 lg:grid-cols-[1fr_2fr] lg:gap-12">
         <div><h2 id="home-faq-title" class="text-2xl font-bold">{{ t('home.faq.title') }}</h2><p class="mt-3 text-sm leading-7 text-gray-600 dark:text-dark-400">{{ t('home.faq.subtitle') }}</p><SupportContact :contact="contactInfo" class="mt-3" /></div>
-        <div class="min-w-0 divide-y divide-gray-200 rounded-2xl border border-gray-200 bg-white px-5 dark:divide-dark-700 dark:border-dark-700 dark:bg-dark-900">
+        <div class="min-w-0 divide-y divide-divider border-y border-divider">
           <details v-for="item in faqItems" :key="item" class="group py-1">
             <summary class="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">{{ t(`home.faq.${item}.question`) }}<span aria-hidden="true" class="shrink-0 text-lg text-gray-400 group-open:rotate-45">+</span></summary>
             <p class="pb-4 text-sm leading-7 text-gray-600 dark:text-dark-400">{{ t(`home.faq.${item}.answer`) }}</p>
@@ -228,8 +230,8 @@
       </section>
     </main>
 
-    <footer class="border-t border-gray-200 px-4 py-6 dark:border-dark-800 sm:px-6">
-      <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 text-sm text-gray-500 dark:text-dark-400">
+    <footer class="home-footer border-t border-divider bg-zinc-950 px-4 py-8 text-zinc-400 sm:px-6">
+      <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 text-sm">
         <p class="[overflow-wrap:anywhere]">&copy; {{ currentYear }} {{ siteName }}</p>
         <div class="flex max-w-full flex-wrap items-center gap-x-5 gap-y-2"><a v-if="docUrl" :href="docUrl" target="_blank" rel="noopener noreferrer" class="home-nav-link">{{ t('home.docs') }}</a><SupportContact :contact="contactInfo" /></div>
       </div>
@@ -238,6 +240,7 @@
 </template>
 
 <script setup lang="ts">
+import { button } from '@heroui/theme'
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore, useAppStore } from '@/stores'
@@ -250,6 +253,9 @@ import { sanitizeUrl } from '@/utils/url'
 import { FeatureFlags, isFeatureFlagEnabled } from '@/utils/featureFlags'
 
 const { t } = useI18n()
+
+const primaryButton = button({ color: 'primary', radius: 'md', class: 'gap-2 px-5 font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus max-sm:min-h-11' })
+const secondaryButton = button({ variant: 'bordered', radius: 'md', class: 'border border-divider bg-content1 px-5 font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus max-sm:min-h-11' })
 
 const authStore = useAuthStore()
 const appStore = useAppStore()
@@ -352,6 +358,9 @@ onMounted(() => {
   @apply h-11 w-11 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-500 dark:text-dark-300 dark:hover:bg-dark-800;
 }
 .home-info-card {
-  @apply min-w-0 rounded-2xl border border-gray-200 bg-white p-5 dark:border-dark-700 dark:bg-dark-900;
+  @apply min-w-0 rounded-lg border border-divider bg-content1 p-5;
+}
+.home-footer .home-nav-link {
+  @apply text-zinc-300 hover:text-white;
 }
 </style>

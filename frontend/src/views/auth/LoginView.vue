@@ -3,7 +3,7 @@
     <div class="space-y-6">
       <!-- Title -->
       <div class="text-center">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+        <h2 class="text-2xl font-semibold text-foreground">
           {{ t('auth.welcomeBack') }}
         </h2>
         <p class="mt-2 text-sm text-gray-500 dark:text-dark-400">
@@ -17,65 +17,49 @@
           <span>{{ errorMessage }}</span>
         </div>
         <!-- Email Input -->
-        <div>
-          <label for="email" class="input-label">
-            {{ t('auth.emailLabel') }}
-          </label>
-          <div class="relative">
-            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-              <Icon name="mail" size="md" class="text-gray-400 dark:text-dark-500" />
-            </div>
-            <input
-              id="email"
-              v-model="formData.email"
-              type="email"
-              required
-              autofocus
-              autocomplete="email"
-              :disabled="authActionDisabled"
-              class="input pl-11"
-              :class="{ 'input-error': errors.email }"
-              :aria-invalid="Boolean(errors.email)"
-              :aria-describedby="errors.email ? 'login-email-error' : undefined"
-              :placeholder="t('auth.emailPlaceholder')"
-            />
-          </div>
-          <p v-if="errors.email" id="login-email-error" class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">{{ errors.email }}</p>
-        </div>
+        <Input
+          id="email"
+          v-model="formData.email"
+          type="email"
+          required
+          autofocus
+          autocomplete="email"
+          :label="t('auth.emailLabel')"
+          :disabled="authActionDisabled"
+          :error="errors.email"
+          :placeholder="t('auth.emailPlaceholder')"
+        >
+          <template #prefix><Icon name="mail" size="md" /></template>
+        </Input>
 
         <!-- Password Input -->
         <div>
-          <label for="password" class="input-label">
-            {{ t('auth.passwordLabel') }}
-          </label>
-          <div class="relative">
-            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-              <Icon name="lock" size="md" class="text-gray-400 dark:text-dark-500" />
-            </div>
-            <input
-              id="password"
-              v-model="formData.password"
-              :type="showPassword ? 'text' : 'password'"
-              required
-              autocomplete="current-password"
-              :disabled="authActionDisabled"
-              class="input pl-11 pr-11"
-              :class="{ 'input-error': errors.password }"
-              :aria-invalid="Boolean(errors.password)"
-              :aria-describedby="errors.password ? 'login-password-error' : undefined"
-              :placeholder="t('auth.passwordPlaceholder')"
-            />
-            <button
-              type="button"
-              @click="showPassword = !showPassword"
-              :disabled="authActionDisabled"
-              class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-dark-300"
-            >
-              <Icon v-if="showPassword" name="eyeOff" size="md" />
-              <Icon v-else name="eye" size="md" />
-            </button>
-          </div>
-          <p v-if="errors.password" id="login-password-error" class="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">{{ errors.password }}</p>
+          <Input
+            id="password"
+            v-model="formData.password"
+            :type="showPassword ? 'text' : 'password'"
+            required
+            autocomplete="current-password"
+            :label="t('auth.passwordLabel')"
+            :disabled="authActionDisabled"
+            :error="errors.password"
+            :placeholder="t('auth.passwordPlaceholder')"
+          >
+            <template #prefix><Icon name="lock" size="md" /></template>
+            <template #suffix>
+              <Button
+                variant="light"
+                size="sm"
+                is-icon-only
+                :aria-label="t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')"
+                :title="t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')"
+                :disabled="authActionDisabled"
+                @click="showPassword = !showPassword"
+              >
+                <Icon :name="showPassword ? 'eyeOff' : 'eye'" size="md" />
+              </Button>
+            </template>
+          </Input>
           <div class="mt-1 flex items-center justify-between">
             <span></span>
             <router-link
@@ -123,34 +107,16 @@
         </div>
 
         <!-- Submit Button -->
-        <button
+        <Button
           type="submit"
+          color="primary"
+          full-width
+          :loading="isLoading"
           :disabled="authActionDisabled || (turnstileEnabled && !turnstileToken)"
-          class="btn btn-primary w-full"
         >
-          <svg
-            v-if="isLoading"
-            class="-ml-1 mr-2 h-4 w-4 animate-spin text-white"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            ></circle>
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            ></path>
-          </svg>
-          <Icon v-else name="login" size="md" class="mr-2" />
+          <Icon v-if="!isLoading" name="login" size="md" />
           {{ isLoading ? t('auth.signingIn') : t('auth.signIn') }}
-        </button>
+        </Button>
 
         <LoginAgreementPrompt
           v-if="loginAgreementEnabled"
@@ -174,16 +140,17 @@
             <div class="h-px flex-1 bg-gray-200 dark:bg-dark-700"></div>
           </div>
 
-          <button
+          <Button
             v-if="showPasskeyLogin"
-            type="button"
-            class="btn btn-secondary w-full"
+            data-testid="passkey-login"
+            variant="bordered"
+            full-width
             :disabled="authActionDisabled"
             @click="handlePasskeyLogin"
           >
             <Icon name="key" size="md" class="mr-2" />
             {{ passkeyLoading ? t('auth.passkeySigningIn') : t('auth.passkeySignIn') }}
-          </button>
+          </Button>
 
           <EmailOAuthButtons
             :disabled="authActionDisabled"
@@ -252,6 +219,8 @@ import { computed, ref, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { AuthLayout } from '@/components/layout'
+import Button from '@/components/common/Button.vue'
+import Input from '@/components/common/Input.vue'
 import LinuxDoOAuthSection from '@/components/auth/LinuxDoOAuthSection.vue'
 import DingTalkOAuthSection from '@/components/auth/DingTalkOAuthSection.vue'
 import OidcOAuthSection from '@/components/auth/OidcOAuthSection.vue'

@@ -4,7 +4,7 @@
       {{ label }}
       <span v-if="required" class="text-red-500" aria-hidden="true">*</span>
     </label>
-    <div class="relative">
+    <div :class="styles.inputWrapper({ class: 'group border bg-content1 shadow-sm focus-within:border-focus focus-within:ring-2 focus-within:ring-focus/20' })">
       <textarea
         :id="fieldId"
         ref="textAreaRef"
@@ -14,13 +14,9 @@
         :placeholder="placeholderText"
         :readonly="readonly"
         :aria-invalid="error ? 'true' : 'false'"
-        :aria-describedby="feedbackId"
+        :aria-describedby="error || hint ? feedbackId : undefined"
         :rows="rows"
-        :class="[
-          'input w-full min-h-[80px] transition-all duration-200 resize-y',
-          error ? 'input-error ring-2 ring-red-500/20' : '',
-          disabled ? 'cursor-not-allowed bg-gray-100 opacity-60 dark:bg-dark-900' : ''
-        ]"
+        :class="styles.input({ class: 'min-h-20 resize-y placeholder:text-default-400 max-sm:text-base' })"
         @input="onInput"
         @change="$emit('change', ($event.target as HTMLTextAreaElement).value)"
         @blur="$emit('blur', $event)"
@@ -40,6 +36,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { input } from '@heroui/theme'
 import Icon from '@/components/icons/Icon.vue'
 
 interface Props {
@@ -70,6 +67,10 @@ const emit = defineEmits<{
 }>()
 
 const textAreaRef = ref<HTMLTextAreaElement | null>(null)
+const styles = computed(() => input({
+  variant: 'bordered', radius: 'md', size: 'md', labelPlacement: 'outside',
+  isMultiline: true, isInvalid: Boolean(props.error), isDisabled: props.disabled
+}))
 const placeholderText = computed(() => props.placeholder || '')
 const generatedId = `textarea-${Math.random().toString(36).slice(2, 10)}`
 const fieldId = computed(() => props.id || generatedId)

@@ -74,6 +74,10 @@ importers:
       xlsx:
         specifier: ^0.18.5
         version: 0.18.5
+
+      "@heroui/theme":
+        specifier: 2.4.10
+        version: 2.4.10(tailwindcss@3.4.19)
     devDependencies:
       '@intlify/message-compiler':
         specifier: 9.14.5
@@ -4531,6 +4535,57 @@ packages:
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
+
+  "@heroui/theme@2.4.10":
+    resolution:
+      integrity: sha512-ffoN+O7RmMojzfcfN7pWl4PfLJCjpEBm+BGstq+17BwFpQtVEYP4A358K79N46KaYYCiXLOP8fEIq/INuKWoTw==
+    peerDependencies:
+      tailwindcss: ">=3.4.0"
+  "@heroui/shared-utils@2.1.6":
+    resolution:
+      integrity: sha512-Qz6/gyVM+jur+FOnALJBCp6YWt2CCnGu/c3SpxTx7/X9NgqLb+VYZ6XMH1HD9Sf3UzjtHZ/My1Cy6nlw1iO+zw==
+  clsx@1.2.1:
+    resolution:
+      integrity: sha512-EcR6r5a8bj6pu3ycsa/E/cKVGuTgZJZdsyUYHOksG/UHIiKfjxzRxYJpyVBwYaQeOvghal9fcc4PidlgzugAQg==
+    engines:
+      node: ">=6"
+  color@4.2.3:
+    resolution:
+      integrity: sha512-1rXeuUUiGGrykh+CeBdu5Ie7OJwinCgQY0bc7GCRxy5xVHy+moaqkpL/jqQq0MtQOeYcrqEz4abc5f0KtU7W4A==
+    engines:
+      node: ">=12.5.0"
+  color-string@1.9.1:
+    resolution:
+      integrity: sha512-shrVawQFojnZv6xM40anx4CkoDP+fZsw/ZerEMsW/pyzsRbElpsL/DBVW7q3ExxwusdNXI3lXpuhEZkzs8p5Eg==
+  simple-swizzle@0.2.4:
+    resolution:
+      integrity: sha512-nAu1WFPQSMNr2Zn9PGSZK9AGn4t/y97lEm+MXTtUDwfP0ksAIX4nO+6ruD9Jwut4C49SB1Ws+fbXsm/yScWOHw==
+  is-arrayish@0.3.4:
+    resolution:
+      integrity: sha512-m6UrgzFVUYawGBh1dUsWR5M2Clqic9RVXC/9f8ceNlv2IcO9j9J/z8UoCLPqtsPBFNzEpfR3xftohbfqDx8EQA==
+  color2k@2.0.4:
+    resolution:
+      integrity: sha512-OXAPGFRNeLFnUfqDtloYdxkwsJoIdXe28+bjbpJiPqyei2HPa3VHmMCWa0Qe62+U4Ftf9Hj7hRssOkxz7WiWbg==
+  deepmerge@4.3.1:
+    resolution:
+      integrity: sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==
+    engines:
+      node: ">=0.10.0"
+  flat@5.0.2:
+    resolution:
+      integrity: sha512-b6suED+5/3rTpUBdG1gupIl8MPFCAMA0QXwmljLhvCUKcUvdE4gWky9zpuGCcXHOsz4J9wPGNWq6OKpmIzz3hQ==
+    hasBin: true
+  tailwind-merge@2.5.4:
+    resolution:
+      integrity: sha512-0q8cfZHMu9nuYP/b5Shb7Y7Sh1B7Nnl5GqNr1U+n2p6+mybvRtayrQ+0042Z5byvTA8ihjlP8Odo8/VnHbZu4Q==
+  tailwind-variants@0.3.0:
+    resolution:
+      integrity: sha512-ho2k5kn+LB1fT5XdNS3Clb96zieWxbStE9wNLK7D0AV64kdZMaYzAKo0fWl6fXLPY99ffF9oBJnIj5escEl/8A==
+    engines:
+      node: ">=16.x"
+      pnpm: ">=7.x"
+    peerDependencies:
+      tailwindcss: "*"
 
 snapshots:
 
@@ -9681,3 +9736,37 @@ snapshots:
       react: 19.2.3
 
   zwitch@2.0.4: {}
+
+  "@heroui/theme@2.4.10(tailwindcss@3.4.19)":
+    dependencies:
+      "@heroui/shared-utils": 2.1.6
+      clsx: 1.2.1
+      color: 4.2.3
+      color2k: 2.0.4
+      deepmerge: 4.3.1
+      flat: 5.0.2
+      tailwind-merge: 2.5.4
+      tailwind-variants: 0.3.0(tailwindcss@3.4.19)
+      tailwindcss: 3.4.19
+  "@heroui/shared-utils@2.1.6": {}
+  clsx@1.2.1: {}
+  color@4.2.3:
+    dependencies:
+      color-convert: 2.0.1
+      color-string: 1.9.1
+  color-string@1.9.1:
+    dependencies:
+      color-name: 1.1.4
+      simple-swizzle: 0.2.4
+  simple-swizzle@0.2.4:
+    dependencies:
+      is-arrayish: 0.3.4
+  is-arrayish@0.3.4: {}
+  color2k@2.0.4: {}
+  deepmerge@4.3.1: {}
+  flat@5.0.2: {}
+  tailwind-merge@2.5.4: {}
+  tailwind-variants@0.3.0(tailwindcss@3.4.19):
+    dependencies:
+      tailwind-merge: 2.5.4
+      tailwindcss: 3.4.19

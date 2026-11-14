@@ -11,29 +11,31 @@
         @click.self="handleClose"
       >
         <!-- Modal panel -->
-        <div ref="dialogRef" :class="['modal-content', widthClasses]" tabindex="-1" @click.stop>
+        <div ref="dialogRef" :class="[styles.base({ class: 'modal-content my-0' }), widthClasses]" tabindex="-1" @click.stop>
           <!-- Header -->
-          <div class="modal-header">
+          <div :class="styles.header({ class: 'modal-header' })">
             <h3 :id="dialogId" class="modal-title">
               {{ title }}
             </h3>
-            <button
+            <Button
               v-if="showCloseButton"
               @click="emit('close')"
-              class="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2 dark:text-dark-500 dark:hover:bg-dark-700 dark:hover:text-dark-300 dark:focus-visible:ring-offset-dark-900"
+              variant="light"
+              is-icon-only
+              class="-mr-2 shrink-0 text-default-500"
               aria-label="Close modal"
             >
               <Icon name="x" size="md" />
-            </button>
+            </Button>
           </div>
 
           <!-- Body -->
-          <div ref="modalBodyRef" class="modal-body">
+          <div ref="modalBodyRef" :class="styles.body({ class: 'modal-body' })">
             <slot></slot>
           </div>
 
           <!-- Footer -->
-          <div v-if="$slots.footer" class="modal-footer">
+          <div v-if="$slots.footer" :class="styles.footer({ class: 'modal-footer' })">
             <slot name="footer"></slot>
           </div>
         </div>
@@ -44,7 +46,11 @@
 
 <script setup lang="ts">
 import { computed, watch, onMounted, onUnmounted, ref, nextTick } from 'vue'
+import { modal } from '@heroui/theme'
+import Button from './Button.vue'
 import Icon from '@/components/icons/Icon.vue'
+
+const styles = modal({ radius: 'md', shadow: 'lg', scrollBehavior: 'inside' })
 
 // 生成唯一ID以避免多个对话框时ID冲突
 let dialogIdCounter = 0
