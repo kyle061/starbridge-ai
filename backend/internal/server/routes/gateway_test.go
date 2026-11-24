@@ -1,7 +1,9 @@
 package routes
 
 import (
+	"bytes"
 	"encoding/json"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -122,6 +124,42 @@ func TestGatewayRoutesOpenAIImagesPathsAreRegistered(t *testing.T) {
 		router.ServeHTTP(w, req)
 		require.NotEqual(t, http.StatusNotFound, w.Code, "path=%s should hit OpenAI images handler", path)
 	}
+}
+
+func TestGatewayRoutesCompositeImagesWithoutModelReachImagesHandler(t *testing.T) {
+	for _, path := range []string{
+		"/v1/images/generations", "/v1/images/edits",
+		"/images/generations", "/images/edits",
+	} {
+		t.Run(path, func(t *testing.T) {
+			router := newGatewayRoutesTestRouter(service.PlatformComposite)
+			req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"prompt":"draw"}`))
+			req.Header.Set("Content-Type", "application/json")
+			rec := httptest.NewRecorder()
+
+			router.ServeHTTP(rec, req)
+
+			// The test auth has no user subject, so reaching Images stops here.
+			require.Equal(t, http.StatusInternalServerError, rec.Code)
+			require.Contains(t, rec.Body.String(), "User context not found")
+		})
+	}
+}
+
+func TestGatewayRoutesCompositeMultipartImagesWithoutModelReachImagesHandler(t *testing.T) {
+	var body bytes.Buffer
+	form := multipart.NewWriter(&body)
+	require.NoError(t, form.WriteField("prompt", "draw"))
+	require.NoError(t, form.Close())
+	router := newGatewayRoutesTestRouter(service.PlatformComposite)
+	req := httptest.NewRequest(http.MethodPost, "/v1/images/edits", &body)
+	req.Header.Set("Content-Type", form.FormDataContentType())
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusInternalServerError, rec.Code)
+	require.Contains(t, rec.Body.String(), "User context not found")
 }
 
 func TestGatewayRoutesAsyncImagesPathsAreRegistered(t *testing.T) {

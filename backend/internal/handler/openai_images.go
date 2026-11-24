@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -76,6 +77,20 @@ func (h *OpenAIGatewayHandler) Images(c *gin.Context) {
 	requestModel := parsed.Model
 	ensureCompositeTargetPlatform(c, apiKey, requestModel)
 	clientRequestModel := clientRequestedModel(c, requestModel)
+	// The ingress allowlist cannot inspect a model supplied by parser defaults.
+	if !parsed.ExplicitModel && apiKey.Group.ModelAllowlistEnabled() {
+		if !apiKey.Group.ModelAllowlist.Allows(clientRequestModel) {
+			service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalModelConfiguration)
+			middleware2.MarkIngressRejected(c, middleware2.IngressRejectModelNotAllowed)
+			h.errorResponse(c, http.StatusNotFound, "invalid_request_error", fmt.Sprintf("Model %q is not available for this group", clientRequestModel))
+			return
+		}
+		if !h.CanBillAutoAllowedModel(c.Request.Context(), apiKey, clientRequestModel) {
+			service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalModelConfiguration)
+			h.errorResponse(c, http.StatusServiceUnavailable, "invalid_request_error", fmt.Sprintf("Model %q is awaiting pricing before it can be used", clientRequestModel))
+			return
+		}
+	}
 	routingModel := requestModel
 	if resolvedModel, ok := service.ResolvedUpstreamModelFromContext(c.Request.Context()); ok {
 		routingModel = resolvedModel

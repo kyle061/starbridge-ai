@@ -87,7 +87,9 @@ func RegisterGatewayRoutes(
 	}
 	imagesHandler := func(c *gin.Context) {
 		switch getGroupPlatform(c) {
-		case service.PlatformOpenAI:
+		case service.PlatformOpenAI, service.PlatformComposite:
+			// A missing model leaves Composite unresolved. Images parses the group
+			// default and enforces the concrete platform before scheduling.
 			h.OpenAIGateway.Images(c)
 		case service.PlatformGrok:
 			h.OpenAIGateway.GrokImages(c)

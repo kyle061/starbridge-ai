@@ -47,3 +47,43 @@ func TestOpenAIGatewayHandlerImages_DisabledGroupRejectsBeforeScheduling(t *test
 	require.Equal(t, "permission_error", gjson.GetBytes(rec.Body.Bytes(), "error.type").String())
 	require.Contains(t, rec.Body.String(), service.ImageGenerationPermissionMessage())
 }
+
+func TestOpenAIGatewayHandlerImages_DefaultModelHonorsGroupAllowlist(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	for _, allowed := range []bool{false, true} {
+		t.Run(map[bool]string{false: "blocked", true: "allowed"}[allowed], func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/v1/images/generations", bytes.NewBufferString(`{"prompt":"draw"}`))
+			req.Header.Set("Content-Type", "application/json")
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
+			c.Request = req
+			models := []string{"gpt-6.2-sol"}
+			if allowed {
+				models = append(models, "gpt-image-2.5-flare")
+			}
+			c.Set(string(middleware2.ContextKeyAPIKey), &service.APIKey{
+				Group: &service.Group{
+					Platform: service.PlatformComposite, DefaultImageModel: "gpt-image-2.5-flare",
+					ModelAllowlist: service.GroupModelAllowlist{Enabled: true, Models: models},
+				},
+			})
+			c.Set(string(middleware2.ContextKeyUser), middleware2.AuthSubject{UserID: 333, Concurrency: 1})
+			h := &OpenAIGatewayHandler{
+				gatewayService:      &service.OpenAIGatewayService{},
+				billingCacheService: &service.BillingCacheService{},
+				apiKeyService:       &service.APIKeyService{},
+				concurrencyHelper:   &ConcurrencyHelper{concurrencyService: &service.ConcurrencyService{}},
+			}
+
+			h.Images(c)
+
+			if allowed {
+				require.Equal(t, http.StatusForbidden, rec.Code)
+				require.Contains(t, rec.Body.String(), service.ImageGenerationPermissionMessage())
+			} else {
+				require.Equal(t, http.StatusNotFound, rec.Code)
+				require.Contains(t, rec.Body.String(), "not available for this group")
+			}
+		})
+	}
+}
