@@ -117,7 +117,7 @@ func TestOpenAIGatewayServiceForward_CodexImageInjectionRespectsGroupCapability(
 		{name: "passthrough spark skips injection", allowImages: true, passthrough: true, model: "gpt-5.3-codex-spark"},
 		{name: "enabled group cannot authorize an image model", allowImages: true, modelMapping: map[string]any{"gpt-5.4": "gpt-5.4"}},
 		{name: "passthrough cannot bypass image allowlist", allowImages: true, passthrough: true, modelMapping: map[string]any{"gpt-5.4": "gpt-5.4"}},
-		{name: "authorized image model is offered", allowImages: true, modelMapping: map[string]any{"gpt-5.4": "gpt-5.4", "gpt-image-2": "gpt-image-2"}, wantInjected: true},
+		{name: "authorized image model is offered", allowImages: true, modelMapping: map[string]any{"gpt-5.4": "gpt-5.4", "gpt-image-2": "gpt-image-2"}, wantInjected: true, wantImageModel: "gpt-image-2"},
 		{name: "only authorized image variant is offered", allowImages: true, modelMapping: map[string]any{"gpt-5.4": "gpt-5.4", "gpt-image-2.5-flare": "gpt-image-2.5-flare"}, wantInjected: true, wantImageModel: "gpt-image-2.5-flare"},
 		{name: "both versions select 2.5", allowImages: true, modelMapping: map[string]any{"gpt-5.4": "gpt-5.4", "gpt-image-2": "gpt-image-2", "gpt-image-2.5-flare": "gpt-image-2.5-flare"}, wantInjected: true, wantImageModel: "gpt-image-2.5-flare"},
 		{name: "passthrough selects 2.5", allowImages: true, passthrough: true, modelMapping: map[string]any{"gpt-5.4": "gpt-5.4", "gpt-image-2": "gpt-image-2", "gpt-image-2.5-flare": "gpt-image-2.5-flare"}, wantInjected: true, wantImageModel: "gpt-image-2.5-flare"},
@@ -185,7 +185,7 @@ func TestOpenAIGatewayServiceForward_CodexImageInjectionRespectsGroupCapability(
 				require.Equal(t, "auto", toolChoice.String())
 				wantModel := tt.wantImageModel
 				if wantModel == "" {
-					wantModel = openAIImagesDefaultModel
+					wantModel = "gpt-image-2.5-flare"
 				}
 				require.Equal(t, wantModel, gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation").model`).String())
 			}
@@ -256,7 +256,7 @@ func TestOpenAIGatewayServiceForward_ExplicitImageToolUsesGroupPermission(t *tes
 	require.NotNil(t, result)
 	require.NotNil(t, upstream.lastReq)
 	require.True(t, gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation")`).Exists())
-	require.Equal(t, openAIImagesDefaultModel, gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation").model`).String())
+	require.Equal(t, "gpt-image-2.5-flare", gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation").model`).String())
 	require.Equal(t, "gpt-6-luna", gjson.GetBytes(upstream.lastBody, "model").String())
 	require.Equal(t, "jpeg", gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation").output_format`).String())
 	require.False(t, gjson.GetBytes(upstream.lastBody, `tools.#(type=="image_generation").format`).Exists())

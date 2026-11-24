@@ -1,5 +1,40 @@
 # Codex generated-image delivery
 
+## Install the local image skill
+
+When the Codex client has no native image tool, install the included
+`starbridge-imagegen` skill on the machine running the agent. Updating the gateway
+does not install a local skill. With Python 3.11+ and a checkout of this repository,
+run from the repository root:
+
+```powershell
+# Native Windows / PowerShell
+py -3 integrations\codex\install_imagegen.py
+```
+
+```sh
+# macOS, Linux, or a Codex agent running inside WSL
+python3 integrations/codex/install_imagegen.py
+```
+
+The installer copies the skill into `CODEX_HOME/skills` (default `~/.codex/skills`),
+creates a dedicated virtual environment, installs `openai` and `pillow`, and runs
+the credential-safe `--check`. It does not change the selected provider or make
+an image-generation request. Windows uses `venv/Scripts/python.exe`; POSIX uses
+`venv/bin/python`. If the skill does not appear, restart Codex. For a WSL agent,
+run the installer inside WSL rather than in the Windows terminal.
+
+Group settings control which models may be used: enable image generation, bind
+an image-capable account, and configure the group's model allowlist. Leave the
+default image model blank to select the newest authorized numeric GPT image
+version for Codex, or enter an exact model ID to pin that group. The local skill
+discovers permitted IDs through `/v1/models` and preserves variant suffixes. A
+client's explicit model choice is retained and remains subject to permissions.
+The separate Images API uses the group's pinned default when set, and otherwise
+keeps its existing `gpt-image-2` default when the client omits `model`.
+
+## Generated-image attachments
+
 Some Codex clients retain the Responses `image_generation_call.result` base64 in
 their local transcript without creating a visible image attachment. Starbridge
 keeps that original result and adds an ordinary assistant message containing a

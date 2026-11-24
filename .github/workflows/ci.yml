@@ -8,6 +8,17 @@ permissions:
   contents: read
 
 jobs:
+  codex-imagegen:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: python -m unittest discover -s integrations/codex/tests -v
+
   frontend:
     runs-on: ubuntu-latest
     steps:
@@ -67,7 +78,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: python3 -m unittest discover -s integrations/codex/tests -v
       - uses: actions/setup-go@v5
         with: { go-version-file: backend/go.mod, cache: true, cache-dependency-path: backend/go.sum }
       - run: go test -tags unit ./internal/service ./internal/handler/admin -run '^TestOpsLatencyAlert' -count=1
@@ -92,7 +102,7 @@ jobs:
         working-directory: backend
       - run: >-
           go test ./internal/service
-          -run '^TestOpenAIGatewayServiceForward_|^TestCodexImageBridgeLite|^TestOpenAIGatewayService_ProxyResponsesWebSocketFromClient_CodexImageBridgeRespectsResponsesLite$|^TestOpenAIWSHTTPBridgeAcceptsFirstFrameAboveLegacy16MiB$'
+          -run '^TestOpenAIGatewayServiceForward_|^TestCodexImageBridge|^TestImageToolAuthorization|^TestOpenAIGatewayService_ProxyResponsesWebSocketFromClient_CodexImageBridgeRespectsResponsesLite$|^TestOpenAIWSHTTPBridgeAcceptsFirstFrameAboveLegacy16MiB$'
           -count=1
         working-directory: backend
       - run: >-

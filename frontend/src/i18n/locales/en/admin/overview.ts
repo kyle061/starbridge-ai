@@ -1014,7 +1014,7 @@ export default {
         allowImageGeneration: 'Allow image generation for this group',
         defaultImageModel: 'Default image model',
         defaultImageModelAuto: 'Automatic selection',
-        defaultImageModelHint: 'For GPT image routes in OpenAI or composite groups: when left blank, the Codex bridge prefers an account-authorized image 2.5 model, then image 2. Set a specific model to use a lower version. The separate Images API still defaults to gpt-image-2 when no model is sent.',
+        defaultImageModelHint: 'When left blank, Codex selects the newest GPT image version permitted by the group and account. Enter a model ID to pin the default. Images API requests without a model use the pinned default, or gpt-image-2 if none is set.',
         allowBatchImageGeneration: 'Allow batch image generation for this group',
         independentMultiplier: 'Use independent image multiplier',
         imageMultiplier: 'Image multiplier',

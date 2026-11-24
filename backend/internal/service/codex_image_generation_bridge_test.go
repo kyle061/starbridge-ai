@@ -91,11 +91,51 @@ func TestCodexImageBridgePrefersAuthorizedImage25AndHonorsLowerManualChoice(t *t
 	require.Equal(t, "gpt-image-2", codexImageGenerationModel(account, group))
 }
 
-func TestCodexImageBridgeLiteGuidanceDoesNotAssumeImage2(t *testing.T) {
+func TestCodexImageBridgeLiteGuidanceSelectsLatestAuthorizedVersion(t *testing.T) {
 	account := &Account{Platform: PlatformOpenAI, Type: AccountTypeAPIKey}
 	body := map[string]any{"model": "gpt-6-luna"}
 	require.True(t, ensureCodexImageGenerationBridge(body, account, &Group{Platform: PlatformOpenAI}, true))
-	require.Contains(t, body["instructions"], "prefer gpt-image-2.5, then gpt-image-2")
+	require.Contains(t, body["instructions"], "highest numeric GPT image version")
+	require.Contains(t, body["instructions"], "including its variant suffix")
+}
+
+func TestCodexImageBridgeLatestModelRespectsGroupAllowlist(t *testing.T) {
+	account := &Account{Platform: PlatformOpenAI, Type: AccountTypeAPIKey, Credentials: map[string]any{
+		"model_mapping": map[string]any{"gpt-image-2": "gpt-image-2", "gpt-image-2.5-flare": "gpt-image-2.5-flare", "gpt-image-2.10": "gpt-image-2.10"},
+	}}
+	group := &Group{Platform: PlatformOpenAI, AllowImageGeneration: true}
+	require.Equal(t, "gpt-image-2.10", codexImageGenerationModel(account, group))
+	group.ModelAllowlist = GroupModelAllowlist{Enabled: true, Models: []string{"gpt-image-2", "gpt-image-2.5-*"}}
+	require.Equal(t, "gpt-image-2.5-flare", codexImageGenerationModel(account, group))
+	group.ModelAllowlist.Models = []string{"gpt-image-2"}
+	require.Equal(t, "gpt-image-2", codexImageGenerationModel(account, group))
+	group.DefaultImageModel = "gpt-image-2.5-flare"
+	require.Empty(t, codexImageGenerationModel(account, group))
+	group.DefaultImageModel = ""
+	group.ModelAllowlist.Models = []string{"gpt-6-astra"}
+	require.Empty(t, codexImageGenerationModel(account, group))
+}
+
+func TestCodexImageBridgeUnmappedAccountPrefersLatestAllowedCatalogModel(t *testing.T) {
+	account := &Account{Platform: PlatformOpenAI, Type: AccountTypeAPIKey}
+	group := &Group{Platform: PlatformOpenAI, AllowImageGeneration: true}
+	require.Equal(t, "gpt-image-2.5-flare", codexImageGenerationModel(account, group))
+	group.ModelAllowlist = GroupModelAllowlist{Enabled: true, Models: []string{"gpt-image-2"}}
+	require.Equal(t, "gpt-image-2", codexImageGenerationModel(account, group))
+	require.ErrorContains(t, validateOpenAIImageModelAuthorization(account, []byte(`{"tools":[{"type":"image_generation","model":"gpt-image-2.5-flare"}]}`), group), "not authorized for this group")
+	require.NoError(t, validateOpenAIImageModelAuthorization(account, []byte(`{"tools":[{"type":"image_generation","model":"gpt-image-2"}]}`), group))
+}
+
+func TestCodexImageBridgePinnedPublicModelKeepsAccountMapping(t *testing.T) {
+	account := &Account{Platform: PlatformOpenAI, Type: AccountTypeAPIKey, Credentials: map[string]any{
+		"model_mapping": map[string]any{"gpt-image-2": "gpt-image-2.5-flare"},
+	}}
+	group := &Group{Platform: PlatformOpenAI, AllowImageGeneration: true, DefaultImageModel: "gpt-image-2", ModelAllowlist: GroupModelAllowlist{Enabled: true, Models: []string{"gpt-image-2"}}}
+	require.Equal(t, "gpt-image-2", codexImageGenerationModel(account, group))
+	require.NoError(t, validateOpenAIImageModelAuthorization(account, []byte(`{"tools":[{"type":"image_generation"}]}`), group))
+	group.DefaultImageModel = ""
+	account.Credentials["model_mapping"] = map[string]any{"gpt-image-2": "gpt-6-astra"}
+	require.Empty(t, codexImageGenerationModel(account, group), "an image alias mapped to a text model cannot offer image generation")
 }
 
 func TestNormalizeGroupDefaultImageModel(t *testing.T) {

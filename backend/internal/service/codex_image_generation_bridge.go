@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/modelcatalog"
 	"github.com/tidwall/gjson"
 )
 
@@ -78,10 +79,13 @@ func validateOpenAIImageModelAuthorization(account *Account, body []byte, group 
 		return nil
 	}
 	mapping := account.GetModelMapping()
-	if len(mapping) == 0 {
-		return nil
-	}
 	check := func(model string) error {
+		if group != nil && !group.ModelAllowlist.Allows(model) {
+			return fmt.Errorf("image model %q is not authorized for this group", model)
+		}
+		if len(mapping) == 0 {
+			return nil
+		}
 		if mappingSupportsRequestedModel(mapping, model) {
 			return nil
 		}
@@ -156,24 +160,38 @@ func codexImageGenerationModel(account *Account, group *Group) string {
 	}
 	mapping := account.GetModelMapping()
 	preferred := groupImageModel(group)
-	if len(mapping) == 0 {
-		return preferred
-	}
 	if group != nil && group.DefaultImageModel != "" {
+		if !group.ModelAllowlist.Allows(preferred) {
+			return ""
+		}
+		if len(mapping) == 0 {
+			return preferred
+		}
 		if mapped, ok := resolveRequestedModelInMapping(mapping, preferred); ok && isOpenAIImageGenerationModel(mapped) {
-			return mapped
+			return preferred
 		}
 		return "" // A configured model must not silently fall back to a different one.
 	}
 	models := make([]string, 0, len(mapping))
-	for _, model := range mapping {
-		if IsGPTImageGenerationModel(model) && !strings.Contains(model, "*") {
+	add := func(model string) {
+		if IsGPTImageGenerationModel(model) && !strings.Contains(model, "*") && (group == nil || group.ModelAllowlist.Allows(model)) {
 			models = append(models, model)
 		}
 	}
-	for _, candidate := range []string{"gpt-image-2.5-flare", "gpt-image-2.5-sunburst", openAIImagesDefaultModel} {
-		if mapped, ok := resolveRequestedModelInMapping(mapping, candidate); ok && IsGPTImageGenerationModel(mapped) && !strings.Contains(mapped, "*") {
-			models = append(models, mapped)
+	for source, target := range mapping {
+		if IsGPTImageGenerationModel(target) {
+			add(source)
+			add(target)
+		}
+	}
+	for _, candidate := range modelcatalog.ModelsForPlatform(PlatformOpenAI) {
+		if !IsGPTImageGenerationModel(candidate) {
+			continue
+		}
+		if len(mapping) == 0 {
+			add(candidate)
+		} else if mapped, ok := resolveRequestedModelInMapping(mapping, candidate); ok && IsGPTImageGenerationModel(mapped) {
+			add(candidate)
 		}
 	}
 	sort.Slice(models, func(i, j int) bool {
@@ -212,7 +230,7 @@ func ensureCodexImageGenerationBridge(body map[string]any, account *Account, gro
 		if strings.Contains(existing, codexImageAPIAvailableMarker) {
 			return defaultSet
 		}
-		modelGuidance := "If no image model was requested, choose an authorized image model from this key's /v1/models listing; prefer gpt-image-2.5, then gpt-image-2. Never guess a model that the key cannot use."
+		modelGuidance := "If no image model was requested, choose the highest numeric GPT image version from this key's /v1/models listing. Use an exact returned model ID, including its variant suffix. The group's model allowlist and account permissions still apply; never guess a model ID."
 		if group != nil && group.DefaultImageModel != "" {
 			modelGuidance = "If no image model was requested, use the group's configured image model " + groupImageModel(group) + "."
 		}

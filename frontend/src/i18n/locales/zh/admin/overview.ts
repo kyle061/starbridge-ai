@@ -1011,7 +1011,7 @@ export default {
         allowImageGeneration: '允许当前分组生图',
         defaultImageModel: '默认生图模型',
         defaultImageModelAuto: '自动选择',
-        defaultImageModelHint: 'OpenAI 和组合分组的 GPT 生图路由：Codex 桥接留空时优先使用账号已授权的 2.5，再使用 2；填写具体模型可固定较低版本。独立 Images API 未指定模型时仍使用 gpt-image-2。',
+        defaultImageModelHint: '留空时，Codex 从分组白名单及账号授权的 GPT 图片模型中选择最新版本；填写模型 ID 可固定默认版本。Images API 未指定模型时使用此处固定值，未设置则使用 gpt-image-2。',
         allowBatchImageGeneration: '允许当前分组批量生图',
         independentMultiplier: '生图倍率独立',
         imageMultiplier: '生图独立倍率',

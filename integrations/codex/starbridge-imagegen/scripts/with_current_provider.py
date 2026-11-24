@@ -13,18 +13,24 @@ from urllib.parse import urlsplit
 from unittest.mock import patch
 
 
+def runtime_paths(home, windows):
+    runtime = home / ".cache/codex-runtimes/codex-primary-runtime/dependencies/python"
+    if windows:
+        return home / ".cache/starbridge-imagegen/venv/Scripts/python.exe", runtime / "python.exe"
+    return home / ".cache/starbridge-imagegen/venv/bin/python", runtime / "bin/python3"
+
+
 def use_available_runtime():
-    dedicated = Path.home() / ".cache/starbridge-imagegen/venv/bin/python"
-    bundled = Path.home() / ".cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"
+    dedicated, bundled = runtime_paths(Path.home(), sys.platform == "win32")
     candidates = [dedicated]
     if sys.version_info < (3, 11):
         candidates.append(bundled)
     for candidate in candidates:
-        if candidate.is_file() and str(candidate) != sys.executable:
+        if candidate.is_file() and os.path.normcase(os.path.abspath(candidate)) != os.path.normcase(os.path.abspath(sys.executable)):
             # A venv's executable resolves to its base Python; compare the invoked path.
             os.execv(str(candidate), [str(candidate), *sys.argv])
     if sys.version_info < (3, 11):
-        raise RuntimeError("Use the Codex bundled Python 3.11+ runtime for this launcher.")
+        raise ValueError("Use Python 3.11+ or the Codex bundled Python runtime for this launcher.")
 
 
 def provider_environment(config_path, environment, profile=None):
@@ -69,15 +75,19 @@ def provider_environment(config_path, environment, profile=None):
 def preferred_image_model(model_ids):
     candidates = []
     for model in model_ids:
-        if not isinstance(model, str) or not model.startswith("gpt-image-"):
+        if not isinstance(model, str):
             continue
-        version = re.match(r"^gpt-image-(\d+)(?:\.(\d+))?(?:-|$)", model)
-        major, minor = (int(version[1]), int(version[2] or 0)) if version else (-1, -1)
-        candidates.append((major, minor, model))
+        version = re.fullmatch(r"gpt-image-(\d+(?:\.\d+)*)(?:-[A-Za-z0-9][A-Za-z0-9._-]*)?", model)
+        if version is None:
+            continue
+        parts = tuple(int(part) for part in version[1].split("."))
+        while len(parts) > 1 and parts[-1] == 0:
+            parts = parts[:-1]
+        candidates.append((parts, model))
     if not candidates:
         raise ValueError("This Starbridge key has no available GPT image model; check its group and account model permissions.")
-    candidates.sort(key=lambda item: (-item[0], -item[1], item[2]))
-    return candidates[0][2]
+    newest = max(version for version, _ in candidates)
+    return min(model for version, model in candidates if version == newest)
 
 
 def has_explicit_model(args):
@@ -116,7 +126,6 @@ def run_bundled_cli(cli, cli_args, environment):
 
 
 def main():
-    use_available_runtime()
     codex_dir = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=codex_dir / "config.toml")
@@ -126,16 +135,18 @@ def main():
     if cli_args[:1] == ["--"]:
         cli_args = cli_args[1:]
     try:
+        use_available_runtime()
         environment, status = provider_environment(options.config, os.environ, options.profile)
         cli = codex_dir / "skills/.system/imagegen/scripts/image_gen.py"
         status["bundled_cli_available"] = cli.is_file()
         status["sdk_available"] = importlib.util.find_spec("openai") is not None
-        status["ready"] = status["bundled_cli_available"] and status["sdk_available"]
+        status["pillow_available"] = importlib.util.find_spec("PIL") is not None
+        status["ready"] = status["bundled_cli_available"] and status["sdk_available"] and status["pillow_available"]
         if options.check:
             print(json.dumps(status))
-            return 0
+            return 0 if status["ready"] else 2
         if not status["ready"]:
-            raise ValueError("The bundled imagegen CLI or SDK is missing; prepare the dedicated runtime, not a new API key.")
+            raise ValueError("The bundled imagegen CLI, openai SDK or pillow is missing; prepare the dedicated runtime, not a new API key.")
         if not cli_args or cli_args[0] not in ("generate", "edit", "generate-batch"):
             raise ValueError("Pass -- followed by a bundled imagegen command: generate, edit or generate-batch.")
         run_bundled_cli(cli, cli_args, environment)

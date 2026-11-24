@@ -35,6 +35,8 @@ docker compose --profile https up -d --build
 
 详细的首次配置、上游接入、模型分组和客户端示例见 [中文部署与接入指南](docs/STARBRIDGE.md)。
 
+Codex 缺少原生生图工具时，可安装仓库提供的本地生图技能；支持 Windows、macOS、Linux 和 WSL，默认从分组允许的模型中选择最新 GPT 图片版本。安装步骤见 [Codex 生图接入](docs/CODEX_IMAGE_DELIVERY.md#install-the-local-image-skill)。
+
 已提供 [GitHub Actions 自动部署](docs/STARBRIDGE.md#21-使用-github-actions-自动部署到独立服务器)：推送 `main` 并通过 CI 后，在 GitHub 构建镜像再通过 SSH 部署。默认目录 `/opt/starbridge`、端口 `19090`，部署脚本会检查目录、Compose 资源和端口冲突。
 
 ## 上游接入
