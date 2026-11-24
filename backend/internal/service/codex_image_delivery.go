@@ -200,6 +200,9 @@ func (d *CodexImageDelivery) observe(item gjson.Result) {
 	}
 	result := strings.TrimSpace(item.Get("result").String())
 	if result == "" {
+		result = strings.TrimSpace(item.Get("b64_json").String())
+	}
+	if result == "" {
 		return
 	}
 	id := item.Get("id").String()

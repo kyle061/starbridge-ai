@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -2170,6 +2171,38 @@ func TestOpenAIGatewayServiceRecordUsage_OutputImageSizeWinsBeforeBillingAndPers
 	require.Equal(t, map[string]int{ImageBillingSize4K: 1, "image_cache_read_tokens": 40}, usageRepo.lastLog.ImageSizeBreakdown)
 	require.InDelta(t, 0.44, usageRepo.lastLog.TotalCost, 1e-12)
 	require.InDelta(t, 0.44, usageRepo.lastLog.ActualCost, 1e-12)
+}
+
+func TestOpenAIGatewayServiceRecordUsage_ImageModelIsSeparateFromResponsesModel(t *testing.T) {
+	for _, test := range []struct {
+		model, imageModel string
+		count             int
+		want              string
+	}{
+		{"gpt-6.2-sol", "gpt-image-2.5-flare", 1, "gpt-image-2.5-flare"},
+		{"gpt-image-2.5-flare", "", 1, "gpt-image-2.5-flare"},
+		{"gpt-6.2-sol", "", 1, ""},
+		{"gpt-6.2-sol", "gpt-image-2.5-flare", 0, ""},
+	} {
+		t.Run(fmt.Sprintf("%s_%s_%d", test.model, test.imageModel, test.count), func(t *testing.T) {
+			usageRepo := &openAIRecordUsageLogRepoStub{inserted: true}
+			svc := newOpenAIRecordUsageServiceForTest(usageRepo, &openAIRecordUsageUserRepoStub{}, &openAIRecordUsageSubRepoStub{}, nil)
+			price := 0.02
+			err := svc.RecordUsage(context.Background(), &OpenAIRecordUsageInput{
+				Result: &OpenAIForwardResult{RequestID: "image-model-test", Model: test.model, BillingModel: test.imageModel, ImageCount: test.count, Usage: OpenAIUsage{InputTokens: 1, OutputTokens: 1}},
+				APIKey: &APIKey{ID: 1, GroupID: i64p(1), Group: &Group{ID: 1, RateMultiplier: 1, ImagePrice2K: &price}},
+				User:   &User{ID: 1}, Account: &Account{ID: 1},
+			})
+			require.NoError(t, err)
+			require.NotNil(t, usageRepo.lastLog)
+			require.Equal(t, test.model, usageRepo.lastLog.Model)
+			if test.want == "" {
+				require.Nil(t, usageRepo.lastLog.ImageModel)
+			} else {
+				require.Equal(t, test.want, *usageRepo.lastLog.ImageModel)
+			}
+		})
+	}
 }
 
 func TestOpenAIGatewayServiceRecordUsage_ImageUsesPerImageBillingEvenWithUsageTokens(t *testing.T) {

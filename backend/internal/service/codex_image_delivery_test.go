@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
@@ -41,6 +42,35 @@ func codexDeliveryEvent(t *testing.T, value any) []byte {
 	body, err := json.Marshal(value)
 	require.NoError(t, err)
 	return body
+}
+
+func TestCodexImageDeliverySupportsCompatibleBase64Field(t *testing.T) {
+	for _, stream := range []bool{false, true} {
+		t.Run(fmt.Sprintf("stream_%t", stream), func(t *testing.T) {
+			store := NewCodexImageStore(t.TempDir())
+			delivery := NewCodexImageDelivery(store, "https://gateway.test")
+			item := codexDeliveryItem(t)
+			item["b64_json"] = item["result"]
+			delete(item, "result")
+			body := codexDeliveryEvent(t, map[string]any{"output": []any{item}})
+			require.Equal(t, 1, countOpenAIResponseImageOutputsFromJSONBytes(body))
+			var output []byte
+			if stream {
+				event := codexDeliveryEvent(t, map[string]any{"type": "response.completed", "response": map[string]any{"output": []any{item}}})
+				require.NoError(t, delivery.WriteEvent(event, func(payload []byte) error { output = bytes.Clone(payload); return nil }))
+			} else {
+				output = delivery.JSON(body)
+			}
+			require.Contains(t, string(output), "![Generated image 1](https://gateway.test/images/generated/")
+			require.Contains(t, string(output), "b64_json")
+			files, err := os.ReadDir(store.directory)
+			require.NoError(t, err)
+			require.Len(t, files, 1)
+			stored, err := os.ReadFile(filepath.Join(store.directory, files[0].Name()))
+			require.NoError(t, err)
+			require.Equal(t, codexDeliveryPNG(t), stored)
+		})
+	}
 }
 
 func TestCodexImageDeliveryPreservesPayloadAndDeduplicatesAcrossEvents(t *testing.T) {

@@ -476,6 +476,8 @@ export default {
     imageUnitPrice: 'Per-image price',
     imageTotalPrice: 'Image total price',
     imageCount: 'Image count',
+    imageModel: 'Image model',
+    imageModelNotRecorded: 'Not recorded',
     imageBillingSize: 'Billing size',
     imageInputSize: 'Input size',
     imageOutputSize: 'Output size',

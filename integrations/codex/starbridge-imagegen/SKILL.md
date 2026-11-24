@@ -27,6 +27,8 @@ When the user explicitly asks to generate or edit an image while their selected 
 
 The launcher calls the existing bundled imagegen CLI with the provider URL and credential set only in its own process. It leaves the config file, shell profile and bundled CLI unchanged. Read the imagegen skill's prompt/output guidance for the requested image; do not apply its generic missing-key setup steps when this provider check succeeds.
 
+For this fallback, use the launcher's Images API workflow so the result is saved as a local image file. Do not substitute a hand-written text-model Responses request: its `image_generation_call` payload may not be rendered by the calling script, and a successful usage record alone does not confirm local delivery.
+
 ```sh
 python3 ~/.codex/skills/starbridge-imagegen/scripts/with_current_provider.py -- generate \
   --prompt-file /absolute/path/prompt.txt \

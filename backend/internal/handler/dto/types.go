@@ -178,7 +178,7 @@ type Group struct {
 // 注意：普通用户接口不得返回 model_routing/account_count/account_groups 等内部信息。
 type AdminGroup struct {
 	Group
-	DefaultImageModel           string  `json:"default_image_model"`
+	DefaultImageModel            string  `json:"default_image_model"`
 	RateMultiplier               float64 `json:"rate_multiplier"`
 	ImageRateIndependent         bool    `json:"image_rate_independent"`
 	ImageRateMultiplier          float64 `json:"image_rate_multiplier"`
@@ -657,6 +657,7 @@ type UsageLog struct {
 	FirstTokenMs       *int `json:"first_token_ms"`
 
 	// 图片生成字段
+	ImageModel         *string        `json:"image_model"`
 	ImageCount         int            `json:"image_count"`
 	ImageSize          *string        `json:"image_size"`
 	ImageInputSize     *string        `json:"image_input_size"`

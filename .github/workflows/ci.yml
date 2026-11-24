@@ -129,6 +129,8 @@ jobs:
         working-directory: backend
       - run: go test ./internal/service -run '^TestOpenAIGatewayServiceRecordUsage_'
         working-directory: backend
+      - run: go test -tags unit ./internal/repository ./internal/handler/dto -run 'TestUsageLog|TestPrepareUsageLogInsert|TestScanUsageLog|TestBuildUsageLog' -count=1
+        working-directory: backend
       - run: go test -tags unit ./internal/service -run '^TestRetailPricing_'
         working-directory: backend
       - run: go test -tags integration ./internal/repository -run '^TestUsageLogRepoSuite$/^TestGetBatchApiKeyUsageStats' -count=1

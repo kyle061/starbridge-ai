@@ -195,6 +195,7 @@ type UsageLog struct {
 	CacheTTLOverridden bool
 
 	// 图片生成字段
+	ImageModel         *string
 	ImageCount         int
 	ImageSize          *string
 	ImageInputSize     *string

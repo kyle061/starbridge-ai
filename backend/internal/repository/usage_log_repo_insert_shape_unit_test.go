@@ -70,17 +70,20 @@ func requireStaticInsertMatchesArgTypes(t *testing.T, query string) {
 // 直接手写 $1..$N 的 INSERT 路径，防止加列后漏补占位符只在集成测试才暴露。
 func TestUsageLogStaticInsertShape_PlaceholdersMatchArgTypes(t *testing.T) {
 	upstreamRequestID := "20260902080329-oneapi"
+	imageModel := "gpt-image-2.5-flare"
 	log := &service.UsageLog{
 		UserID:            1,
 		APIKeyID:          2,
 		AccountID:         3,
 		RequestID:         "client:insert-shape",
 		UpstreamRequestID: &upstreamRequestID,
+		ImageModel:        &imageModel,
 		Model:             "claude-3",
 		InputTokens:       10,
 		CreatedAt:         time.Date(2026, 9, 2, 12, 0, 0, 0, time.UTC),
 	}
 	prepared := prepareUsageLogInsert(log)
+	require.Equal(t, sql.NullString{String: imageModel, Valid: true}, prepared.args[len(prepared.args)-5])
 	args := anySliceToDriverValues(prepared.args)
 
 	t.Run("createSingle", func(t *testing.T) {

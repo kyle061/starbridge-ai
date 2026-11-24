@@ -40,6 +40,8 @@ const messages: Record<string, string> = {
   'usage.accountBilled': 'Account billed',
   'usage.imageUnit': ' images',
   'usage.imageCount': 'Image count',
+  'usage.imageModel': 'Image model',
+  'usage.imageModelNotRecorded': 'Not recorded',
   'usage.imageBillingSize': 'Billing size',
   'usage.imageInputSize': 'Input size',
   'usage.imageOutputSize': 'Output size',
@@ -129,6 +131,21 @@ const baseImageRow = {
 }
 
 describe('admin UsageTable tooltip', () => {
+  it('shows the selected image model separately and never guesses historical models', () => {
+    const wrapper = mount(UsageTable, {
+      props: { data: [
+        { ...baseImageRow, request_id: 'responses-image', model: 'gpt-6.2-sol', image_model: 'gpt-image-2.5-flare' },
+        { ...baseImageRow, request_id: 'historical-image', image_model: null },
+        { ...baseImageRow, request_id: 'text-only', image_count: 0, image_model: null },
+      ], columns: [] },
+      global: { stubs: { DataTable: DataTableStub, EmptyState: true, Icon: true, Teleport: true } },
+    })
+    const models = wrapper.findAll('[data-testid="image-model"]')
+    expect(models).toHaveLength(2)
+    expect(models[0].text()).toBe('Image model: gpt-image-2.5-flare')
+    expect(models[1].text()).toBe('Image model: Not recorded')
+    expect(wrapper.text()).toContain('gpt-6.2-sol')
+  })
   beforeEach(() => {
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
       x: 0,

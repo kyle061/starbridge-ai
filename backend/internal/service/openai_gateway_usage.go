@@ -378,6 +378,15 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 	}
 
 	imageSizeBreakdown := cloneImageSizeBreakdown(result.ImageSizeBreakdown)
+	var imageModel *string
+	if result.ImageCount > 0 {
+		for _, model := range []string{result.BillingModel, result.UpstreamModel, result.Model} {
+			if isOpenAIImageGenerationModel(model) {
+				imageModel = optionalTrimmedStringPtr(model)
+				break
+			}
+		}
+	}
 	if result.Usage.ImageCacheReadTokens > 0 {
 		if imageSizeBreakdown == nil {
 			imageSizeBreakdown = make(map[string]int)
@@ -408,6 +417,7 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 		ImageInputTokens:         result.Usage.ImageInputTokens,
 		ImageOutputTokens:        result.Usage.ImageOutputTokens,
 		ImageCount:               result.ImageCount,
+		ImageModel:               imageModel,
 		ImageSize:                optionalTrimmedStringPtr(result.ImageSize),
 		ImageInputSize:           optionalTrimmedStringPtr(result.ImageInputSize),
 		ImageOutputSize:          optionalTrimmedStringPtr(result.ImageOutputSize),

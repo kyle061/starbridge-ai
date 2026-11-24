@@ -481,6 +481,8 @@ export default {
     imageUnitPrice: '单张价格',
     imageTotalPrice: '图片总价',
     imageCount: '图片张数',
+    imageModel: '生图模型',
+    imageModelNotRecorded: '未记录',
     imageBillingSize: '计费尺寸',
     imageInputSize: '输入尺寸',
     imageOutputSize: '输出尺寸',

@@ -53,7 +53,7 @@
         </template>
 
         <template #cell-model="{ row }">
-          <div class="space-y-0.5 text-xs">
+          <div class="min-w-0 space-y-0.5 text-xs">
             <div v-if="row.model_mapping_chain && row.model_mapping_chain.includes('→')" class="space-y-0.5">
               <div v-for="(step, i) in row.model_mapping_chain.split('→')" :key="i"
                    class="break-all"
@@ -71,6 +71,9 @@
               </div>
             </div>
             <span v-else class="font-medium text-gray-900 dark:text-white">{{ row.model }}</span>
+            <div v-if="row.image_count > 0" data-testid="image-model" class="break-all text-[11px] text-gray-500 dark:text-gray-400">
+              {{ t('usage.imageModel') }}: {{ row.image_model?.trim() || t('usage.imageModelNotRecorded') }}
+            </div>
             <div
               v-if="row.upstream_model_mismatch === true && row.upstream_response_model"
               class="break-all pl-3 text-[11px]"
